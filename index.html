@@ -511,22 +511,9 @@
 </div>
 
     <div id="hud">
-      <span>
-        スコア:
-        <span id="score-value">0</span>
-      </span>
-
-      <span>
-        コイン:
-        <span id="coin-value">0</span>
-      </span>
-
-      <span>
-        ミス:
-        <span id="miss-value">0</span>
-      </span>
-  
-  <span id="stage-name-value">ステージ1</span>
+  <span id="stage-name-value">
+    ステージ1
+  </span>
 
   <span>
     スコア:
@@ -542,7 +529,7 @@
     ミス:
     <span id="miss-value">0</span>
   </span>
-    </div>
+</div>
 
     <button
       id="restart-button"
@@ -949,6 +936,12 @@ const STAGES = [
     let missTimer = 0;
 
     let lastTime = 0;
+
+    /*
+  ステージ選択画面などを表示している間、
+  ゲーム処理を停止するための状態です。
+*/
+let gamePaused = true;
 
     /*
   現在選択されているステージの配列番号です。
@@ -1532,35 +1525,36 @@ stageRows =
         }
       }
 
-      player = {
-  x: startX,
-  y: startY,
+            player = {
+        x: startX,
+        y: startY,
 
-  startX,
-  startY,
+        startX,
+        startY,
 
-  width: PLAYER_WIDTH,
-  height: PLAYER_HEIGHT,
+        width: PLAYER_WIDTH,
+        height: PLAYER_HEIGHT,
 
-  velocityX: 0,
-  velocityY: 0,
+        velocityX: 0,
+        velocityY: 0,
 
-  grounded: false,
+        grounded: false,
 
-  facing: 1,
-  running: false,
-  dashing: false,
+        facing: 1,
+        running: false,
+        dashing: false,
 
-  animationTime: 0,
-  dustTimer: 0
-};
+        animationTime: 0,
+        dustTimer: 0
+      };
 
-stageNameValue.textContent =
-  currentStage.name;
+      stageNameValue.textContent =
+        currentStage.name;
 
-hideMessage();
-updateHud();
-
+      hideMessage();
+      updateHud();
+    }
+    
     /*
       ミス後にステージを再開します。
     */
@@ -1667,6 +1661,162 @@ function renderStageSelectButtons() {
   }
 }
 
+/*
+  ミス後に現在のステージを再開します。
+*/
+function restartAfterMiss() {
+  const currentMissCount =
+    missCount;
+
+  initializeGame(false);
+
+  missCount =
+    currentMissCount;
+
+  updateHud();
+}
+
+/*
+  ステージ選択ボタンを作り直します。
+*/
+function renderStageSelectButtons() {
+  stageButtonList.innerHTML = "";
+
+  for (
+    let index = 0;
+    index < STAGES.length;
+    index += 1
+  ) {
+    const stage =
+      STAGES[index];
+
+    const unlocked =
+      isStageUnlocked(stage.id);
+
+    const cleared =
+      isStageCleared(stage.id);
+
+    const button =
+      document.createElement("button");
+
+    button.type = "button";
+    button.className =
+      "stage-select-item";
+
+    if (!unlocked) {
+      button.classList.add("locked");
+      button.disabled = true;
+    }
+
+    const stageKey =
+      String(stage.id);
+
+    const bestScore =
+      saveData.bestScores[stageKey];
+
+    const bestMisses =
+      saveData.bestMisses[stageKey];
+
+    let recordText = "";
+
+    if (cleared) {
+      recordText =
+        "クリア済み<br>" +
+        "最高スコア: " +
+        (bestScore ?? 0) +
+        "<br>" +
+        "最少ミス: " +
+        (bestMisses ?? 0);
+    } else if (unlocked) {
+      recordText =
+        "未クリア";
+    } else {
+      recordText =
+        "未解放";
+    }
+
+    button.innerHTML =
+      stage.name +
+      "<br>" +
+      "<small>" +
+      stage.description +
+      "</small>" +
+      '<span class="stage-record">' +
+      recordText +
+      "</span>";
+
+    if (unlocked) {
+      button.addEventListener(
+        "click",
+        () => {
+          startStage(index);
+        }
+      );
+    }
+
+    stageButtonList.appendChild(
+      button
+    );
+  }
+}
+
+/*
+  ステージ選択画面を表示します。
+*/
+function showStageSelectScreen() {
+  resetAllInputs();
+  hideMessage();
+
+  gamePaused = true;
+
+  renderStageSelectButtons();
+
+  stageSelectScreen.style.display =
+    "flex";
+}
+
+/*
+  ステージ選択画面を閉じます。
+*/
+function hideStageSelectScreen() {
+  stageSelectScreen.style.display =
+    "none";
+}
+
+/*
+  指定したステージを開始します。
+*/
+function startStage(stageIndex) {
+  if (
+    stageIndex < 0 ||
+    stageIndex >= STAGES.length
+  ) {
+    return;
+  }
+
+  const stage =
+    STAGES[stageIndex];
+
+  if (!isStageUnlocked(stage.id)) {
+    return;
+  }
+
+  currentStageIndex =
+    stageIndex;
+
+  hideStageSelectScreen();
+  initializeGame(true);
+
+  gamePaused = false;
+
+  /*
+    長時間ステージ選択画面を表示した後に、
+    大きなdeltaTimeが発生するのを防ぎます。
+  */
+  lastTime =
+    performance.now();
+}
+    
 /*
   ステージ選択画面を表示します。
 */
@@ -2674,31 +2824,35 @@ function startStage(stageIndex) {
     }
 
     function triggerClear() {
-      if (gameCleared) {
-        return;
-      }
+  if (gameCleared) {
+    return;
+  }
 
-      resetAllInputs();
+  resetAllInputs();
 
-      gameCleared = true;
+  gameCleared = true;
 
-      player.velocityX = 0;
-      player.velocityY = 0;
+  player.velocityX = 0;
+  player.velocityY = 0;
 
-      score += 1000;
+  score += 1000;
 
-saveStageClearResult();
+  /*
+    ステージのクリア結果と、
+    次ステージの解放状態を保存します。
+  */
+  saveStageClearResult();
 
-updateHud();
-playClearSound();
+  updateHud();
+  playClearSound();
 
-      updateHud();
-      playClearSound();
-
-      window.setTimeout(() => {
-        showClearMessage();
-      }, 500);
-    }
+  window.setTimeout(
+    () => {
+      showClearMessage();
+    },
+    500
+  );
+}
 
     function showClearMessage() {
   const currentStage =
@@ -3620,15 +3774,17 @@ playClearSound();
     // ゲームループ
     // =========================================================
 
-    function updateGame(
-      deltaTime
-    ) {
-      updatePlayer(deltaTime);
-      updateEnemies(deltaTime);
-      updateObjectCollisions();
-      updateParticles(deltaTime);
-      updateCamera(deltaTime);
-    }
+    function updateGame(deltaTime) {
+  if (gamePaused) {
+    return;
+  }
+
+  updatePlayer(deltaTime);
+  updateEnemies(deltaTime);
+  updateObjectCollisions();
+  updateParticles(deltaTime);
+  updateCamera(deltaTime);
+}
 
     function gameLoop(
       currentTime
@@ -3716,13 +3872,13 @@ playClearSound();
 
         event.preventDefault();
       }
-
-      if (
-        key === "r" &&
-        !event.repeat
-      ) {
-        initializeGame(true);
-      }
+if (
+  key === "r" &&
+  !event.repeat &&
+  !gamePaused
+) {
+  initializeGame(true);
+}
     }
 
     function handleKeyUp(event) {
@@ -3790,50 +3946,258 @@ playClearSound();
       new Map();
 
     /*
-      押している間だけ有効になるボタンを設定します。
-    */
-    function bindHoldButton(
-      element,
-      onPress,
-      onRelease
-    ) {
-      const pointerIds =
-        new Set();
+  押している間だけ有効になるボタンを設定します。
+*/
+function bindHoldButton(
+  element,
+  onPress,
+  onRelease
+) {
+  const pointerIds =
+    new Set();
 
-      /*
-        指を1本だけ解除します。
-      */
-      function releasePointerById(
+  function releasePointerById(
+    pointerId
+  ) {
+    if (!pointerIds.has(pointerId)) {
+      return;
+    }
+
+    pointerIds.delete(pointerId);
+
+    activePointerReleases.delete(
+      pointerId
+    );
+
+    if (pointerIds.size === 0) {
+      element.classList.remove(
+        "active"
+      );
+
+      onRelease();
+    }
+  }
+
+  function releaseAllPointers() {
+    const ids =
+      Array.from(pointerIds);
+
+    for (const pointerId of ids) {
+      releasePointerById(
         pointerId
+      );
+    }
+
+    element.classList.remove(
+      "active"
+    );
+
+    onRelease();
+  }
+
+  element.addEventListener(
+    "pointerdown",
+    event => {
+      ensureAudioContext();
+      event.preventDefault();
+
+      if (
+        pointerIds.has(
+          event.pointerId
+        )
       ) {
-        if (
-          !pointerIds.has(
-            pointerId
-          )
-        ) {
-          return;
-        }
-
-        pointerIds.delete(
-          pointerId
-        );
-
-        activePointerReleases.delete(
-          pointerId
-        );
-
-        if (
-          pointerIds.size === 0
-        ) {
-          element.classList.remove(
-            "active"
-          );
-
-          onRelease();
-        }
+        return;
       }
 
-      /*
+      pointerIds.add(
+        event.pointerId
+      );
+
+      activePointerReleases.set(
+        event.pointerId,
+        () => {
+          releasePointerById(
+            event.pointerId
+          );
+        }
+      );
+
+      try {
+        element.setPointerCapture(
+          event.pointerId
+        );
+      } catch (error) {
+        /*
+          Pointer Captureが利用できない場合も、
+          document側のpointerupで解除します。
+        */
+      }
+
+      element.classList.add(
+        "active"
+      );
+
+      onPress();
+    },
+    {
+      passive: false
+    }
+  );
+
+  element.addEventListener(
+    "pointerup",
+    event => {
+      event.preventDefault();
+
+      releasePointerById(
+        event.pointerId
+      );
+    },
+    {
+      passive: false
+    }
+  );
+
+  element.addEventListener(
+    "pointercancel",
+    event => {
+      event.preventDefault();
+
+      releasePointerById(
+        event.pointerId
+      );
+    },
+    {
+      passive: false
+    }
+  );
+
+  element.addEventListener(
+    "lostpointercapture",
+    event => {
+      releasePointerById(
+        event.pointerId
+      );
+    }
+  );
+
+  element.addEventListener(
+    "contextmenu",
+    event => {
+      event.preventDefault();
+      releaseAllPointers();
+    }
+  );
+
+  element.addEventListener(
+    "dragstart",
+    event => {
+      event.preventDefault();
+      releaseAllPointers();
+    }
+  );
+
+  element.releaseAllPointers =
+    releaseAllPointers;
+}
+
+/*
+  移動ボタンに、
+  通常移動とダブルタップ長押しダッシュを設定します。
+*/
+function bindMoveButton(
+  element,
+  direction
+) {
+  let lastPressTime =
+    -Infinity;
+
+  let dashActive =
+    false;
+
+  bindHoldButton(
+    element,
+
+    () => {
+      const currentTime =
+        performance.now() /
+        1000;
+
+      const isDoubleTap =
+        currentTime -
+        lastPressTime <=
+        MOVE_DOUBLE_TAP_TIME;
+
+      lastPressTime =
+        currentTime;
+
+      if (direction === "left") {
+        input.left = true;
+      } else {
+        input.right = true;
+      }
+
+      if (isDoubleTap) {
+        dashActive = true;
+
+        touchDashDirections.add(
+          direction
+        );
+
+        updateDashInput();
+      }
+    },
+
+    () => {
+      if (direction === "left") {
+        input.left = false;
+      } else {
+        input.right = false;
+      }
+
+      if (dashActive) {
+        dashActive = false;
+
+        touchDashDirections.delete(
+          direction
+        );
+
+        updateDashInput();
+      }
+    }
+  );
+}
+
+    bindMoveButton(
+  leftButton,
+  "left"
+);
+
+bindMoveButton(
+  rightButton,
+  "right"
+);
+
+bindHoldButton(
+  jumpButton,
+  () => {
+    if (!input.jump) {
+      input.jumpPressed = true;
+    }
+
+    input.jump = true;
+    input.jumpReleased = false;
+  },
+  () => {
+    if (input.jump) {
+      input.jumpReleased = true;
+    }
+
+    input.jump = false;
+  }
+);
+    
+    /*
   移動ボタンへ、
   通常移動とダブルタップ長押しダッシュを設定します。
 */
@@ -4351,20 +4715,29 @@ messageStageSelectButton.addEventListener(
     // =========================================================
 
     restartButton.addEventListener(
-      "click",
-      () => {
-        ensureAudioContext();
-        initializeGame(true);
-      }
-    );
+  "click",
+  () => {
+    if (gamePaused) {
+      return;
+    }
 
-    messageRestartButton.addEventListener(
-      "click",
-      () => {
-        ensureAudioContext();
-        initializeGame(true);
-      }
-    );
+    ensureAudioContext();
+    initializeGame(true);
+  }
+);
+
+   messageRestartButton.addEventListener(
+  "click",
+  () => {
+    ensureAudioContext();
+
+    hideMessage();
+    initializeGame(true);
+
+    gamePaused = false;
+    lastTime = performance.now();
+  }
+);
 
     // =========================================================
     // Canvasサイズ
@@ -4436,13 +4809,14 @@ messageStageSelectButton.addEventListener(
    resizeCanvas();
 
 /*
-  最初はステージ1を内部的に準備します。
+  ステージ1を内部的に準備します。
 */
 currentStageIndex = 0;
 initializeGame(true);
 
 /*
-  起動時はステージ選択画面を表示します。
+  起動時はステージ選択画面を表示し、
+  ゲーム処理を停止します。
 */
 showStageSelectScreen();
 
