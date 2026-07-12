@@ -504,6 +504,14 @@
     // =========================================================
 
     function initializeGame(resetMissCount = true) {
+      /*
+        リスタート前に残っている入力状態を解除します。
+      */
+      input.left = false;
+      input.right = false;
+      input.jump = false;
+      input.jumpPressed = false;
+      input.dash = false;
       stageRows = STAGE_TEMPLATE.map(row => row.split(""));
 
       stageWidth = stageRows[0].length * TILE_SIZE;
@@ -1820,69 +1828,203 @@
     // タッチ操作
     // =========================================================
 
-    function bindHoldButton(
-      element,
-      onPress,
-      onRelease
-    ) {
-      const activePointerIds = new Set();
+    /*
+  タッチボタンを押している間だけ入力を有効にします。
 
-      element.addEventListener(
-        "pointerdown",
-        event => {
-          ensureAudioContext();
+  pointerupを正常に受け取れなかった場合でも、
+  pointercancelやlostpointercaptureなどで
+  必ず入力を解除するようにします。
+*/
+function bindHoldButton(
+  element,
+  onPress,
+  onRelease
+) {
+  /*
+    現在このボタンを押している指のIDを保存します。
+  */
+  const activePointerIds = new Set();
 
-          event.preventDefault();
-
-          activePointerIds.add(
-            event.pointerId
-          );
-
-          element.setPointerCapture(
-            event.pointerId
-          );
-
-          element.classList.add("active");
-          onPress();
-        }
-      );
-
-      const releasePointer = event => {
-        if (
-          !activePointerIds.has(
-            event.pointerId
-          )
-        ) {
-          return;
-        }
-
-        activePointerIds.delete(
-          event.pointerId
-        );
-
-        if (
-          activePointerIds.size === 0
-        ) {
-          element.classList.remove("active");
-          onRelease();
-        }
-      };
-
-      element.addEventListener(
-        "pointerup",
-        releasePointer
-      );
-
-      element.addEventListener(
-        "pointercancel",
-        releasePointer
-      );
-
-      element.addEventListener(
-        "lostpointercapture",
-        releasePointer
-      );
+  /*
+    ボタンの押下状態をすべて解除します。
+  */
+  function releaseAllPointers() {
+    /*
+      すでに押されていない場合は、
+      onReleaseを重複して呼びません。
+    */
+    if (activePointerIds.size === 0) {
+      element.classList.remove("active");
+      return;
     }
+
+    /*
+      押している指の情報をすべて削除します。
+    */
+    activePointerIds.clear();
+
+    /*
+      ボタンの押下表示を解除します。
+    */
+    element.classList.remove("active");
+
+    /*
+      ゲーム内の入力状態も解除します。
+    */
+    onRelease();
+  }
+
+  /*
+    ボタンを押したときの処理です。
+  */
+  element.addEventListener(
+    "pointerdown",
+    event => {
+      ensureAudioContext();
+
+      event.preventDefault();
+
+      /*
+        この指がすでに登録済みなら、
+        同じ押下処理を重複して実行しません。
+      */
+      if (activePointerIds.has(event.pointerId)) {
+        return;
+      }
+
+      /*
+        指のIDを登録します。
+      */
+      activePointerIds.add(event.pointerId);
+
+      /*
+        ボタン外へ指が移動しても、
+        この要素がpointerupを受け取れるようにします。
+      */
+      try {
+        element.setPointerCapture(event.pointerId);
+      } catch (error) {
+        /*
+          ブラウザによっては、
+          Pointer Captureに失敗する場合があります。
+          その場合もゲームは続行します。
+        */
+      }
+
+      /*
+        ボタンを押した見た目にします。
+      */
+      element.classList.add("active");
+
+      /*
+        ゲーム内の入力を有効にします。
+      */
+      onPress();
+    },
+    {
+      passive: false
+    }
+  );
+
+  /*
+    指が離れたときの共通処理です。
+  */
+  function releasePointer(event) {
+    /*
+      このボタンで管理していない指なら無視します。
+    */
+    if (!activePointerIds.has(event.pointerId)) {
+      return;
+    }
+
+    /*
+      指のIDを削除します。
+    */
+    activePointerIds.delete(event.pointerId);
+
+    /*
+      Pointer Captureを安全に解除します。
+    */
+    try {
+      if (element.hasPointerCapture(event.pointerId)) {
+        element.releasePointerCapture(event.pointerId);
+      }
+    } catch (error) {
+      /*
+        解除できなかった場合も処理を続けます。
+      */
+    }
+
+    /*
+      すべての指が離れた場合だけ、
+      ボタンと入力を解除します。
+    */
+    if (activePointerIds.size === 0) {
+      element.classList.remove("active");
+      onRelease();
+    }
+  }
+
+  /*
+    通常どおり指を離した場合です。
+  */
+  element.addEventListener(
+    "pointerup",
+    releasePointer,
+    {
+      passive: false
+    }
+  );
+
+  /*
+    ブラウザによって操作が中断された場合です。
+  */
+  element.addEventListener(
+    "pointercancel",
+    releasePointer,
+    {
+      passive: false
+    }
+  );
+
+  /*
+    Pointer Captureが失われた場合も、
+    入力状態を必ず解除します。
+  */
+  element.addEventListener(
+    "lostpointercapture",
+    releaseAllPointers
+  );
+
+  /*
+    ボタン上で右クリックメニューなどが出ないようにします。
+  */
+  element.addEventListener(
+    "contextmenu",
+    event => {
+      event.preventDefault();
+      releaseAllPointers();
+    }
+  );
+
+  /*
+    ボタン要素からドラッグ操作が始まった場合も解除します。
+  */
+  element.addEventListener(
+    "dragstart",
+    event => {
+      event.preventDefault();
+      releaseAllPointers();
+    }
+  );
+
+  /*
+    後で全ボタンをまとめて解除できるよう、
+    解除関数を要素に保存します。
+  */
+  element.releaseAllPointers =
+    releaseAllPointers;
+}
 
     bindHoldButton(
       leftButton,
@@ -1927,6 +2069,83 @@
         input.jump = false;
       }
     );
+
+    /*
+  すべての操作ボタンと入力状態を解除します。
+
+  ブラウザがバックグラウンドへ移動した場合や、
+  画面外で指が離れた場合の入力ロックを防止します。
+*/
+function resetAllInputs() {
+  /*
+    ゲーム内の入力状態をすべて解除します。
+  */
+  input.left = false;
+  input.right = false;
+  input.jump = false;
+  input.jumpPressed = false;
+  input.dash = false;
+
+  /*
+    各タッチボタンが保持している指情報と、
+    押下中の見た目を解除します。
+  */
+  const touchButtons = [
+    leftButton,
+    rightButton,
+    jumpButton,
+    dashButton
+  ];
+
+  for (const button of touchButtons) {
+    if (
+      typeof button.releaseAllPointers ===
+      "function"
+    ) {
+      button.releaseAllPointers();
+    } else {
+      button.classList.remove("active");
+    }
+  }
+}
+
+    /*
+  ブラウザの外で指やマウスを離した場合にも、
+  すべての入力を解除します。
+*/
+
+window.addEventListener(
+  "pointercancel",
+  resetAllInputs
+);
+
+/*
+  画面からフォーカスが外れた場合に解除します。
+*/
+window.addEventListener(
+  "blur",
+  resetAllInputs
+);
+
+/*
+  ブラウザやアプリがバックグラウンドへ移動した場合に解除します。
+*/
+document.addEventListener(
+  "visibilitychange",
+  () => {
+    if (document.hidden) {
+      resetAllInputs();
+    }
+  }
+);
+
+/*
+  画面の向きが変わった場合にも解除します。
+*/
+window.addEventListener(
+  "orientationchange",
+  resetAllInputs
+);
 
     // =========================================================
     // ボタン
