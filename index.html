@@ -10,9 +10,23 @@
 
   <style>
     * {
-      box-sizing: border-box;
-      -webkit-tap-highlight-color: transparent;
-    }
+  box-sizing: border-box;
+  -webkit-tap-highlight-color: transparent;
+
+  /*
+    画面上の文字や要素が選択されるのを防ぎます。
+  */
+  user-select: none;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+
+  /*
+    iPhone・iPadで長押しした際の
+    コピー・検索メニューなどを抑制します。
+  */
+  -webkit-touch-callout: none;
+}
 
     html,
     body {
