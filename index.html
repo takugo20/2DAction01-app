@@ -6,7 +6,7 @@
     name="viewport"
     content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"
   >
-  <title>横スクロールアクション</title>
+  <title>2Dアクション</title>
 
   <style>
     * {
@@ -945,9 +945,15 @@
             enemy.direction *= -1;
           }
         }
-
-        if (enemy.y > stageHeight + 150) {
+        /*
+          敵が奈落へ落下し、
+          ステージ下端を完全に通過したら消滅させます。
+        */
+        if (enemy.y >= stageHeight) {
           enemy.alive = false;
+          enemy.velocityX = 0;
+          enemy.velocityY = 0;
+        }
         }
       }
     }
