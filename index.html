@@ -2,40 +2,43 @@
 <html lang="ja">
 <head>
   <meta charset="UTF-8">
+
   <meta
     name="viewport"
-    content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"
+    content="
+      width=device-width,
+      initial-scale=1.0,
+      maximum-scale=1.0,
+      user-scalable=no
+    "
   >
+
   <title>2Dアクション</title>
 
   <style>
+    /*
+      すべての要素について、
+      サイズ計算とタッチ時の表示を統一します。
+    */
     * {
-  box-sizing: border-box;
-  -webkit-tap-highlight-color: transparent;
+      box-sizing: border-box;
+      -webkit-tap-highlight-color: transparent;
 
-  /*
-    画面上の文字や要素が選択されるのを防ぎます。
-  */
-  user-select: none;
-  -webkit-user-select: none;
-  -moz-user-select: none;
-  -ms-user-select: none;
+      /*
+        操作中に文字が選択されることを防ぎます。
+      */
+      user-select: none;
+      -webkit-user-select: none;
+      -moz-user-select: none;
+      -ms-user-select: none;
 
-  /*
-    iPhone・iPadで長押しした際の
-    コピー・検索メニューなどを抑制します。
-  */
-  -webkit-touch-callout: none;
-}
-
-    button,
-    canvas,
-    div,
-    span {
-      -webkit-user-drag: none;
-      user-drag: none;
+      /*
+        iPhone・iPadで長押ししたときの
+        コピーや検索などのメニューを抑制します。
+      */
+      -webkit-touch-callout: none;
     }
-    
+
     html,
     body {
       width: 100%;
@@ -44,92 +47,119 @@
       overflow: hidden;
       background: #1a1a1a;
       font-family: sans-serif;
-      touch-action: none;
 
-      user-select: none;
-      -webkit-user-select: none;
-      -webkit-touch-callout: none;
+      /*
+        ブラウザ側のスクロールやズーム操作を無効にします。
+      */
+      touch-action: none;
+      -ms-touch-action: none;
+    }
+
+    button,
+    canvas,
+    div,
+    span {
+      /*
+        要素のドラッグを防ぎます。
+      */
+      -webkit-user-drag: none;
     }
 
     #game-wrapper {
-  position: relative;
-  width: 100%;
-  height: 100%;
-  overflow: hidden;
-  background: #87ceeb;
+      position: relative;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background: #87ceeb;
+      touch-action: none;
+      -ms-touch-action: none;
+    }
 
-  /*
-    ダブルタップやピンチ操作による
-    ブラウザ側のズームを無効にします。
-  */
-  touch-action: none;
-  -ms-touch-action: none;
-}
+    #game-canvas {
+      display: block;
+      width: 100%;
+      height: 100%;
+      background: #87ceeb;
+      touch-action: none;
+      -ms-touch-action: none;
+    }
 
-#game-canvas {
-  display: block;
-  width: 100%;
-  height: 100%;
-  background: #87ceeb;
-
-  /*
-    Canvas上のダブルタップズームを無効にします。
-  */
-  touch-action: none;
-  -ms-touch-action: none;
-}
-
+    /*
+      スコアなどの表示です。
+    */
     #hud {
       position: absolute;
       top: 12px;
       left: 12px;
+      z-index: 10;
+
       display: flex;
       gap: 14px;
-      z-index: 10;
+
       padding: 8px 12px;
+
       color: white;
+      background: rgba(0, 0, 0, 0.45);
+
+      border-radius: 10px;
+
       font-size: 16px;
       font-weight: bold;
-      background: rgba(0, 0, 0, 0.45);
-      border-radius: 10px;
+
       pointer-events: none;
-      user-select: none;
     }
 
+    /*
+      画面右上のリスタートボタンです。
+    */
     #restart-button {
       position: absolute;
       top: 12px;
       right: 12px;
       z-index: 10;
+
       min-width: 86px;
       min-height: 42px;
+
       border: 2px solid white;
       border-radius: 10px;
+
       color: white;
       background: rgba(0, 0, 0, 0.5);
+
       font-size: 15px;
       font-weight: bold;
+
       cursor: pointer;
+      touch-action: manipulation;
     }
 
+    /*
+      クリア時の画面全体を覆う表示です。
+    */
     #message-overlay {
       position: absolute;
       inset: 0;
       z-index: 20;
+
       display: none;
       align-items: center;
       justify-content: center;
+
       background: rgba(0, 0, 0, 0.58);
     }
 
     #message-panel {
       min-width: 270px;
       padding: 26px;
+
       color: white;
-      text-align: center;
       background: rgba(20, 20, 20, 0.92);
+
       border: 3px solid white;
       border-radius: 16px;
+
+      text-align: center;
     }
 
     #message-title {
@@ -146,44 +176,58 @@
     #message-restart-button {
       min-width: 150px;
       min-height: 48px;
+
       border: 0;
       border-radius: 12px;
+
       color: #222;
       background: white;
+
       font-size: 17px;
       font-weight: bold;
+
       cursor: pointer;
+      touch-action: manipulation;
     }
 
+    /*
+      スマートフォン・タブレット用の操作領域です。
+    */
     #touch-controls {
       position: absolute;
       inset: 0;
       z-index: 15;
+
       display: none;
+
       pointer-events: none;
-      user-select: none;
     }
 
     .control-group {
       position: absolute;
       bottom: 22px;
+
       display: flex;
       gap: 12px;
+
       pointer-events: auto;
     }
 
+    /*
+      左右ボタンは画面左下に配置します。
+    */
     #move-controls {
       left: 20px;
+      align-items: flex-end;
     }
 
+    /*
+      ジャンプボタンを上、
+      ダッシュボタンを右下に配置します。
+    */
     #action-controls {
       right: 20px;
 
-      /*
-        ジャンプを上、
-        ダッシュを下に並べます。
-      */
-      display: flex;
       flex-direction: column;
       align-items: flex-end;
     }
@@ -192,18 +236,27 @@
       display: flex;
       align-items: center;
       justify-content: center;
+
       width: 78px;
       height: 78px;
+
       border: 3px solid rgba(255, 255, 255, 0.9);
       border-radius: 50%;
+
       color: white;
       background: rgba(0, 0, 0, 0.38);
+
       font-size: 27px;
       font-weight: bold;
+
       box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+
       touch-action: none;
     }
 
+    /*
+      ボタンを押している間の見た目です。
+    */
     .touch-button.active {
       transform: scale(0.94);
       background: rgba(255, 255, 255, 0.45);
@@ -221,15 +274,19 @@
       font-size: 18px;
     }
 
+    /*
+      タッチ操作端末または幅900px以下の画面で、
+      仮想ボタンを表示します。
+    */
     @media (pointer: coarse), (max-width: 900px) {
       #touch-controls {
         display: block;
       }
 
       #hud {
-        font-size: 13px;
         gap: 8px;
         padding: 6px 8px;
+        font-size: 13px;
       }
 
       #restart-button {
@@ -239,6 +296,9 @@
       }
     }
 
+    /*
+      高さの小さい画面向けの設定です。
+    */
     @media (max-height: 500px) {
       .control-group {
         bottom: 12px;
@@ -261,56 +321,42 @@
     }
 
     /*
-  タブレット向けの操作ボタン設定です。
-  画面幅768px以上かつタッチ操作対応端末に適用します。
-*/
-@media (pointer: coarse) and (min-width: 768px) {
-  /*
-    左右ボタンの位置を、画面端から少し離します。
-  */
-  #move-controls {
-    left: 32px;
-    bottom: 32px;
-    gap: 20px;
-  }
+      タブレット向けの設定です。
+    */
+    @media (pointer: coarse) and (min-width: 768px) {
+      #move-controls {
+        left: 32px;
+        bottom: 32px;
+        gap: 20px;
+      }
 
-  /*
-    ジャンプ・ダッシュボタンの位置を調整します。
-  */
-  #action-controls {
-    right: 32px;
-    bottom: 32px;
-    gap: 20px;
-  }
+      #action-controls {
+        right: 32px;
+        bottom: 32px;
+        gap: 20px;
+      }
 
-  /*
-    タブレットでは、すべての操作ボタンを大きくします。
-  */
-  .touch-button {
-    width: 110px;
-    height: 110px;
-    border-width: 4px;
-    font-size: 38px;
-  }
+      .touch-button {
+        width: 110px;
+        height: 110px;
 
-  /*
-    ダッシュボタンは右下に配置します。
-  */
-  #dash-button {
-    width: 110px;
-    height: 110px;
-    font-size: 21px;
-  }
+        border-width: 4px;
 
-  /*
-    ジャンプボタンはダッシュボタンより少し大きくします。
-  */
-  #jump-button {
-    width: 126px;
-    height: 126px;
-    font-size: 23px;
-  }
-}
+        font-size: 38px;
+      }
+
+      #dash-button {
+        width: 110px;
+        height: 110px;
+        font-size: 21px;
+      }
+
+      #jump-button {
+        width: 126px;
+        height: 126px;
+        font-size: 23px;
+      }
+    }
   </style>
 </head>
 
@@ -319,41 +365,84 @@
     <canvas id="game-canvas"></canvas>
 
     <div id="hud">
-      <span>スコア: <span id="score-value">0</span></span>
-      <span>コイン: <span id="coin-value">0</span></span>
-      <span>ミス: <span id="miss-value">0</span></span>
+      <span>
+        スコア:
+        <span id="score-value">0</span>
+      </span>
+
+      <span>
+        コイン:
+        <span id="coin-value">0</span>
+      </span>
+
+      <span>
+        ミス:
+        <span id="miss-value">0</span>
+      </span>
     </div>
 
-    <button id="restart-button" type="button">
+    <button
+      id="restart-button"
+      type="button"
+    >
       リスタート
     </button>
 
     <div id="message-overlay">
       <div id="message-panel">
-        <h1 id="message-title">CLEAR</h1>
+        <h1 id="message-title">
+          CLEAR
+        </h1>
+
         <p id="message-result"></p>
 
-        <button id="message-restart-button" type="button">
+        <button
+          id="message-restart-button"
+          type="button"
+        >
           もう一度遊ぶ
         </button>
       </div>
     </div>
 
     <div id="touch-controls">
-      <div id="move-controls" class="control-group">
-        <div id="left-button" class="touch-button">←</div>
-        <div id="right-button" class="touch-button">→</div>
+      <div
+        id="move-controls"
+        class="control-group"
+      >
+        <div
+          id="left-button"
+          class="touch-button"
+        >
+          ←
+        </div>
+
+        <div
+          id="right-button"
+          class="touch-button"
+        >
+          →
+        </div>
       </div>
 
-      <div id="action-controls" class="control-group">
-    <div id="jump-button" class="touch-button">
-        ジャンプ
-    </div>
+      <div
+        id="action-controls"
+        class="control-group"
+      >
+        <div
+          id="jump-button"
+          class="touch-button"
+        >
+          ジャンプ
+        </div>
 
-    <div id="dash-button" class="touch-button">
-        ダッシュ
-    </div>
-</div>
+        <div
+          id="dash-button"
+          class="touch-button"
+        >
+          ダッシュ
+        </div>
+      </div>
     </div>
   </div>
 
@@ -364,54 +453,125 @@
     // HTML要素
     // =========================================================
 
-    const canvas = document.getElementById("game-canvas");
-    const context = canvas.getContext("2d");
+    const canvas =
+      document.getElementById("game-canvas");
 
-    const scoreValue = document.getElementById("score-value");
-    const coinValue = document.getElementById("coin-value");
-    const missValue = document.getElementById("miss-value");
+    const context =
+      canvas.getContext("2d");
 
-    const restartButton = document.getElementById("restart-button");
+    const scoreValue =
+      document.getElementById("score-value");
 
-    const messageOverlay = document.getElementById("message-overlay");
-    const messageTitle = document.getElementById("message-title");
-    const messageResult = document.getElementById("message-result");
+    const coinValue =
+      document.getElementById("coin-value");
+
+    const missValue =
+      document.getElementById("miss-value");
+
+    const restartButton =
+      document.getElementById("restart-button");
+
+    const messageOverlay =
+      document.getElementById("message-overlay");
+
+    const messageTitle =
+      document.getElementById("message-title");
+
+    const messageResult =
+      document.getElementById("message-result");
+
     const messageRestartButton =
-      document.getElementById("message-restart-button");
+      document.getElementById(
+        "message-restart-button"
+      );
 
-    const leftButton = document.getElementById("left-button");
-    const rightButton = document.getElementById("right-button");
-    const jumpButton = document.getElementById("jump-button");
-    const dashButton = document.getElementById("dash-button");
+    const leftButton =
+      document.getElementById("left-button");
+
+    const rightButton =
+      document.getElementById("right-button");
+
+    const jumpButton =
+      document.getElementById("jump-button");
+
+    const dashButton =
+      document.getElementById("dash-button");
 
     // =========================================================
     // 基本設定
     // =========================================================
 
+    /*
+      タイル1マスの大きさです。
+    */
     const TILE_SIZE = 48;
 
+    /*
+      重力と最大落下速度です。
+    */
     const GRAVITY = 1900;
     const MAX_FALL_SPEED = 900;
 
+    /*
+      通常移動とダッシュの最高速度です。
+    */
     const WALK_MAX_SPEED = 240;
     const DASH_MAX_SPEED = 390;
 
+    /*
+      地上と空中での加速度です。
+    */
     const GROUND_ACCELERATION = 1800;
     const GROUND_DECELERATION = 2200;
     const AIR_ACCELERATION = 850;
 
+    /*
+      ジャンプ開始時の上向き速度です。
+    */
     const JUMP_POWER = 760;
+
+    /*
+      小・中・大ジャンプの判定時間です。
+    */
+    const SMALL_JUMP_RELEASE_TIME = 0.10;
+    const LARGE_JUMP_HOLD_TIME = 0.22;
+
+    /*
+      小ジャンプと中ジャンプ時に残す上向き速度です。
+    */
+    const SMALL_JUMP_RELEASE_SPEED = 280;
+    const MEDIUM_JUMP_RELEASE_SPEED = 480;
+
+    /*
+      敵を踏んだときの跳ね返り速度です。
+    */
     const STOMP_BOUNCE_POWER = 390;
 
+    /*
+      着地直前のジャンプ入力を保存する時間です。
+    */
+    const JUMP_BUFFER_TIME = 0.15;
+
+    /*
+      足場を離れた直後でもジャンプできる時間です。
+    */
+    const COYOTE_TIME = 0.10;
+
+    /*
+      プレイヤーの大きさです。
+    */
     const PLAYER_WIDTH = 32;
     const PLAYER_HEIGHT = 42;
 
+    /*
+      敵の大きさと移動速度です。
+    */
     const ENEMY_WIDTH = 34;
     const ENEMY_HEIGHT = 30;
     const ENEMY_SPEED = 75;
 
     // =========================================================
-    // ステージ
+    // ステージデータ
     // =========================================================
 
     /*
@@ -426,22 +586,22 @@
     */
 
     const STAGE_TEMPLATE = [
-  ".........................................................................................",
-  ".........................................................................................",
-  ".........................................................................................",
-  ".........................................................................................",
-  "....................C.............................................C......................",
-  ".........................................................................................",
-  "..............###..................C........................###..........................",
-  ".................E....................................E..................................",
-  "................................######.........................C.........................",
-  ".......C....................C............................................................",
-  "..................................................#####......................C...........",
-  ".....#####.............########...........................................#####..........",
-  "..P........E................................E.......................................G....",
-  "#############..##################..#################..##############..###################",
-  "#############..##################..#################..##############..###################"
-];
+      ".........................................................................................",
+      ".........................................................................................",
+      ".........................................................................................",
+      ".........................................................................................",
+      "....................C.............................................C......................",
+      ".........................................................................................",
+      "..............###..................C........................###..........................",
+      ".................E....................................E..................................",
+      "................................######.........................C.........................",
+      ".......C....................C............................................................",
+      "..................................................#####......................C...........",
+      ".....#####.............########...........................................#####..........",
+      "..P........E................................E.......................................G....",
+      "#############..##################..#################..##############..###################",
+      "#############..##################..#################..##############..###################"
+    ];
 
     let stageRows = [];
     let stageWidth = 0;
@@ -468,6 +628,36 @@
 
     let lastTime = 0;
 
+    /*
+      Canvasの表示上の幅と高さです。
+    */
+    let viewportWidth = window.innerWidth;
+    let viewportHeight = window.innerHeight;
+
+    // =========================================================
+    // ジャンプ状態
+    // =========================================================
+
+    /*
+      ジャンプ入力を保存するタイマーです。
+    */
+    let jumpBufferTimer = 0;
+
+    /*
+      足場を離れた直後のジャンプ猶予時間です。
+    */
+    let coyoteTimer = 0;
+
+    /*
+      小・中・大ジャンプの判定中かどうかです。
+    */
+    let variableJumpActive = false;
+
+    /*
+      ジャンプボタンを押し続けている時間です。
+    */
+    let jumpHoldTimer = 0;
+
     // =========================================================
     // 入力状態
     // =========================================================
@@ -477,30 +667,42 @@
       right: false,
       jump: false,
       jumpPressed: false,
+      jumpReleased: false,
       dash: false
     };
 
     // =========================================================
-    // Audio
+    // 効果音
     // =========================================================
 
     let audioContext = null;
 
+    /*
+      初回操作時にAudioContextを作成します。
+    */
     function ensureAudioContext() {
       if (!audioContext) {
         const AudioContextClass =
-          window.AudioContext || window.webkitAudioContext;
+          window.AudioContext ||
+          window.webkitAudioContext;
 
         if (AudioContextClass) {
-          audioContext = new AudioContextClass();
+          audioContext =
+            new AudioContextClass();
         }
       }
 
-      if (audioContext && audioContext.state === "suspended") {
+      if (
+        audioContext &&
+        audioContext.state === "suspended"
+      ) {
         audioContext.resume();
       }
     }
 
+    /*
+      指定した周波数の音を再生します。
+    */
     function playTone({
       frequency = 440,
       duration = 0.12,
@@ -514,22 +716,35 @@
         return;
       }
 
-      const now = audioContext.currentTime;
+      const now =
+        audioContext.currentTime;
 
-      const oscillator = audioContext.createOscillator();
-      const gain = audioContext.createGain();
+      const oscillator =
+        audioContext.createOscillator();
+
+      const gain =
+        audioContext.createGain();
 
       oscillator.type = type;
-      oscillator.frequency.setValueAtTime(frequency, now);
+
+      oscillator.frequency.setValueAtTime(
+        frequency,
+        now
+      );
 
       if (endFrequency !== null) {
-        oscillator.frequency.exponentialRampToValueAtTime(
-          Math.max(1, endFrequency),
-          now + duration
-        );
+        oscillator.frequency
+          .exponentialRampToValueAtTime(
+            Math.max(1, endFrequency),
+            now + duration
+          );
       }
 
-      gain.gain.setValueAtTime(volume, now);
+      gain.gain.setValueAtTime(
+        volume,
+        now
+      );
+
       gain.gain.exponentialRampToValueAtTime(
         0.0001,
         now + duration
@@ -606,24 +821,26 @@
     // 初期化
     // =========================================================
 
-    function initializeGame(resetMissCount = true) {
-     /*
-      リスタート前に残っている入力状態と、
-      タッチボタンの押下状態を解除します。
+    /*
+      ゲームを最初の状態へ戻します。
     */
-    if (typeof resetAllInputs === "function") {
+    function initializeGame(
+      resetMissCount = true
+    ) {
       resetAllInputs();
-    } else {
-      input.left = false;
-      input.right = false;
-      input.jump = false;
-      input.jumpPressed = false;
-      input.dash = false;
-    }
-      stageRows = STAGE_TEMPLATE.map(row => row.split(""));
 
-      stageWidth = stageRows[0].length * TILE_SIZE;
-      stageHeight = stageRows.length * TILE_SIZE;
+      stageRows =
+        STAGE_TEMPLATE.map(
+          row => row.split("")
+        );
+
+      stageWidth =
+        stageRows[0].length *
+        TILE_SIZE;
+
+      stageHeight =
+        stageRows.length *
+        TILE_SIZE;
 
       enemies = [];
       coins = [];
@@ -639,30 +856,75 @@
       gameCleared = false;
       playerDisabled = false;
       missTimer = 0;
+
       cameraX = 0;
 
-      let startX = TILE_SIZE * 2;
-      let startY = TILE_SIZE * 10;
+      jumpBufferTimer = 0;
+      coyoteTimer = 0;
+      variableJumpActive = false;
+      jumpHoldTimer = 0;
 
-      for (let row = 0; row < stageRows.length; row += 1) {
-        for (let column = 0; column < stageRows[row].length; column += 1) {
-          const symbol = stageRows[row][column];
-          const tileX = column * TILE_SIZE;
-          const tileY = row * TILE_SIZE;
+      particles.length = 0;
+
+      let startX =
+        TILE_SIZE * 2;
+
+      let startY =
+        TILE_SIZE * 10;
+
+      /*
+        ステージ内の記号から、
+        プレイヤー・敵・コイン・ゴールを作成します。
+      */
+      for (
+        let row = 0;
+        row < stageRows.length;
+        row += 1
+      ) {
+        for (
+          let column = 0;
+          column < stageRows[row].length;
+          column += 1
+        ) {
+          const symbol =
+            stageRows[row][column];
+
+          const tileX =
+            column * TILE_SIZE;
+
+          const tileY =
+            row * TILE_SIZE;
 
           if (symbol === "P") {
-            startX = tileX + (TILE_SIZE - PLAYER_WIDTH) / 2;
-            startY = tileY + TILE_SIZE - PLAYER_HEIGHT;
+            startX =
+              tileX +
+              (TILE_SIZE - PLAYER_WIDTH) / 2;
+
+            startY =
+              tileY +
+              TILE_SIZE -
+              PLAYER_HEIGHT;
+
             stageRows[row][column] = ".";
           }
 
           if (symbol === "C") {
             coins.push({
-              x: tileX + TILE_SIZE / 2,
-              y: tileY + TILE_SIZE / 2,
+              x:
+                tileX +
+                TILE_SIZE / 2,
+
+              y:
+                tileY +
+                TILE_SIZE / 2,
+
               radius: 11,
               collected: false,
-              animationTime: Math.random() * Math.PI * 2
+
+              animationTime:
+                Math.random() *
+                Math.PI *
+                2
             });
 
             stageRows[row][column] = ".";
@@ -670,12 +932,21 @@
 
           if (symbol === "E") {
             enemies.push({
-              x: tileX + (TILE_SIZE - ENEMY_WIDTH) / 2,
-              y: tileY + TILE_SIZE - ENEMY_HEIGHT,
+              x:
+                tileX +
+                (TILE_SIZE - ENEMY_WIDTH) / 2,
+
+              y:
+                tileY +
+                TILE_SIZE -
+                ENEMY_HEIGHT,
+
               width: ENEMY_WIDTH,
               height: ENEMY_HEIGHT,
+
               velocityX: -ENEMY_SPEED,
               velocityY: 0,
+
               direction: -1,
               alive: true,
               grounded: false,
@@ -687,10 +958,15 @@
 
           if (symbol === "G") {
             goal = {
-              x: tileX + TILE_SIZE / 2,
+              x:
+                tileX +
+                TILE_SIZE / 2,
+
               y: tileY,
+
               width: 22,
               height: TILE_SIZE,
+
               reached: false
             };
 
@@ -702,30 +978,41 @@
       player = {
         x: startX,
         y: startY,
+
         startX,
         startY,
+
         width: PLAYER_WIDTH,
         height: PLAYER_HEIGHT,
+
         velocityX: 0,
         velocityY: 0,
+
         grounded: false,
+
         facing: 1,
         running: false,
         dashing: false,
+
         animationTime: 0,
-        dustTimer: 0,
-        invincibleTimer: 0
+        dustTimer: 0
       };
 
       hideMessage();
       updateHud();
     }
 
+    /*
+      ミス後にステージを再開します。
+    */
     function restartAfterMiss() {
-      const currentMissCount = missCount;
+      const currentMissCount =
+        missCount;
 
       initializeGame(false);
-      missCount = currentMissCount;
+
+      missCount =
+        currentMissCount;
 
       updateHud();
     }
@@ -734,66 +1021,101 @@
     // ステージ判定
     // =========================================================
 
-    function isSolidTile(column, row) {
-  /*
-    ステージ上端より上は空間として扱います。
-  */
-  if (row < 0) {
-    return false;
-  }
+    /*
+      指定したタイルが地面か判定します。
+    */
+    function isSolidTile(
+      column,
+      row
+    ) {
+      /*
+        ステージ上端より上は空間です。
+      */
+      if (row < 0) {
+        return false;
+      }
 
-  /*
-    ステージ最下部より下も空間として扱います。
-    これにより奈落へ落下できます。
-  */
-  if (row >= stageRows.length) {
-    return false;
-  }
+      /*
+        ステージ下端より下も空間です。
+        奈落へ落下できるようにします。
+      */
+      if (row >= stageRows.length) {
+        return false;
+      }
 
-  /*
-    ステージ左右の外側は壁として扱います。
-  */
-  if (
-    column < 0 ||
-    column >= stageRows[0].length
-  ) {
-    return true;
-  }
+      /*
+        ステージ左右の外側は壁です。
+      */
+      if (
+        column < 0 ||
+        column >= stageRows[0].length
+      ) {
+        return true;
+      }
 
-  return stageRows[row][column] === "#";
-}
-
-    function getTileRectangle(column, row) {
-      return {
-        x: column * TILE_SIZE,
-        y: row * TILE_SIZE,
-        width: TILE_SIZE,
-        height: TILE_SIZE
-      };
-    }
-
-    function rectanglesOverlap(a, b) {
       return (
-        a.x < b.x + b.width &&
-        a.x + a.width > b.x &&
-        a.y < b.y + b.height &&
-        a.y + a.height > b.y
+        stageRows[row][column] === "#"
       );
     }
 
-    function circleRectangleOverlap(circle, rectangle) {
-      const nearestX = Math.max(
-        rectangle.x,
-        Math.min(circle.x, rectangle.x + rectangle.width)
-      );
+    /*
+      長方形同士が重なっているか判定します。
+    */
+    function rectanglesOverlap(
+      rectangleA,
+      rectangleB
+    ) {
+      return (
+        rectangleA.x <
+          rectangleB.x +
+          rectangleB.width &&
 
-      const nearestY = Math.max(
-        rectangle.y,
-        Math.min(circle.y, rectangle.y + rectangle.height)
-      );
+        rectangleA.x +
+          rectangleA.width >
+          rectangleB.x &&
 
-      const differenceX = circle.x - nearestX;
-      const differenceY = circle.y - nearestY;
+        rectangleA.y <
+          rectangleB.y +
+          rectangleB.height &&
+
+        rectangleA.y +
+          rectangleA.height >
+          rectangleB.y
+      );
+    }
+
+    /*
+      円と長方形が重なっているか判定します。
+    */
+    function circleRectangleOverlap(
+      circle,
+      rectangle
+    ) {
+      const nearestX =
+        Math.max(
+          rectangle.x,
+          Math.min(
+            circle.x,
+            rectangle.x +
+              rectangle.width
+          )
+        );
+
+      const nearestY =
+        Math.max(
+          rectangle.y,
+          Math.min(
+            circle.y,
+            rectangle.y +
+              rectangle.height
+          )
+        );
+
+      const differenceX =
+        circle.x - nearestX;
+
+      const differenceY =
+        circle.y - nearestY;
 
       return (
         differenceX * differenceX +
@@ -806,31 +1128,82 @@
     // 物理処理
     // =========================================================
 
-    function moveEntityHorizontally(entity, deltaX) {
+    /*
+      キャラクターを横方向へ移動させます。
+    */
+    function moveEntityHorizontally(
+      entity,
+      deltaX
+    ) {
       entity.x += deltaX;
 
-      const leftColumn = Math.floor(entity.x / TILE_SIZE);
-      const rightColumn = Math.floor(
-        (entity.x + entity.width - 1) / TILE_SIZE
-      );
+      const leftColumn =
+        Math.floor(
+          entity.x /
+          TILE_SIZE
+        );
 
-      const topRow = Math.floor(entity.y / TILE_SIZE);
-      const bottomRow = Math.floor(
-        (entity.y + entity.height - 1) / TILE_SIZE
-      );
+      const rightColumn =
+        Math.floor(
+          (
+            entity.x +
+            entity.width -
+            1
+          ) /
+          TILE_SIZE
+        );
 
-      for (let row = topRow; row <= bottomRow; row += 1) {
-        if (deltaX > 0 && isSolidTile(rightColumn, row)) {
+      const topRow =
+        Math.floor(
+          entity.y /
+          TILE_SIZE
+        );
+
+      const bottomRow =
+        Math.floor(
+          (
+            entity.y +
+            entity.height -
+            1
+          ) /
+          TILE_SIZE
+        );
+
+      for (
+        let row = topRow;
+        row <= bottomRow;
+        row += 1
+      ) {
+        if (
+          deltaX > 0 &&
+          isSolidTile(
+            rightColumn,
+            row
+          )
+        ) {
           entity.x =
-            rightColumn * TILE_SIZE - entity.width;
+            rightColumn *
+              TILE_SIZE -
+            entity.width;
+
           entity.velocityX = 0;
+
           return true;
         }
 
-        if (deltaX < 0 && isSolidTile(leftColumn, row)) {
+        if (
+          deltaX < 0 &&
+          isSolidTile(
+            leftColumn,
+            row
+          )
+        ) {
           entity.x =
-            (leftColumn + 1) * TILE_SIZE;
+            (leftColumn + 1) *
+            TILE_SIZE;
+
           entity.velocityX = 0;
+
           return true;
         }
       }
@@ -838,37 +1211,84 @@
       return false;
     }
 
-    function moveEntityVertically(entity, deltaY) {
+    /*
+      キャラクターを縦方向へ移動させます。
+    */
+    function moveEntityVertically(
+      entity,
+      deltaY
+    ) {
       entity.y += deltaY;
       entity.grounded = false;
 
-      const leftColumn = Math.floor(entity.x / TILE_SIZE);
-      const rightColumn = Math.floor(
-        (entity.x + entity.width - 1) / TILE_SIZE
-      );
+      const leftColumn =
+        Math.floor(
+          entity.x /
+          TILE_SIZE
+        );
 
-      const topRow = Math.floor(entity.y / TILE_SIZE);
-      const bottomRow = Math.floor(
-        (entity.y + entity.height - 1) / TILE_SIZE
-      );
+      const rightColumn =
+        Math.floor(
+          (
+            entity.x +
+            entity.width -
+            1
+          ) /
+          TILE_SIZE
+        );
+
+      const topRow =
+        Math.floor(
+          entity.y /
+          TILE_SIZE
+        );
+
+      const bottomRow =
+        Math.floor(
+          (
+            entity.y +
+            entity.height -
+            1
+          ) /
+          TILE_SIZE
+        );
 
       for (
         let column = leftColumn;
         column <= rightColumn;
         column += 1
       ) {
-        if (deltaY > 0 && isSolidTile(column, bottomRow)) {
+        if (
+          deltaY > 0 &&
+          isSolidTile(
+            column,
+            bottomRow
+          )
+        ) {
           entity.y =
-            bottomRow * TILE_SIZE - entity.height;
+            bottomRow *
+              TILE_SIZE -
+            entity.height;
+
           entity.velocityY = 0;
           entity.grounded = true;
+
           return true;
         }
 
-        if (deltaY < 0 && isSolidTile(column, topRow)) {
+        if (
+          deltaY < 0 &&
+          isSolidTile(
+            column,
+            topRow
+          )
+        ) {
           entity.y =
-            (topRow + 1) * TILE_SIZE;
+            (topRow + 1) *
+            TILE_SIZE;
+
           entity.velocityY = 0;
+
           return true;
         }
       }
@@ -876,102 +1296,108 @@
       return false;
     }
 
-    function approach(currentValue, targetValue, amount) {
-      if (currentValue < targetValue) {
-        return Math.min(currentValue + amount, targetValue);
+    /*
+      数値を目標値へ徐々に近付けます。
+    */
+    function approach(
+      currentValue,
+      targetValue,
+      amount
+    ) {
+      if (
+        currentValue <
+        targetValue
+      ) {
+        return Math.min(
+          currentValue + amount,
+          targetValue
+        );
       }
 
-      if (currentValue > targetValue) {
-        return Math.max(currentValue - amount, targetValue);
+      if (
+        currentValue >
+        targetValue
+      ) {
+        return Math.max(
+          currentValue - amount,
+          targetValue
+        );
       }
 
       return targetValue;
     }
 
     // =========================================================
-// ブラウザのズーム操作を防止
-// =========================================================
-
-let lastNonButtonTouchEndTime = 0;
-
-/*
-  ボタン以外の場所を素早く2回タップした際に、
-  Safariなどが画面を拡大するのを防止します。
-*/
-document.addEventListener(
-  "touchend",
-  event => {
-    /*
-      リスタートボタンや操作ボタンへのタップは、
-      通常どおり処理します。
-    */
-    const target = event.target;
-
-    if (
-      target instanceof Element &&
-      target.closest(
-        "button, .touch-button"
-      )
-    ) {
-      return;
-    }
-
-    const currentTime = Date.now();
-    const elapsedTime =
-      currentTime - lastNonButtonTouchEndTime;
+    // ジャンプ処理
+    // =========================================================
 
     /*
-      前回のタップから350ミリ秒以内なら、
-      ダブルタップとして標準動作を止めます。
+      プレイヤーのジャンプを開始します。
     */
-    if (elapsedTime > 0 && elapsedTime < 350) {
-      event.preventDefault();
+    function startPlayerJump() {
+      player.velocityY =
+        -JUMP_POWER;
+
+      player.grounded = false;
+
+      variableJumpActive = true;
+      jumpHoldTimer = 0;
+
+      jumpBufferTimer = 0;
+      coyoteTimer = 0;
+
+      playJumpSound();
     }
 
-    lastNonButtonTouchEndTime = currentTime;
-  },
-  {
-    passive: false
-  }
-);
+    /*
+      ボタンを離した時間に応じて、
+      小ジャンプまたは中ジャンプへ調整します。
+    */
+    function finishVariableJump() {
+      if (!variableJumpActive) {
+        return;
+      }
 
-/*
-  ダブルクリックとして認識された場合も、
-  ボタン以外では標準のズーム動作を止めます。
-*/
-document.addEventListener(
-  "dblclick",
-  event => {
-    const target = event.target;
+      /*
+        すでに落下中なら調整しません。
+      */
+      if (player.velocityY >= 0) {
+        variableJumpActive = false;
+        return;
+      }
 
-    if (
-      target instanceof Element &&
-      target.closest(
-        "button, .touch-button"
-      )
-    ) {
-      return;
+      /*
+        0.10秒未満なら小ジャンプです。
+      */
+      if (
+        jumpHoldTimer <
+        SMALL_JUMP_RELEASE_TIME
+      ) {
+        player.velocityY =
+          Math.max(
+            player.velocityY,
+            -SMALL_JUMP_RELEASE_SPEED
+          );
+      /*
+        0.22秒未満なら中ジャンプです。
+      */
+      } else if (
+        jumpHoldTimer <
+        LARGE_JUMP_HOLD_TIME
+      ) {
+        player.velocityY =
+          Math.max(
+            player.velocityY,
+            -MEDIUM_JUMP_RELEASE_SPEED
+          );
+      }
+
+      /*
+        0.22秒以上押した場合は速度を変更せず、
+        大ジャンプになります。
+      */
+      variableJumpActive = false;
     }
-
-    event.preventDefault();
-  },
-  {
-    passive: false
-  }
-);
-
-/*
-  iPhone・iPadでのピンチズーム開始も防止します。
-*/
-document.addEventListener(
-  "gesturestart",
-  event => {
-    event.preventDefault();
-  },
-  {
-    passive: false
-  }
-);
 
     // =========================================================
     // プレイヤー更新
@@ -982,16 +1408,32 @@ document.addEventListener(
         return;
       }
 
+      /*
+        ミス演出中の処理です。
+      */
       if (playerDisabled) {
-        player.velocityY = Math.min(
-          player.velocityY + GRAVITY * deltaTime,
-          MAX_FALL_SPEED
-        );
+        player.velocityY =
+          Math.min(
+            player.velocityY +
+              GRAVITY *
+              deltaTime,
 
-        player.x += player.velocityX * deltaTime;
-        player.y += player.velocityY * deltaTime;
+            MAX_FALL_SPEED
+          );
 
-        missTimer -= deltaTime;
+        player.x +=
+          player.velocityX *
+          deltaTime;
+
+        player.y +=
+          player.velocityY *
+          deltaTime;
+
+        player.animationTime +=
+          deltaTime;
+
+        missTimer -=
+          deltaTime;
 
         if (missTimer <= 0) {
           restartAfterMiss();
@@ -1010,90 +1452,236 @@ document.addEventListener(
         horizontalInput += 1;
       }
 
-      player.dashing = input.dash && horizontalInput !== 0;
-      player.running = horizontalInput !== 0;
+      player.dashing =
+        input.dash &&
+        horizontalInput !== 0;
+
+      player.running =
+        horizontalInput !== 0;
 
       const maximumSpeed =
-        player.dashing ? DASH_MAX_SPEED : WALK_MAX_SPEED;
+        player.dashing
+          ? DASH_MAX_SPEED
+          : WALK_MAX_SPEED;
 
+      /*
+        左右移動処理です。
+      */
       if (horizontalInput !== 0) {
-        player.facing = horizontalInput;
+        player.facing =
+          horizontalInput;
 
         const targetVelocityX =
-          horizontalInput * maximumSpeed;
+          horizontalInput *
+          maximumSpeed;
 
         const acceleration =
           player.grounded
             ? GROUND_ACCELERATION
             : AIR_ACCELERATION;
 
-        player.velocityX = approach(
-          player.velocityX,
-          targetVelocityX,
-          acceleration * deltaTime
-        );
-      } else {
-        if (player.grounded) {
-          player.velocityX = approach(
+        player.velocityX =
+          approach(
+            player.velocityX,
+            targetVelocityX,
+            acceleration *
+              deltaTime
+          );
+      } else if (player.grounded) {
+        player.velocityX =
+          approach(
             player.velocityX,
             0,
-            GROUND_DECELERATION * deltaTime
+            GROUND_DECELERATION *
+              deltaTime
           );
-        }
       }
 
-      if (
-        input.jumpPressed &&
-        player.grounded
-      ) {
-        player.velocityY = -JUMP_POWER;
-        player.grounded = false;
-
-        playJumpSound();
+      /*
+        ジャンプボタンが押された瞬間の入力を保存します。
+      */
+      if (input.jumpPressed) {
+        jumpBufferTimer =
+          JUMP_BUFFER_TIME;
       }
 
       input.jumpPressed = false;
 
-      player.velocityY = Math.min(
-        player.velocityY + GRAVITY * deltaTime,
-        MAX_FALL_SPEED
-      );
+      /*
+        ジャンプ入力の保存時間を減らします。
+      */
+      if (jumpBufferTimer > 0) {
+        jumpBufferTimer -=
+          deltaTime;
+      }
 
+      /*
+        地面にいる間はコヨーテタイムを回復します。
+      */
+      if (player.grounded) {
+        coyoteTimer =
+          COYOTE_TIME;
+      } else if (coyoteTimer > 0) {
+        coyoteTimer -=
+          deltaTime;
+      }
+
+      /*
+        ジャンプ可能ならジャンプを開始します。
+      */
+      if (
+        jumpBufferTimer > 0 &&
+        coyoteTimer > 0
+      ) {
+        startPlayerJump();
+      }
+
+      /*
+        ジャンプボタンを押している時間を計測します。
+      */
+      if (
+        variableJumpActive &&
+        input.jump
+      ) {
+        jumpHoldTimer +=
+          deltaTime;
+
+        jumpHoldTimer =
+          Math.min(
+            jumpHoldTimer,
+            LARGE_JUMP_HOLD_TIME
+          );
+      }
+
+      /*
+        ジャンプボタンを離した瞬間に、
+        小・中・大ジャンプを決定します。
+      */
+      if (input.jumpReleased) {
+        finishVariableJump();
+        input.jumpReleased = false;
+      }
+
+      /*
+        重力を加えます。
+      */
+      player.velocityY =
+        Math.min(
+          player.velocityY +
+            GRAVITY *
+            deltaTime,
+
+          MAX_FALL_SPEED
+        );
+
+      /*
+        横方向へ移動します。
+      */
       moveEntityHorizontally(
         player,
-        player.velocityX * deltaTime
+        player.velocityX *
+          deltaTime
       );
 
+      /*
+        縦方向へ移動します。
+      */
       moveEntityVertically(
         player,
-        player.velocityY * deltaTime
+        player.velocityY *
+          deltaTime
       );
 
+      /*
+        着地した場合の処理です。
+      */
+      if (player.grounded) {
+        coyoteTimer =
+          COYOTE_TIME;
+
+        variableJumpActive = false;
+        jumpHoldTimer = 0;
+      }
+
+      /*
+        着地直前にジャンプが押されていた場合は、
+        着地した瞬間にジャンプします。
+      */
+      if (
+        player.grounded &&
+        jumpBufferTimer > 0
+      ) {
+        startPlayerJump();
+
+        /*
+          すでにボタンを離していた場合は、
+          小ジャンプとして処理します。
+        */
+        if (!input.jump) {
+          finishVariableJump();
+        }
+      }
+
+      /*
+        頂点を越えて落下し始めた場合は、
+        可変ジャンプ処理を終了します。
+      */
+      if (
+        variableJumpActive &&
+        player.velocityY >= 0
+      ) {
+        variableJumpActive = false;
+      }
+
+      /*
+        ステージ左右の外へ出ないようにします。
+      */
       if (player.x < 0) {
         player.x = 0;
         player.velocityX = 0;
       }
 
-      if (player.x + player.width > stageWidth) {
-        player.x = stageWidth - player.width;
+      if (
+        player.x +
+        player.width >
+        stageWidth
+      ) {
+        player.x =
+          stageWidth -
+          player.width;
+
         player.velocityX = 0;
       }
 
-      player.animationTime += deltaTime;
+      player.animationTime +=
+        deltaTime;
 
+      /*
+        ダッシュ中の土煙を作成します。
+      */
       if (
         player.dashing &&
         player.grounded &&
-        Math.abs(player.velocityX) > WALK_MAX_SPEED
+        Math.abs(
+          player.velocityX
+        ) >
+          WALK_MAX_SPEED
       ) {
-        player.dustTimer -= deltaTime;
+        player.dustTimer -=
+          deltaTime;
 
-        if (player.dustTimer <= 0) {
+        if (
+          player.dustTimer <= 0
+        ) {
           player.dustTimer = 0.08;
+
           createDustParticle(
-            player.x + player.width / 2 -
+            player.x +
+              player.width / 2 -
               player.facing * 16,
-            player.y + player.height
+
+            player.y +
+              player.height
           );
         }
       } else {
@@ -1101,12 +1689,14 @@ document.addEventListener(
       }
 
       /*
-       プレイヤーの足元がステージ下端に達した場合は、
-       奈落へ落下したものとしてミスにします。
+        奈落へ落下した場合はミスです。
       */
-      if (player.y + player.height >= stageHeight) {
+      if (
+        player.y +
+        player.height >=
+        stageHeight
+      ) {
         triggerMiss();
-        return;
       }
     }
 
@@ -1116,60 +1706,104 @@ document.addEventListener(
 
     function updateEnemies(deltaTime) {
       for (const enemy of enemies) {
+        /*
+          倒された敵は移動させません。
+      */
         if (!enemy.alive) {
-          enemy.squashTimer -= deltaTime;
+          enemy.squashTimer -=
+            deltaTime;
+
           continue;
         }
 
         enemy.velocityX =
-          enemy.direction * ENEMY_SPEED;
+          enemy.direction *
+          ENEMY_SPEED;
 
-        const hitWall = moveEntityHorizontally(
-          enemy,
-          enemy.velocityX * deltaTime
-        );
+        /*
+          壁にぶつかった場合は反転します。
+        */
+        const hitWall =
+          moveEntityHorizontally(
+            enemy,
+            enemy.velocityX *
+              deltaTime
+          );
 
         if (hitWall) {
           enemy.direction *= -1;
+
           enemy.velocityX =
-            enemy.direction * ENEMY_SPEED;
+            enemy.direction *
+            ENEMY_SPEED;
         }
 
-        enemy.velocityY = Math.min(
-          enemy.velocityY + GRAVITY * deltaTime,
-          MAX_FALL_SPEED
-        );
+        /*
+          敵にも重力を加えます。
+        */
+        enemy.velocityY =
+          Math.min(
+            enemy.velocityY +
+              GRAVITY *
+              deltaTime,
+
+            MAX_FALL_SPEED
+          );
 
         moveEntityVertically(
           enemy,
-          enemy.velocityY * deltaTime
+          enemy.velocityY *
+            deltaTime
         );
 
+        /*
+          現在の敵は穴の手前で引き返します。
+        */
         if (enemy.grounded) {
           const footX =
             enemy.direction > 0
-              ? enemy.x + enemy.width + 3
+              ? enemy.x +
+                enemy.width +
+                3
               : enemy.x - 3;
 
           const footY =
-            enemy.y + enemy.height + 4;
+            enemy.y +
+            enemy.height +
+            4;
 
           const frontColumn =
-            Math.floor(footX / TILE_SIZE);
+            Math.floor(
+              footX /
+              TILE_SIZE
+            );
 
           const groundRow =
-            Math.floor(footY / TILE_SIZE);
+            Math.floor(
+              footY /
+              TILE_SIZE
+            );
 
-          if (!isSolidTile(frontColumn, groundRow)) {
+          if (
+            !isSolidTile(
+              frontColumn,
+              groundRow
+            )
+          ) {
             enemy.direction *= -1;
           }
         }
+
         /*
-          敵が奈落へ落下し、
-          ステージ下端を完全に通過したら消滅させます。
+          何らかの理由で奈落へ落ちた敵は消滅します。
         */
-        if (enemy.y >= stageHeight) {
+        if (
+          enemy.y >=
+          stageHeight
+        ) {
           enemy.alive = false;
+          enemy.squashTimer = 0;
+
           enemy.velocityX = 0;
           enemy.velocityY = 0;
         }
@@ -1177,21 +1811,33 @@ document.addEventListener(
     }
 
     // =========================================================
-    // プレイヤーとオブジェクトの接触
+    // オブジェクトとの接触
     // =========================================================
 
     function updateObjectCollisions() {
-      if (playerDisabled || gameCleared) {
+      if (
+        playerDisabled ||
+        gameCleared
+      ) {
         return;
       }
 
+      /*
+        コインとの接触判定です。
+      */
       for (const coin of coins) {
         if (coin.collected) {
           continue;
         }
 
-        if (circleRectangleOverlap(coin, player)) {
+        if (
+          circleRectangleOverlap(
+            coin,
+            player
+          )
+        ) {
           coin.collected = true;
+
           collectedCoins += 1;
           score += 100;
 
@@ -1200,37 +1846,66 @@ document.addEventListener(
         }
       }
 
+      /*
+        敵との接触判定です。
+      */
       for (const enemy of enemies) {
         if (!enemy.alive) {
           continue;
         }
 
-        if (!rectanglesOverlap(player, enemy)) {
+        if (
+          !rectanglesOverlap(
+            player,
+            enemy
+          )
+        ) {
           continue;
         }
 
         const playerBottom =
-          player.y + player.height;
+          player.y +
+          player.height;
 
+        /*
+          直前のフレームに近い足元位置を計算します。
+        */
         const previousPlayerBottom =
-          playerBottom - player.velocityY / 60;
+          playerBottom -
+          player.velocityY /
+          60;
 
         const isFalling =
           player.velocityY > 0;
 
         const isAboveEnemy =
           previousPlayerBottom <=
-          enemy.y + enemy.height * 0.45;
+          enemy.y +
+          enemy.height *
+            0.45;
 
-        if (isFalling && isAboveEnemy) {
+        /*
+          上から踏んだ場合は敵を倒します。
+        */
+        if (
+          isFalling &&
+          isAboveEnemy
+        ) {
           enemy.alive = false;
           enemy.squashTimer = 0.35;
 
           player.y =
-            enemy.y - player.height;
+            enemy.y -
+            player.height;
 
           player.velocityY =
             -STOMP_BOUNCE_POWER;
+
+          /*
+            踏みつけ後は可変ジャンプ状態を解除します。
+          */
+          variableJumpActive = false;
+          jumpHoldTimer = 0;
 
           score += 200;
 
@@ -1242,15 +1917,27 @@ document.addEventListener(
         }
       }
 
+      /*
+        ゴールとの接触判定です。
+      */
       if (goal) {
         const goalRectangle = {
-          x: goal.x - goal.width / 2,
+          x:
+            goal.x -
+            goal.width / 2,
+
           y: goal.y,
+
           width: goal.width,
           height: goal.height
         };
 
-        if (rectanglesOverlap(player, goalRectangle)) {
+        if (
+          rectanglesOverlap(
+            player,
+            goalRectangle
+          )
+        ) {
           triggerClear();
         }
       }
@@ -1268,12 +1955,20 @@ document.addEventListener(
         return;
       }
 
+      resetAllInputs();
+
       missCount += 1;
       playerDisabled = true;
       missTimer = 1.15;
 
+      variableJumpActive = false;
+      jumpHoldTimer = 0;
+      jumpBufferTimer = 0;
+      coyoteTimer = 0;
+
       player.velocityX =
-        -player.facing * 120;
+        -player.facing *
+        120;
 
       player.velocityY = -430;
       player.grounded = false;
@@ -1287,13 +1982,16 @@ document.addEventListener(
         return;
       }
 
+      resetAllInputs();
+
       gameCleared = true;
+
       player.velocityX = 0;
       player.velocityY = 0;
 
       score += 1000;
-      updateHud();
 
+      updateHud();
       playClearSound();
 
       window.setTimeout(() => {
@@ -1302,18 +2000,26 @@ document.addEventListener(
     }
 
     function showClearMessage() {
-      messageTitle.textContent = "CLEAR";
+      messageTitle.textContent =
+        "CLEAR";
 
       messageResult.innerHTML =
-        "スコア: " + score + "<br>" +
-        "コイン: " + collectedCoins + "<br>" +
-        "ミス: " + missCount;
+        "スコア: " +
+        score +
+        "<br>" +
+        "コイン: " +
+        collectedCoins +
+        "<br>" +
+        "ミス: " +
+        missCount;
 
-      messageOverlay.style.display = "flex";
+      messageOverlay.style.display =
+        "flex";
     }
 
     function hideMessage() {
-      messageOverlay.style.display = "none";
+      messageOverlay.style.display =
+        "none";
     }
 
     // =========================================================
@@ -1322,41 +2028,67 @@ document.addEventListener(
 
     const particles = [];
 
-    function createDustParticle(x, y) {
+    function createDustParticle(
+      x,
+      y
+    ) {
       particles.push({
         x,
         y,
+
         velocityX:
-          (Math.random() - 0.5) * 80,
+          (Math.random() - 0.5) *
+          80,
+
         velocityY:
-          -40 - Math.random() * 50,
+          -40 -
+          Math.random() *
+          50,
+
         life: 0.35,
         maximumLife: 0.35,
-        size: 7 + Math.random() * 5
+
+        size:
+          7 +
+          Math.random() *
+          5
       });
     }
 
-    function updateParticles(deltaTime) {
+    function updateParticles(
+      deltaTime
+    ) {
       for (
-        let index = particles.length - 1;
+        let index =
+          particles.length - 1;
+
         index >= 0;
+
         index -= 1
       ) {
-        const particle = particles[index];
+        const particle =
+          particles[index];
 
-        particle.life -= deltaTime;
+        particle.life -=
+          deltaTime;
 
         particle.x +=
-          particle.velocityX * deltaTime;
+          particle.velocityX *
+          deltaTime;
 
         particle.y +=
-          particle.velocityY * deltaTime;
+          particle.velocityY *
+          deltaTime;
 
         particle.velocityY +=
-          240 * deltaTime;
+          240 *
+          deltaTime;
 
         if (particle.life <= 0) {
-          particles.splice(index, 1);
+          particles.splice(
+            index,
+            1
+          );
         }
       }
     }
@@ -1365,146 +2097,250 @@ document.addEventListener(
     // カメラ
     // =========================================================
 
-    function updateCamera(deltaTime) {
+    function updateCamera(
+      deltaTime
+    ) {
       const desiredX =
         player.x +
         player.width / 2 -
-        canvas.width * 0.42;
+        viewportWidth *
+        0.42;
 
       const maximumCameraX =
-        Math.max(0, stageWidth - canvas.width);
+        Math.max(
+          0,
+          stageWidth -
+            viewportWidth
+        );
 
       const targetCameraX =
         Math.max(
           0,
-          Math.min(desiredX, maximumCameraX)
+          Math.min(
+            desiredX,
+            maximumCameraX
+          )
         );
 
-      const cameraSpeed = 8;
-
       cameraX +=
-        (targetCameraX - cameraX) *
-        Math.min(1, cameraSpeed * deltaTime);
+        (
+          targetCameraX -
+          cameraX
+        ) *
+        Math.min(
+          1,
+          8 *
+          deltaTime
+        );
     }
 
     // =========================================================
-    // 描画
+    // 背景描画
     // =========================================================
-
-    function drawGame() {
-      context.clearRect(
-        0,
-        0,
-        canvas.width,
-        canvas.height
-      );
-
-      drawBackground();
-
-      context.save();
-
-      const verticalOffset =
-        canvas.height - stageHeight;
-
-      context.translate(
-        -cameraX,
-        verticalOffset
-      );
-
-      drawStage();
-      drawGoal();
-      drawCoins();
-      drawEnemies();
-      drawPlayer();
-      drawParticles();
-
-      context.restore();
-    }
 
     function drawBackground() {
-      const gradient = context.createLinearGradient(
+      const gradient =
+        context.createLinearGradient(
+          0,
+          0,
+          0,
+          viewportHeight
+        );
+
+      gradient.addColorStop(
         0,
-        0,
-        0,
-        canvas.height
+        "#74c9f5"
       );
 
-      gradient.addColorStop(0, "#74c9f5");
-      gradient.addColorStop(1, "#d8f3ff");
+      gradient.addColorStop(
+        1,
+        "#d8f3ff"
+      );
 
-      context.fillStyle = gradient;
+      context.fillStyle =
+        gradient;
+
       context.fillRect(
         0,
         0,
-        canvas.width,
-        canvas.height
+        viewportWidth,
+        viewportHeight
       );
 
-      drawCloud(120 - cameraX * 0.12, 90, 1);
-      drawCloud(480 - cameraX * 0.12, 150, 0.8);
-      drawCloud(850 - cameraX * 0.12, 80, 1.2);
+      drawCloud(
+        120 -
+          cameraX *
+          0.12,
+        90,
+        1
+      );
+
+      drawCloud(
+        480 -
+          cameraX *
+          0.12,
+        150,
+        0.8
+      );
+
+      drawCloud(
+        850 -
+          cameraX *
+          0.12,
+        80,
+        1.2
+      );
 
       drawMountain(
-        -120 - cameraX * 0.18,
-        canvas.height - 150,
+        -120 -
+          cameraX *
+          0.18,
+
+        viewportHeight -
+          150,
+
         330
       );
 
       drawMountain(
-        230 - cameraX * 0.18,
-        canvas.height - 130,
+        230 -
+          cameraX *
+          0.18,
+
+        viewportHeight -
+          130,
+
         270
       );
 
       drawMountain(
-        650 - cameraX * 0.18,
-        canvas.height - 145,
+        650 -
+          cameraX *
+          0.18,
+
+        viewportHeight -
+          145,
+
         310
       );
     }
 
-    function drawCloud(x, y, scale) {
+    function drawCloud(
+      x,
+      y,
+      scale
+    ) {
       context.save();
-      context.translate(x, y);
-      context.scale(scale, scale);
+
+      context.translate(
+        x,
+        y
+      );
+
+      context.scale(
+        scale,
+        scale
+      );
 
       context.fillStyle =
         "rgba(255, 255, 255, 0.9)";
 
       context.beginPath();
-      context.arc(0, 10, 25, 0, Math.PI * 2);
-      context.arc(28, 0, 31, 0, Math.PI * 2);
-      context.arc(60, 12, 24, 0, Math.PI * 2);
-      context.arc(30, 22, 38, 0, Math.PI * 2);
+
+      context.arc(
+        0,
+        10,
+        25,
+        0,
+        Math.PI * 2
+      );
+
+      context.arc(
+        28,
+        0,
+        31,
+        0,
+        Math.PI * 2
+      );
+
+      context.arc(
+        60,
+        12,
+        24,
+        0,
+        Math.PI * 2
+      );
+
+      context.arc(
+        30,
+        22,
+        38,
+        0,
+        Math.PI * 2
+      );
+
       context.fill();
 
       context.restore();
     }
 
-    function drawMountain(x, baseY, width) {
+    function drawMountain(
+      x,
+      baseY,
+      width
+    ) {
       context.fillStyle =
         "rgba(84, 155, 105, 0.55)";
 
       context.beginPath();
-      context.moveTo(x, baseY);
-      context.lineTo(x + width / 2, baseY - width * 0.55);
-      context.lineTo(x + width, baseY);
+
+      context.moveTo(
+        x,
+        baseY
+      );
+
+      context.lineTo(
+        x + width / 2,
+        baseY -
+          width *
+          0.55
+      );
+
+      context.lineTo(
+        x + width,
+        baseY
+      );
+
       context.closePath();
       context.fill();
     }
 
-    function drawStage() {
-      const firstColumn = Math.max(
-        0,
-        Math.floor(cameraX / TILE_SIZE) - 1
-      );
+    // =========================================================
+    // ステージ描画
+    // =========================================================
 
-      const lastColumn = Math.min(
-        stageRows[0].length - 1,
-        Math.floor(
-          (cameraX + canvas.width) / TILE_SIZE
-        ) + 1
-      );
+    function drawStage() {
+      const firstColumn =
+        Math.max(
+          0,
+          Math.floor(
+            cameraX /
+            TILE_SIZE
+          ) - 1
+        );
+
+      const lastColumn =
+        Math.min(
+          stageRows[0].length - 1,
+
+          Math.floor(
+            (
+              cameraX +
+              viewportWidth
+            ) /
+            TILE_SIZE
+          ) + 1
+        );
 
       for (
         let row = 0;
@@ -1512,18 +2348,32 @@ document.addEventListener(
         row += 1
       ) {
         for (
-          let column = firstColumn;
-          column <= lastColumn;
+          let column =
+            firstColumn;
+
+          column <=
+            lastColumn;
+
           column += 1
         ) {
-          if (stageRows[row][column] !== "#") {
+          if (
+            stageRows[row][column] !==
+            "#"
+          ) {
             continue;
           }
 
-          const x = column * TILE_SIZE;
-          const y = row * TILE_SIZE;
+          const x =
+            column *
+            TILE_SIZE;
 
-          context.fillStyle = "#8b572a";
+          const y =
+            row *
+            TILE_SIZE;
+
+          context.fillStyle =
+            "#8b572a";
+
           context.fillRect(
             x,
             y,
@@ -1531,7 +2381,9 @@ document.addEventListener(
             TILE_SIZE
           );
 
-          context.fillStyle = "#5fbf54";
+          context.fillStyle =
+            "#5fbf54";
+
           context.fillRect(
             x,
             y,
@@ -1571,6 +2423,10 @@ document.addEventListener(
       }
     }
 
+    // =========================================================
+    // プレイヤー描画
+    // =========================================================
+
     function drawPlayer() {
       const x = player.x;
       const y = player.y;
@@ -1578,8 +2434,11 @@ document.addEventListener(
       context.save();
 
       context.translate(
-        x + player.width / 2,
-        y + player.height / 2
+        x +
+          player.width / 2,
+
+        y +
+          player.height / 2
       );
 
       context.scale(
@@ -1589,23 +2448,33 @@ document.addEventListener(
 
       if (playerDisabled) {
         context.rotate(
-          player.animationTime * 8
+          player.animationTime *
+          8
         );
       }
 
       const speedRatio =
         Math.min(
           1,
-          Math.abs(player.velocityX) /
+
+          Math.abs(
+            player.velocityX
+          ) /
           DASH_MAX_SPEED
         );
 
       const legSwing =
         player.grounded &&
-        Math.abs(player.velocityX) > 20
+        Math.abs(
+          player.velocityX
+        ) > 20
           ? Math.sin(
               player.animationTime *
-              (player.dashing ? 24 : 15)
+              (
+                player.dashing
+                  ? 24
+                  : 15
+              )
             ) * 5
           : 0;
 
@@ -1621,7 +2490,9 @@ document.addEventListener(
         31
       );
 
-      context.fillStyle = "#ffd2a6";
+      context.fillStyle =
+        "#ffd2a6";
+
       context.fillRect(
         -13,
         -17,
@@ -1629,7 +2500,9 @@ document.addEventListener(
         18
       );
 
-      context.fillStyle = "#1c1c1c";
+      context.fillStyle =
+        "#1c1c1c";
+
       context.fillRect(
         4,
         -11,
@@ -1637,7 +2510,9 @@ document.addEventListener(
         5
       );
 
-      context.fillStyle = "#1554a0";
+      context.fillStyle =
+        "#1554a0";
+
       context.fillRect(
         -17,
         -21,
@@ -1645,7 +2520,8 @@ document.addEventListener(
         7
       );
 
-      context.fillStyle = "#222";
+      context.fillStyle =
+        "#222";
 
       if (!player.grounded) {
         context.fillRect(
@@ -1664,14 +2540,16 @@ document.addEventListener(
       } else {
         context.fillRect(
           -13,
-          13 + legSwing,
+          13 +
+            legSwing,
           9,
           8
         );
 
         context.fillRect(
           4,
-          13 - legSwing,
+          13 -
+            legSwing,
           9,
           8
         );
@@ -1702,6 +2580,10 @@ document.addEventListener(
       context.restore();
     }
 
+    // =========================================================
+    // 敵描画
+    // =========================================================
+
     function drawEnemies() {
       for (const enemy of enemies) {
         if (
@@ -1714,16 +2596,23 @@ document.addEventListener(
         context.save();
 
         context.translate(
-          enemy.x + enemy.width / 2,
-          enemy.y + enemy.height / 2
+          enemy.x +
+            enemy.width / 2,
+
+          enemy.y +
+            enemy.height / 2
         );
 
         context.scale(
           enemy.direction,
-          enemy.alive ? 1 : 0.35
+
+          enemy.alive
+            ? 1
+            : 0.35
         );
 
-        context.fillStyle = "#9c3dad";
+        context.fillStyle =
+          "#9c3dad";
 
         context.fillRect(
           -enemy.width / 2,
@@ -1732,7 +2621,8 @@ document.addEventListener(
           enemy.height
         );
 
-        context.fillStyle = "#f2d0a7";
+        context.fillStyle =
+          "#f2d0a7";
 
         context.fillRect(
           -enemy.width / 2 + 4,
@@ -1741,7 +2631,8 @@ document.addEventListener(
           12
         );
 
-        context.fillStyle = "#222";
+        context.fillStyle =
+          "#222";
 
         context.fillRect(
           4,
@@ -1768,19 +2659,27 @@ document.addEventListener(
       }
     }
 
+    // =========================================================
+    // コイン描画
+    // =========================================================
+
     function drawCoins() {
       for (const coin of coins) {
         if (coin.collected) {
           continue;
         }
 
-        coin.animationTime += 0.05;
+        coin.animationTime +=
+          0.05;
 
         const scaleX =
           0.35 +
           Math.abs(
-            Math.sin(coin.animationTime)
-          ) * 0.65;
+            Math.sin(
+              coin.animationTime
+            )
+          ) *
+          0.65;
 
         context.save();
 
@@ -1794,9 +2693,11 @@ document.addEventListener(
           1
         );
 
-        context.fillStyle = "#ffd11a";
+        context.fillStyle =
+          "#ffd11a";
 
         context.beginPath();
+
         context.arc(
           0,
           0,
@@ -1804,9 +2705,12 @@ document.addEventListener(
           0,
           Math.PI * 2
         );
+
         context.fill();
 
-        context.strokeStyle = "#db8d00";
+        context.strokeStyle =
+          "#db8d00";
+
         context.lineWidth = 3;
         context.stroke();
 
@@ -1824,50 +2728,70 @@ document.addEventListener(
       }
     }
 
+    // =========================================================
+    // ゴール描画
+    // =========================================================
+
     function drawGoal() {
       if (!goal) {
         return;
       }
 
-      context.fillStyle = "#d7d7d7";
+      context.fillStyle =
+        "#d7d7d7";
 
       context.fillRect(
         goal.x - 3,
-        goal.y - TILE_SIZE * 2,
+        goal.y -
+          TILE_SIZE * 2,
         6,
         TILE_SIZE * 3
       );
 
-      context.fillStyle = "#ff4e4e";
+      context.fillStyle =
+        "#ff4e4e";
 
       context.beginPath();
+
       context.moveTo(
         goal.x + 3,
-        goal.y - TILE_SIZE * 2
+        goal.y -
+          TILE_SIZE * 2
       );
 
       context.lineTo(
         goal.x + 42,
-        goal.y - TILE_SIZE * 2 + 14
+        goal.y -
+          TILE_SIZE * 2 +
+          14
       );
 
       context.lineTo(
         goal.x + 3,
-        goal.y - TILE_SIZE * 2 + 28
+        goal.y -
+          TILE_SIZE * 2 +
+          28
       );
 
       context.closePath();
       context.fill();
 
-      context.fillStyle = "#555";
+      context.fillStyle =
+        "#555";
 
       context.fillRect(
         goal.x - 13,
-        goal.y + TILE_SIZE - 7,
+        goal.y +
+          TILE_SIZE -
+          7,
         26,
         7
       );
     }
+
+    // =========================================================
+    // パーティクル描画
+    // =========================================================
 
     function drawParticles() {
       for (const particle of particles) {
@@ -1885,7 +2809,8 @@ document.addEventListener(
         context.arc(
           particle.x,
           particle.y,
-          particle.size * alpha,
+          particle.size *
+            alpha,
           0,
           Math.PI * 2
         );
@@ -1895,20 +2820,84 @@ document.addEventListener(
     }
 
     // =========================================================
+    // ゲーム全体の描画
+    // =========================================================
+
+    function drawGame() {
+      const ratio =
+        Math.min(
+          window.devicePixelRatio ||
+          1,
+          2
+        );
+
+      /*
+        CSSピクセルを基準に描画できるようにします。
+      */
+      context.setTransform(
+        ratio,
+        0,
+        0,
+        ratio,
+        0,
+        0
+      );
+
+      context.clearRect(
+        0,
+        0,
+        viewportWidth,
+        viewportHeight
+      );
+
+      drawBackground();
+
+      context.save();
+
+      /*
+        ステージ下端を画面下端に揃えます。
+      */
+      const verticalOffset =
+        viewportHeight -
+        stageHeight;
+
+      context.translate(
+        -cameraX,
+        verticalOffset
+      );
+
+      drawStage();
+      drawGoal();
+      drawCoins();
+      drawEnemies();
+      drawPlayer();
+      drawParticles();
+
+      context.restore();
+    }
+
+    // =========================================================
     // HUD
     // =========================================================
 
     function updateHud() {
-      scoreValue.textContent = score;
-      coinValue.textContent = collectedCoins;
-      missValue.textContent = missCount;
+      scoreValue.textContent =
+        score;
+
+      coinValue.textContent =
+        collectedCoins;
+
+      missValue.textContent =
+        missCount;
     }
 
     // =========================================================
     // ゲームループ
     // =========================================================
 
-    function updateGame(deltaTime) {
+    function updateGame(
+      deltaTime
+    ) {
       updatePlayer(deltaTime);
       updateEnemies(deltaTime);
       updateObjectCollisions();
@@ -1916,22 +2905,34 @@ document.addEventListener(
       updateCamera(deltaTime);
     }
 
-    function gameLoop(currentTime) {
+    function gameLoop(
+      currentTime
+    ) {
       if (!lastTime) {
-        lastTime = currentTime;
+        lastTime =
+          currentTime;
       }
 
-      const deltaTime = Math.min(
-        (currentTime - lastTime) / 1000,
-        0.033
-      );
+      const deltaTime =
+        Math.min(
+          (
+            currentTime -
+            lastTime
+          ) /
+          1000,
 
-      lastTime = currentTime;
+          0.033
+        );
+
+      lastTime =
+        currentTime;
 
       updateGame(deltaTime);
       drawGame();
 
-      window.requestAnimationFrame(gameLoop);
+      window.requestAnimationFrame(
+        gameLoop
+      );
     }
 
     // =========================================================
@@ -1941,7 +2942,8 @@ document.addEventListener(
     function handleKeyDown(event) {
       ensureAudioContext();
 
-      const key = event.key.toLowerCase();
+      const key =
+        event.key.toLowerCase();
 
       if (
         key === "arrowleft" ||
@@ -1964,11 +2966,19 @@ document.addEventListener(
         key === "w" ||
         key === " "
       ) {
-        if (!input.jump) {
+        /*
+          キーリピートでは新しいジャンプ入力にしません。
+        */
+        if (
+          !input.jump &&
+          !event.repeat
+        ) {
           input.jumpPressed = true;
         }
 
         input.jump = true;
+        input.jumpReleased = false;
+
         event.preventDefault();
       }
 
@@ -1980,13 +2990,17 @@ document.addEventListener(
         event.preventDefault();
       }
 
-      if (key === "r") {
+      if (
+        key === "r" &&
+        !event.repeat
+      ) {
         initializeGame(true);
       }
     }
 
     function handleKeyUp(event) {
-      const key = event.key.toLowerCase();
+      const key =
+        event.key.toLowerCase();
 
       if (
         key === "arrowleft" ||
@@ -2007,6 +3021,10 @@ document.addEventListener(
         key === "w" ||
         key === " "
       ) {
+        if (input.jump) {
+          input.jumpReleased = true;
+        }
+
         input.jump = false;
       }
 
@@ -2021,7 +3039,9 @@ document.addEventListener(
     window.addEventListener(
       "keydown",
       handleKeyDown,
-      { passive: false }
+      {
+        passive: false
+      }
     );
 
     window.addEventListener(
@@ -2034,203 +3054,190 @@ document.addEventListener(
     // =========================================================
 
     /*
-  タッチボタンを押している間だけ入力を有効にします。
-
-  pointerupを正常に受け取れなかった場合でも、
-  pointercancelやlostpointercaptureなどで
-  必ず入力を解除するようにします。
-*/
-function bindHoldButton(
-  element,
-  onPress,
-  onRelease
-) {
-  /*
-    現在このボタンを押している指のIDを保存します。
-  */
-  const activePointerIds = new Set();
-
-  /*
-    ボタンの押下状態をすべて解除します。
-  */
-  function releaseAllPointers() {
-    /*
-      すでに押されていない場合は、
-      onReleaseを重複して呼びません。
+      指IDごとの解除処理を保存します。
+      Pointer Captureに失敗した場合でも、
+      document側で指を解除できます。
     */
-    if (activePointerIds.size === 0) {
-      element.classList.remove("active");
-      return;
-    }
+    const activePointerReleases =
+      new Map();
 
     /*
-      押している指の情報をすべて削除します。
+      押している間だけ有効になるボタンを設定します。
     */
-    activePointerIds.clear();
-
-    /*
-      ボタンの押下表示を解除します。
-    */
-    element.classList.remove("active");
-
-    /*
-      ゲーム内の入力状態も解除します。
-    */
-    onRelease();
-  }
-
-  /*
-    ボタンを押したときの処理です。
-  */
-  element.addEventListener(
-    "pointerdown",
-    event => {
-      ensureAudioContext();
-
-      event.preventDefault();
+    function bindHoldButton(
+      element,
+      onPress,
+      onRelease
+    ) {
+      const pointerIds =
+        new Set();
 
       /*
-        この指がすでに登録済みなら、
-        同じ押下処理を重複して実行しません。
+        指を1本だけ解除します。
       */
-      if (activePointerIds.has(event.pointerId)) {
-        return;
+      function releasePointerById(
+        pointerId
+      ) {
+        if (
+          !pointerIds.has(
+            pointerId
+          )
+        ) {
+          return;
+        }
+
+        pointerIds.delete(
+          pointerId
+        );
+
+        activePointerReleases.delete(
+          pointerId
+        );
+
+        if (
+          pointerIds.size === 0
+        ) {
+          element.classList.remove(
+            "active"
+          );
+
+          onRelease();
+        }
       }
 
       /*
-        指のIDを登録します。
+        このボタンを押している指をすべて解除します。
       */
-      activePointerIds.add(event.pointerId);
+      function releaseAllPointers() {
+        const ids =
+          Array.from(
+            pointerIds
+          );
 
-      /*
-        ボタン外へ指が移動しても、
-        この要素がpointerupを受け取れるようにします。
-      */
-      try {
-        element.setPointerCapture(event.pointerId);
-      } catch (error) {
-        /*
-          ブラウザによっては、
-          Pointer Captureに失敗する場合があります。
-          その場合もゲームは続行します。
-        */
+        for (
+          const pointerId of ids
+        ) {
+          releasePointerById(
+            pointerId
+          );
+        }
+
+        element.classList.remove(
+          "active"
+        );
+
+        onRelease();
       }
 
-      /*
-        ボタンを押した見た目にします。
-      */
-      element.classList.add("active");
+      element.addEventListener(
+        "pointerdown",
+        event => {
+          ensureAudioContext();
+          event.preventDefault();
 
-      /*
-        ゲーム内の入力を有効にします。
-      */
-      onPress();
-    },
-    {
-      passive: false
+          if (
+            pointerIds.has(
+              event.pointerId
+            )
+          ) {
+            return;
+          }
+
+          pointerIds.add(
+            event.pointerId
+          );
+
+          activePointerReleases.set(
+            event.pointerId,
+            () => {
+              releasePointerById(
+                event.pointerId
+              );
+            }
+          );
+
+          try {
+            element.setPointerCapture(
+              event.pointerId
+            );
+          } catch (error) {
+            /*
+              Pointer Captureに失敗しても、
+              document側のpointerupで解除します。
+            */
+          }
+
+          element.classList.add(
+            "active"
+          );
+
+          onPress();
+        },
+        {
+          passive: false
+        }
+      );
+
+      element.addEventListener(
+        "pointerup",
+        event => {
+          event.preventDefault();
+
+          releasePointerById(
+            event.pointerId
+          );
+        },
+        {
+          passive: false
+        }
+      );
+
+      element.addEventListener(
+        "pointercancel",
+        event => {
+          event.preventDefault();
+
+          releasePointerById(
+            event.pointerId
+          );
+        },
+        {
+          passive: false
+        }
+      );
+
+      element.addEventListener(
+        "lostpointercapture",
+        event => {
+          releasePointerById(
+            event.pointerId
+          );
+        }
+      );
+
+      element.addEventListener(
+        "contextmenu",
+        event => {
+          event.preventDefault();
+          releaseAllPointers();
+        }
+      );
+
+      element.addEventListener(
+        "dragstart",
+        event => {
+          event.preventDefault();
+          releaseAllPointers();
+        }
+      );
+
+      element.releaseAllPointers =
+        releaseAllPointers;
     }
-  );
 
-  /*
-    指が離れたときの共通処理です。
-  */
-  function releasePointer(event) {
     /*
-      このボタンで管理していない指なら無視します。
+      左移動ボタンです。
     */
-    if (!activePointerIds.has(event.pointerId)) {
-      return;
-    }
-
-    /*
-      指のIDを削除します。
-    */
-    activePointerIds.delete(event.pointerId);
-
-    /*
-      Pointer Captureを安全に解除します。
-    */
-    try {
-      if (element.hasPointerCapture(event.pointerId)) {
-        element.releasePointerCapture(event.pointerId);
-      }
-    } catch (error) {
-      /*
-        解除できなかった場合も処理を続けます。
-      */
-    }
-
-    /*
-      すべての指が離れた場合だけ、
-      ボタンと入力を解除します。
-    */
-    if (activePointerIds.size === 0) {
-      element.classList.remove("active");
-      onRelease();
-    }
-  }
-
-  /*
-    通常どおり指を離した場合です。
-  */
-  element.addEventListener(
-    "pointerup",
-    releasePointer,
-    {
-      passive: false
-    }
-  );
-
-  /*
-    ブラウザによって操作が中断された場合です。
-  */
-  element.addEventListener(
-    "pointercancel",
-    releasePointer,
-    {
-      passive: false
-    }
-  );
-
-  /*
-    Pointer Captureが失われた場合も、
-    入力状態を必ず解除します。
-  */
-  element.addEventListener(
-    "lostpointercapture",
-    releaseAllPointers
-  );
-
-  /*
-    ボタン上で右クリックメニューなどが出ないようにします。
-  */
-  element.addEventListener(
-    "contextmenu",
-    event => {
-      event.preventDefault();
-      releaseAllPointers();
-    }
-  );
-
-  /*
-    ボタン要素からドラッグ操作が始まった場合も解除します。
-  */
-  element.addEventListener(
-    "dragstart",
-    event => {
-      event.preventDefault();
-      releaseAllPointers();
-    }
-  );
-
-  /*
-    後で全ボタンをまとめて解除できるよう、
-    解除関数を要素に保存します。
-  */
-  element.releaseAllPointers =
-    releaseAllPointers;
-}
-
     bindHoldButton(
       leftButton,
       () => {
@@ -2241,6 +3248,9 @@ function bindHoldButton(
       }
     );
 
+    /*
+      右移動ボタンです。
+    */
     bindHoldButton(
       rightButton,
       () => {
@@ -2251,6 +3261,9 @@ function bindHoldButton(
       }
     );
 
+    /*
+      ダッシュボタンです。
+    */
     bindHoldButton(
       dashButton,
       () => {
@@ -2261,6 +3274,9 @@ function bindHoldButton(
       }
     );
 
+    /*
+      ジャンプボタンです。
+    */
     bindHoldButton(
       jumpButton,
       () => {
@@ -2269,88 +3285,219 @@ function bindHoldButton(
         }
 
         input.jump = true;
+        input.jumpReleased = false;
       },
       () => {
+        if (input.jump) {
+          input.jumpReleased = true;
+        }
+
         input.jump = false;
       }
     );
 
     /*
-  すべての操作ボタンと入力状態を解除します。
+      ボタン外で指を離した場合でも、
+      該当する指だけを解除します。
+    */
+    document.addEventListener(
+      "pointerup",
+      event => {
+        const releasePointer =
+          activePointerReleases.get(
+            event.pointerId
+          );
 
-  ブラウザがバックグラウンドへ移動した場合や、
-  画面外で指が離れた場合の入力ロックを防止します。
-*/
-function resetAllInputs() {
-  /*
-    ゲーム内の入力状態をすべて解除します。
-  */
-  input.left = false;
-  input.right = false;
-  input.jump = false;
-  input.jumpPressed = false;
-  input.dash = false;
+        if (releasePointer) {
+          releasePointer();
+        }
+      }
+    );
 
-  /*
-    各タッチボタンが保持している指情報と、
-    押下中の見た目を解除します。
-  */
-  const touchButtons = [
-    leftButton,
-    rightButton,
-    jumpButton,
-    dashButton
-  ];
+    document.addEventListener(
+      "pointercancel",
+      event => {
+        const releasePointer =
+          activePointerReleases.get(
+            event.pointerId
+          );
 
-  for (const button of touchButtons) {
-    if (
-      typeof button.releaseAllPointers ===
-      "function"
-    ) {
-      button.releaseAllPointers();
-    } else {
-      button.classList.remove("active");
-    }
-  }
-}
+        if (releasePointer) {
+          releasePointer();
+        }
+      }
+    );
 
     /*
-  ブラウザの外で指やマウスを離した場合にも、
-  すべての入力を解除します。
-*/
+      すべての入力状態を解除します。
+    */
+    function resetAllInputs() {
+      input.left = false;
+      input.right = false;
+      input.jump = false;
+      input.jumpPressed = false;
+      input.jumpReleased = false;
+      input.dash = false;
 
-window.addEventListener(
-  "pointercancel",
-  resetAllInputs
-);
+      const touchButtons = [
+        leftButton,
+        rightButton,
+        jumpButton,
+        dashButton
+      ];
 
-/*
-  画面からフォーカスが外れた場合に解除します。
-*/
-window.addEventListener(
-  "blur",
-  resetAllInputs
-);
+      for (
+        const button of
+        touchButtons
+      ) {
+        if (
+          typeof button.releaseAllPointers ===
+          "function"
+        ) {
+          button.releaseAllPointers();
+        } else {
+          button.classList.remove(
+            "active"
+          );
+        }
+      }
 
-/*
-  ブラウザやアプリがバックグラウンドへ移動した場合に解除します。
-*/
-document.addEventListener(
-  "visibilitychange",
-  () => {
-    if (document.hidden) {
-      resetAllInputs();
+      activePointerReleases.clear();
     }
-  }
-);
 
-/*
-  画面の向きが変わった場合にも解除します。
-*/
-window.addEventListener(
-  "orientationchange",
-  resetAllInputs
-);
+    /*
+      画面からフォーカスが外れた場合に解除します。
+    */
+    window.addEventListener(
+      "blur",
+      resetAllInputs
+    );
+
+    /*
+      アプリやブラウザがバックグラウンドへ移動した場合です。
+    */
+    document.addEventListener(
+      "visibilitychange",
+      () => {
+        if (document.hidden) {
+          resetAllInputs();
+        }
+      }
+    );
+
+    /*
+      画面の向きが変わった場合です。
+    */
+    window.addEventListener(
+      "orientationchange",
+      resetAllInputs
+    );
+
+    // =========================================================
+    // ブラウザのズーム防止
+    // =========================================================
+
+    let lastNonButtonTouchEndTime = 0;
+
+    /*
+      ボタン以外の場所をダブルタップした際の
+      ズームを防止します。
+    */
+    document.addEventListener(
+      "touchend",
+      event => {
+        const target =
+          event.target;
+
+        if (
+          target instanceof Element &&
+          target.closest(
+            "button, .touch-button"
+          )
+        ) {
+          return;
+        }
+
+        const currentTime =
+          Date.now();
+
+        const elapsedTime =
+          currentTime -
+          lastNonButtonTouchEndTime;
+
+        if (
+          elapsedTime > 0 &&
+          elapsedTime < 350
+        ) {
+          event.preventDefault();
+        }
+
+        lastNonButtonTouchEndTime =
+          currentTime;
+      },
+      {
+        passive: false
+      }
+    );
+
+    /*
+      ダブルクリック扱いになった場合の
+      ズームも防止します。
+    */
+    document.addEventListener(
+      "dblclick",
+      event => {
+        const target =
+          event.target;
+
+        if (
+          target instanceof Element &&
+          target.closest(
+            "button, .touch-button"
+          )
+        ) {
+          return;
+        }
+
+        event.preventDefault();
+      },
+      {
+        passive: false
+      }
+    );
+
+    /*
+      iPhone・iPadでのピンチズームを防止します。
+    */
+    document.addEventListener(
+      "gesturestart",
+      event => {
+        event.preventDefault();
+      },
+      {
+        passive: false
+      }
+    );
+
+    document.addEventListener(
+      "gesturechange",
+      event => {
+        event.preventDefault();
+      },
+      {
+        passive: false
+      }
+    );
+
+    document.addEventListener(
+      "gestureend",
+      event => {
+        event.preventDefault();
+      },
+      {
+        passive: false
+      }
+    );
 
     // =========================================================
     // ボタン
@@ -2373,101 +3520,42 @@ window.addEventListener(
     );
 
     // =========================================================
-    // 画面サイズ
+    // Canvasサイズ
     // =========================================================
 
     function resizeCanvas() {
-      const devicePixelRatioValue =
+      const ratio =
         Math.min(
-          window.devicePixelRatio || 1,
+          window.devicePixelRatio ||
+          1,
           2
         );
 
-      const displayWidth =
+      viewportWidth =
         window.innerWidth;
 
-      const displayHeight =
+      viewportHeight =
         window.innerHeight;
 
       canvas.width =
         Math.floor(
-          displayWidth *
-          devicePixelRatioValue
+          viewportWidth *
+          ratio
         );
 
       canvas.height =
         Math.floor(
-          displayHeight *
-          devicePixelRatioValue
+          viewportHeight *
+          ratio
         );
 
       canvas.style.width =
-        displayWidth + "px";
+        viewportWidth +
+        "px";
 
       canvas.style.height =
-        displayHeight + "px";
-
-      context.setTransform(
-        devicePixelRatioValue,
-        0,
-        0,
-        devicePixelRatioValue,
-        0,
-        0
-      );
-
-      /*
-        Canvas内部の座標をCSSピクセル単位として扱うため、
-        描画時に使用する幅・高さを上書きします。
-      */
-
-      Object.defineProperty(
-        canvas,
-        "logicalWidth",
-        {
-          value: displayWidth,
-          configurable: true
-        }
-      );
-
-      Object.defineProperty(
-        canvas,
-        "logicalHeight",
-        {
-          value: displayHeight,
-          configurable: true
-        }
-      );
-    }
-
-    /*
-      devicePixelRatio対応後も、
-     ゲーム計算ではCSS上の画面サイズを利用します。
-    */
-
-    function getCanvasWidth() {
-      return canvas.logicalWidth ||
-        window.innerWidth;
-    }
-
-    function getCanvasHeight() {
-      return canvas.logicalHeight ||
-        window.innerHeight;
-    }
-
-    /*
-      既存処理でcanvas.widthとcanvas.heightを直接使っているため、
-      描画時だけ座標系をCSSピクセルに合わせます。
-    */
-
-    const originalDrawGame = drawGame;
-
-    drawGame = function () {
-      const ratio =
-        Math.min(
-          window.devicePixelRatio || 1,
-          2
-        );
+        viewportHeight +
+        "px";
 
       context.setTransform(
         ratio,
@@ -2477,238 +3565,7 @@ window.addEventListener(
         0,
         0
       );
-
-      const realCanvasWidth =
-        canvas.width;
-
-      const realCanvasHeight =
-        canvas.height;
-
-      canvas.widthValue =
-        getCanvasWidth();
-
-      canvas.heightValue =
-        getCanvasHeight();
-
-      context.clearRect(
-        0,
-        0,
-        getCanvasWidth(),
-        getCanvasHeight()
-      );
-
-      drawBackgroundResponsive();
-
-      context.save();
-
-      const verticalOffset =
-        getCanvasHeight() -
-        stageHeight;
-
-      context.translate(
-        -cameraX,
-        verticalOffset
-      );
-
-      drawStageResponsive();
-      drawGoal();
-      drawCoins();
-      drawEnemies();
-      drawPlayer();
-      drawParticles();
-
-      context.restore();
-    };
-
-    function drawBackgroundResponsive() {
-      const width = getCanvasWidth();
-      const height = getCanvasHeight();
-
-      const gradient =
-        context.createLinearGradient(
-          0,
-          0,
-          0,
-          height
-        );
-
-      gradient.addColorStop(
-        0,
-        "#74c9f5"
-      );
-
-      gradient.addColorStop(
-        1,
-        "#d8f3ff"
-      );
-
-      context.fillStyle = gradient;
-
-      context.fillRect(
-        0,
-        0,
-        width,
-        height
-      );
-
-      drawCloud(
-        120 - cameraX * 0.12,
-        90,
-        1
-      );
-
-      drawCloud(
-        480 - cameraX * 0.12,
-        150,
-        0.8
-      );
-
-      drawCloud(
-        850 - cameraX * 0.12,
-        80,
-        1.2
-      );
-
-      drawMountain(
-        -120 - cameraX * 0.18,
-        height - 150,
-        330
-      );
-
-      drawMountain(
-        230 - cameraX * 0.18,
-        height - 130,
-        270
-      );
-
-      drawMountain(
-        650 - cameraX * 0.18,
-        height - 145,
-        310
-      );
     }
-
-    function drawStageResponsive() {
-      const width = getCanvasWidth();
-
-      const firstColumn = Math.max(
-        0,
-        Math.floor(
-          cameraX / TILE_SIZE
-        ) - 1
-      );
-
-      const lastColumn = Math.min(
-        stageRows[0].length - 1,
-        Math.floor(
-          (cameraX + width) /
-          TILE_SIZE
-        ) + 1
-      );
-
-      for (
-        let row = 0;
-        row < stageRows.length;
-        row += 1
-      ) {
-        for (
-          let column = firstColumn;
-          column <= lastColumn;
-          column += 1
-        ) {
-          if (
-            stageRows[row][column] !== "#"
-          ) {
-            continue;
-          }
-
-          const x =
-            column * TILE_SIZE;
-
-          const y =
-            row * TILE_SIZE;
-
-          context.fillStyle = "#8b572a";
-
-          context.fillRect(
-            x,
-            y,
-            TILE_SIZE,
-            TILE_SIZE
-          );
-
-          context.fillStyle = "#5fbf54";
-
-          context.fillRect(
-            x,
-            y,
-            TILE_SIZE,
-            9
-          );
-
-          context.strokeStyle =
-            "rgba(70, 35, 10, 0.45)";
-
-          context.lineWidth = 2;
-
-          context.strokeRect(
-            x + 1,
-            y + 1,
-            TILE_SIZE - 2,
-            TILE_SIZE - 2
-          );
-
-          context.fillStyle =
-            "rgba(255, 255, 255, 0.08)";
-
-          context.fillRect(
-            x + 6,
-            y + 16,
-            12,
-            5
-          );
-
-          context.fillRect(
-            x + 28,
-            y + 31,
-            11,
-            5
-          );
-        }
-      }
-    }
-
-    updateCamera = function (deltaTime) {
-      const width =
-        getCanvasWidth();
-
-      const desiredX =
-        player.x +
-        player.width / 2 -
-        width * 0.42;
-
-      const maximumCameraX =
-        Math.max(
-          0,
-          stageWidth - width
-        );
-
-      const targetCameraX =
-        Math.max(
-          0,
-          Math.min(
-            desiredX,
-            maximumCameraX
-          )
-        );
-
-      cameraX +=
-        (targetCameraX - cameraX) *
-        Math.min(
-          1,
-          8 * deltaTime
-        );
-    };
 
     window.addEventListener(
       "resize",
@@ -2726,7 +3583,7 @@ window.addEventListener(
     );
 
     // =========================================================
-    // 開始
+    // ゲーム開始
     // =========================================================
 
     resizeCanvas();
