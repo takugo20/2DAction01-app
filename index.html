@@ -886,8 +886,13 @@
         player.dustTimer = 0;
       }
 
-      if (player.y > stageHeight + 180) {
+      /*
+       プレイヤーの足元がステージ下端に達した場合は、
+       奈落へ落下したものとしてミスにします。
+      */
+      if (player.y + player.height >= stageHeight) {
         triggerMiss();
+        return;
       }
     }
 
