@@ -266,6 +266,161 @@
     }
 
     /*
+  ステージ選択画面です。
+*/
+#stage-select-screen {
+  position: absolute;
+  inset: 0;
+  z-index: 30;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  padding: 20px;
+
+  background:
+    linear-gradient(
+      #74c9f5,
+      #d8f3ff
+    );
+}
+
+#stage-select-panel {
+  width: min(620px, 100%);
+  max-height: 90vh;
+  overflow-y: auto;
+
+  padding: 28px;
+
+  border: 3px solid white;
+  border-radius: 18px;
+
+  color: white;
+  background: rgba(20, 20, 20, 0.88);
+
+  text-align: center;
+}
+
+#stage-select-panel h1 {
+  margin: 0 0 10px;
+  font-size: 36px;
+}
+
+#stage-select-panel p {
+  margin: 0 0 22px;
+}
+
+#stage-button-list {
+  display: grid;
+  grid-template-columns:
+    repeat(
+      auto-fit,
+      minmax(150px, 1fr)
+    );
+
+  gap: 14px;
+}
+
+.stage-select-item {
+  min-height: 100px;
+  padding: 12px;
+
+  border: 2px solid white;
+  border-radius: 12px;
+
+  color: white;
+  background: rgba(255, 255, 255, 0.13);
+
+  font-size: 16px;
+  font-weight: bold;
+
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+.stage-select-item:hover {
+  background: rgba(255, 255, 255, 0.25);
+}
+
+.stage-select-item.locked {
+  color: rgba(255, 255, 255, 0.5);
+  background: rgba(0, 0, 0, 0.25);
+
+  cursor: default;
+}
+
+.stage-select-item .stage-record {
+  display: block;
+
+  margin-top: 8px;
+
+  font-size: 12px;
+  font-weight: normal;
+  line-height: 1.5;
+}
+
+#stage-select-button {
+  position: absolute;
+  top: 62px;
+  right: 12px;
+  z-index: 10;
+
+  min-width: 86px;
+  min-height: 38px;
+
+  border: 2px solid white;
+  border-radius: 10px;
+
+  color: white;
+  background: rgba(0, 0, 0, 0.5);
+
+  font-size: 13px;
+  font-weight: bold;
+
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+#message-buttons {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+#message-buttons button {
+  min-width: 170px;
+  min-height: 46px;
+
+  border: 0;
+  border-radius: 12px;
+
+  color: #222;
+  background: white;
+
+  font-size: 16px;
+  font-weight: bold;
+
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+#next-stage-button {
+  display: none;
+}
+
+@media (pointer: coarse), (max-width: 900px) {
+  #stage-select-button {
+    top: 56px;
+
+    min-width: 74px;
+    min-height: 34px;
+
+    font-size: 12px;
+  }
+}
+
+    /*
       タッチ操作端末または幅900px以下の画面で、
       仮想ボタンを表示します。
     */
@@ -370,6 +525,23 @@
         ミス:
         <span id="miss-value">0</span>
       </span>
+  
+  <span id="stage-name-value">ステージ1</span>
+
+  <span>
+    スコア:
+    <span id="score-value">0</span>
+  </span>
+
+  <span>
+    コイン:
+    <span id="coin-value">0</span>
+  </span>
+
+  <span>
+    ミス:
+    <span id="miss-value">0</span>
+  </span>
     </div>
 
     <button
@@ -378,6 +550,13 @@
     >
       リスタート
     </button>
+    
+    <button
+  id="stage-select-button"
+  type="button"
+>
+  ステージ選択
+</button>
 
     <div id="message-overlay">
       <div id="message-panel">
@@ -387,12 +566,28 @@
 
         <p id="message-result"></p>
 
-        <button
-          id="message-restart-button"
-          type="button"
-        >
-          もう一度遊ぶ
-        </button>
+        <div id="message-buttons">
+  <button
+    id="next-stage-button"
+    type="button"
+  >
+    次のステージ
+  </button>
+
+  <button
+    id="message-restart-button"
+    type="button"
+  >
+    もう一度遊ぶ
+  </button>
+
+  <button
+    id="message-stage-select-button"
+    type="button"
+  >
+    ステージ選択
+  </button>
+</div>
       </div>
     </div>
 
@@ -477,6 +672,36 @@
 
     const jumpButton =
       document.getElementById("jump-button");
+
+    const stageSelectScreen =
+  document.getElementById(
+    "stage-select-screen"
+  );
+
+const stageButtonList =
+  document.getElementById(
+    "stage-button-list"
+  );
+
+const stageNameValue =
+  document.getElementById(
+    "stage-name-value"
+  );
+
+const stageSelectButton =
+  document.getElementById(
+    "stage-select-button"
+  );
+
+const nextStageButton =
+  document.getElementById(
+    "next-stage-button"
+  );
+
+const messageStageSelectButton =
+  document.getElementById(
+    "message-stage-select-button"
+  );
 
     // =========================================================
     // 基本設定
@@ -572,24 +797,134 @@
       G ゴール
     */
 
-    const STAGE_TEMPLATE = [
-  ".........................................................................................",
-  ".........................................................................................",
-  ".........................................................................................",
-  ".........................................................................................",
-  "....................C.............................................C......................",
-  ".........................................................................................",
-  "..............###..................C........................###..........................",
-  ".................E....................................E..................................",
-  "................................######.........................C.........................",
-  ".......C....................C............................................................",
-  ".....#####.............########...................#####...................#####..........",
-  ".........................................................................................",
-  "..P........E................................E.......................................G....",
-  "#############..##################..#################..##############..###################",
-  "#############..##################..#################..##############..###################"
-];
+    /*
+  ゲーム内の全ステージを管理します。
 
+  現時点では、敵やブロックの追加前なので、
+  既存要素を使った5つの仮ステージです。
+*/
+const STAGES = [
+  {
+    id: 1,
+    name: "ステージ1",
+    description: "基本操作",
+
+    map: [
+      ".........................................................................................",
+      ".........................................................................................",
+      ".........................................................................................",
+      ".........................................................................................",
+      "....................C.............................................C......................",
+      ".........................................................................................",
+      "..............###..................C........................###...........................",
+      ".................E....................................E..................................",
+      "................................######.........................C.........................",
+      ".......C....................C.............................................................",
+      ".....#####.............########...................#####...................#####...........",
+      ".........................................................................................",
+      "..P........E................................E.......................................G.....",
+      "#############..##################..#################..##############..####################",
+      "#############..##################..#################..##############..####################"
+    ]
+  },
+
+  {
+    id: 2,
+    name: "ステージ2",
+    description: "ジャンプ練習",
+
+    map: [
+      ".........................................................................................",
+      ".........................................................................................",
+      ".........................................................................................",
+      ".........................................................C...............................",
+      ".......................................................#####.............................",
+      ".................................C.......................................................",
+      "...............................#####.....................................................",
+      ".................C........................................................C...............",
+      "...............#####....................................................#####.............",
+      "........................................C................................................",
+      "......................................#####..............................................",
+      ".........................................................................................",
+      "..P......E........................E.................................................G......",
+      "################..################..################..################..##################",
+      "################..################..################..################..##################"
+    ]
+  },
+
+  {
+    id: 3,
+    name: "ステージ3",
+    description: "穴と敵",
+
+    map: [
+      ".........................................................................................",
+      ".........................................................................................",
+      ".........................................................................................",
+      ".........................................................................................",
+      "....................C.........................C........................C..................",
+      "..................#####.....................#####....................#####................",
+      ".........................................................................................",
+      "............E.......................E........................E.............................",
+      ".........................................................................................",
+      "............................C............................................................",
+      "..........................#####..........................................................",
+      ".........................................................................................",
+      "..P................................................................................G......",
+      "##########..##########..##########..##########..##########..##########..##################",
+      "##########..##########..##########..##########..##########..##########..##################"
+    ]
+  },
+
+  {
+    id: 4,
+    name: "ステージ4",
+    description: "複合ステージ",
+
+    map: [
+      ".........................................................................................",
+      ".........................................................................................",
+      ".......................................................C.................................",
+      ".....................................................#####...............................",
+      "..............................C..........................................................",
+      "............................#####........................................................",
+      "............C.................................................C..........................",
+      "..........#####.............................................#####........................",
+      ".....................E....................E...............................................",
+      ".........................................................................................",
+      ".................................#####...................................................",
+      ".........................................................................................",
+      "..P......E........................................................E................G......",
+      "############..############..############..############..############..####################",
+      "############..############..############..############..############..####################"
+    ]
+  },
+
+  {
+    id: 5,
+    name: "ステージ5",
+    description: "最終ステージ",
+
+    map: [
+      ".........................................................................................",
+      ".........................................................................................",
+      ".....................C......................C.......................C.....................",
+      "...................#####..................#####...................#####...................",
+      ".........................................................................................",
+      ".........C....................C.......................C...................................",
+      ".......#####................#####...................#####.................................",
+      "................E......................E.......................E..........................",
+      ".........................................................................................",
+      ".................................#####...................................................",
+      ".........................................................................................",
+      ".........................................................................................",
+      "..P....E..............E...................E...................E.....................G......",
+      "########..########..########..########..########..########..########..####################",
+      "########..########..########..########..########..########..########..####################"
+    ]
+  }
+];
+    
     let stageRows = [];
     let stageWidth = 0;
     let stageHeight = 0;
@@ -614,6 +949,216 @@
     let missTimer = 0;
 
     let lastTime = 0;
+
+    /*
+  現在選択されているステージの配列番号です。
+*/
+let currentStageIndex = 0;
+
+/*
+  localStorageへ保存するときの識別名です。
+*/
+const SAVE_KEY =
+  "twoDActionSaveData_v1";
+
+/*
+  初回起動時のセーブ内容です。
+*/
+const DEFAULT_SAVE_DATA = {
+  unlockedStageIds: [1],
+  clearedStageIds: [],
+
+  bestScores: {},
+  bestMisses: {}
+};
+
+let saveData =
+  loadSaveData();
+
+    /*
+  保存データを読み込みます。
+*/
+function loadSaveData() {
+  try {
+    const savedText =
+      localStorage.getItem(
+        SAVE_KEY
+      );
+
+    if (!savedText) {
+      return structuredClone(
+        DEFAULT_SAVE_DATA
+      );
+    }
+
+    const parsedData =
+      JSON.parse(savedText);
+
+    return {
+      unlockedStageIds:
+        Array.isArray(
+          parsedData.unlockedStageIds
+        )
+          ? parsedData.unlockedStageIds
+          : [1],
+
+      clearedStageIds:
+        Array.isArray(
+          parsedData.clearedStageIds
+        )
+          ? parsedData.clearedStageIds
+          : [],
+
+      bestScores:
+        parsedData.bestScores &&
+        typeof parsedData.bestScores ===
+          "object"
+          ? parsedData.bestScores
+          : {},
+
+      bestMisses:
+        parsedData.bestMisses &&
+        typeof parsedData.bestMisses ===
+          "object"
+          ? parsedData.bestMisses
+          : {}
+    };
+  } catch (error) {
+    console.warn(
+      "セーブデータを読み込めませんでした。",
+      error
+    );
+
+    return structuredClone(
+      DEFAULT_SAVE_DATA
+    );
+  }
+}
+
+/*
+  セーブ内容をlocalStorageへ保存します。
+*/
+function writeSaveData() {
+  try {
+    localStorage.setItem(
+      SAVE_KEY,
+      JSON.stringify(saveData)
+    );
+  } catch (error) {
+    console.warn(
+      "セーブデータを保存できませんでした。",
+      error
+    );
+  }
+}
+
+/*
+  指定ステージが解放されているか確認します。
+*/
+function isStageUnlocked(stageId) {
+  return saveData.unlockedStageIds
+    .includes(stageId);
+}
+
+/*
+  指定ステージがクリア済みか確認します。
+*/
+function isStageCleared(stageId) {
+  return saveData.clearedStageIds
+    .includes(stageId);
+}
+
+/*
+  ステージクリア結果を保存します。
+*/
+function saveStageClearResult() {
+  const stage =
+    STAGES[currentStageIndex];
+
+  const stageKey =
+    String(stage.id);
+
+  /*
+    クリア済み一覧へ追加します。
+  */
+  if (
+    !saveData.clearedStageIds
+      .includes(stage.id)
+  ) {
+    saveData.clearedStageIds.push(
+      stage.id
+    );
+  }
+
+  /*
+    最高スコアを更新します。
+  */
+  const previousBestScore =
+    saveData.bestScores[stageKey];
+
+  if (
+    previousBestScore === undefined ||
+    score > previousBestScore
+  ) {
+    saveData.bestScores[stageKey] =
+      score;
+  }
+
+  /*
+    最少ミス数を更新します。
+  */
+  const previousBestMisses =
+    saveData.bestMisses[stageKey];
+
+  if (
+    previousBestMisses === undefined ||
+    missCount < previousBestMisses
+  ) {
+    saveData.bestMisses[stageKey] =
+      missCount;
+  }
+
+  /*
+    次のステージを解放します。
+  */
+  const nextStage =
+    STAGES[currentStageIndex + 1];
+
+  if (
+    nextStage &&
+    !saveData.unlockedStageIds
+      .includes(nextStage.id)
+  ) {
+    saveData.unlockedStageIds.push(
+      nextStage.id
+    );
+  }
+
+  writeSaveData();
+}
+
+    /*
+  ステージ内で最も長い行に合わせて、
+  すべての行を空間で埋めます。
+*/
+function normalizeStageMap(mapRows) {
+  const maximumLength =
+    Math.max(
+      ...mapRows.map(
+        row => row.length
+      )
+    );
+
+  return mapRows.map(
+    row =>
+      row
+        .padEnd(
+          maximumLength,
+          "."
+        )
+        .split("")
+  );
+}
 
     /*
       Canvasの表示上の幅と高さです。
@@ -838,10 +1383,13 @@
     ) {
       resetAllInputs();
 
-      stageRows =
-        STAGE_TEMPLATE.map(
-          row => row.split("")
-        );
+      const currentStage =
+  STAGES[currentStageIndex];
+
+stageRows =
+  normalizeStageMap(
+    currentStage.map
+  );
 
       stageWidth =
         stageRows[0].length *
@@ -985,31 +1533,33 @@
       }
 
       player = {
-        x: startX,
-        y: startY,
+  x: startX,
+  y: startY,
 
-        startX,
-        startY,
+  startX,
+  startY,
 
-        width: PLAYER_WIDTH,
-        height: PLAYER_HEIGHT,
+  width: PLAYER_WIDTH,
+  height: PLAYER_HEIGHT,
 
-        velocityX: 0,
-        velocityY: 0,
+  velocityX: 0,
+  velocityY: 0,
 
-        grounded: false,
+  grounded: false,
 
-        facing: 1,
-        running: false,
-        dashing: false,
+  facing: 1,
+  running: false,
+  dashing: false,
 
-        animationTime: 0,
-        dustTimer: 0
-      };
+  animationTime: 0,
+  dustTimer: 0
+};
 
-      hideMessage();
-      updateHud();
-    }
+stageNameValue.textContent =
+  currentStage.name;
+
+hideMessage();
+updateHud();
 
     /*
       ミス後にステージを再開します。
@@ -1025,6 +1575,143 @@
 
       updateHud();
     }
+
+      /*
+  ステージ選択ボタンを作り直します。
+*/
+function renderStageSelectButtons() {
+  stageButtonList.innerHTML = "";
+
+  for (
+    let index = 0;
+    index < STAGES.length;
+    index += 1
+  ) {
+    const stage =
+      STAGES[index];
+
+    const unlocked =
+      isStageUnlocked(stage.id);
+
+    const cleared =
+      isStageCleared(stage.id);
+
+    const button =
+      document.createElement(
+        "button"
+      );
+
+    button.type = "button";
+    button.className =
+      "stage-select-item";
+
+    if (!unlocked) {
+      button.classList.add(
+        "locked"
+      );
+    }
+
+    const stageKey =
+      String(stage.id);
+
+    const bestScore =
+      saveData.bestScores[stageKey];
+
+    const bestMisses =
+      saveData.bestMisses[stageKey];
+
+    let recordText = "";
+
+    if (cleared) {
+      recordText +=
+        "クリア済み<br>";
+
+      recordText +=
+        "最高スコア: " +
+        bestScore +
+        "<br>";
+
+      recordText +=
+        "最少ミス: " +
+        bestMisses;
+    } else if (unlocked) {
+      recordText =
+        "未クリア";
+    } else {
+      recordText =
+        "未解放";
+    }
+
+    button.innerHTML =
+      stage.name +
+      "<br>" +
+      "<small>" +
+      stage.description +
+      "</small>" +
+      '<span class="stage-record">' +
+      recordText +
+      "</span>";
+
+    if (unlocked) {
+      button.addEventListener(
+        "click",
+        () => {
+          startStage(index);
+        }
+      );
+    }
+
+    stageButtonList.appendChild(
+      button
+    );
+  }
+}
+
+/*
+  ステージ選択画面を表示します。
+*/
+function showStageSelectScreen() {
+  resetAllInputs();
+  hideMessage();
+
+  renderStageSelectButtons();
+
+  stageSelectScreen.style.display =
+    "flex";
+}
+
+/*
+  ステージ選択画面を閉じます。
+*/
+function hideStageSelectScreen() {
+  stageSelectScreen.style.display =
+    "none";
+}
+
+/*
+  指定したステージを開始します。
+*/
+function startStage(stageIndex) {
+  if (
+    stageIndex < 0 ||
+    stageIndex >= STAGES.length
+  ) {
+    return;
+  }
+
+  const stage =
+    STAGES[stageIndex];
+
+  if (!isStageUnlocked(stage.id)) {
+    return;
+  }
+
+  currentStageIndex =
+    stageIndex;
+
+  hideStageSelectScreen();
+  initializeGame(true);
+}
 
     // =========================================================
     // ステージ判定
@@ -2000,6 +2687,11 @@
 
       score += 1000;
 
+saveStageClearResult();
+
+updateHud();
+playClearSound();
+
       updateHud();
       playClearSound();
 
@@ -2009,22 +2701,46 @@
     }
 
     function showClearMessage() {
-      messageTitle.textContent =
-        "CLEAR";
+  const currentStage =
+    STAGES[currentStageIndex];
 
-      messageResult.innerHTML =
-        "スコア: " +
-        score +
-        "<br>" +
-        "コイン: " +
-        collectedCoins +
-        "<br>" +
-        "ミス: " +
-        missCount;
+  messageTitle.textContent =
+    "CLEAR";
 
-      messageOverlay.style.display =
-        "flex";
-    }
+  messageResult.innerHTML =
+    currentStage.name +
+    " クリア！" +
+    "<br><br>" +
+    "スコア: " +
+    score +
+    "<br>" +
+    "コイン: " +
+    collectedCoins +
+    "<br>" +
+    "ミス: " +
+    missCount;
+
+  /*
+    次のステージが存在し、
+    解放されている場合だけ表示します。
+  */
+  const nextStage =
+    STAGES[currentStageIndex + 1];
+
+  if (
+    nextStage &&
+    isStageUnlocked(nextStage.id)
+  ) {
+    nextStageButton.style.display =
+      "block";
+  } else {
+    nextStageButton.style.display =
+      "none";
+  }
+
+  messageOverlay.style.display =
+    "flex";
+}
 
     function hideMessage() {
       messageOverlay.style.display =
@@ -3411,6 +4127,46 @@ bindMoveButton(
       }
     );
 
+      /*
+  ゲーム中のステージ選択ボタンです。
+*/
+stageSelectButton.addEventListener(
+  "click",
+  () => {
+    showStageSelectScreen();
+  }
+);
+
+/*
+  クリア画面から次のステージへ進みます。
+*/
+nextStageButton.addEventListener(
+  "click",
+  () => {
+    const nextStageIndex =
+      currentStageIndex + 1;
+
+    if (
+      nextStageIndex <
+      STAGES.length
+    ) {
+      startStage(
+        nextStageIndex
+      );
+    }
+  }
+);
+
+/*
+  クリア画面からステージ選択へ戻ります。
+*/
+messageStageSelectButton.addEventListener(
+  "click",
+  () => {
+    showStageSelectScreen();
+  }
+);
+
     /*
       すべての入力状態を解除します。
     */
@@ -3677,12 +4433,22 @@ bindMoveButton(
     // ゲーム開始
     // =========================================================
 
-    resizeCanvas();
-    initializeGame(true);
+   resizeCanvas();
 
-    window.requestAnimationFrame(
-      gameLoop
-    );
+/*
+  最初はステージ1を内部的に準備します。
+*/
+currentStageIndex = 0;
+initializeGame(true);
+
+/*
+  起動時はステージ選択画面を表示します。
+*/
+showStageSelectScreen();
+
+window.requestAnimationFrame(
+  gameLoop
+);
   </script>
 </body>
 </html>
