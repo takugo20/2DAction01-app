@@ -155,7 +155,6 @@
       position: absolute;
       bottom: 22px;
       display: flex;
-      align-items: flex-end;
       gap: 12px;
       pointer-events: auto;
     }
@@ -166,6 +165,14 @@
 
     #action-controls {
       right: 20px;
+
+      /*
+        ジャンプを上、
+        ダッシュを下に並べます。
+      */
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
     }
 
     .touch-button {
@@ -274,9 +281,14 @@
       </div>
 
       <div id="action-controls" class="control-group">
-        <div id="dash-button" class="touch-button">ダッシュ</div>
-        <div id="jump-button" class="touch-button">ジャンプ</div>
-      </div>
+    <div id="jump-button" class="touch-button">
+        ジャンプ
+    </div>
+
+    <div id="dash-button" class="touch-button">
+        ダッシュ
+    </div>
+</div>
     </div>
   </div>
 
