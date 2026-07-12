@@ -222,13 +222,10 @@
     }
 
     /*
-      ジャンプボタンを上、
-      ダッシュボタンを右下に配置します。
+      ジャンプボタンを画面右下へ配置します。
     */
     #action-controls {
       right: 20px;
-
-      flex-direction: column;
       align-items: flex-end;
     }
 
@@ -260,12 +257,6 @@
     .touch-button.active {
       transform: scale(0.94);
       background: rgba(255, 255, 255, 0.45);
-    }
-
-    #dash-button {
-      width: 72px;
-      height: 72px;
-      font-size: 15px;
     }
 
     #jump-button {
@@ -309,11 +300,6 @@
         height: 66px;
       }
 
-      #dash-button {
-        width: 62px;
-        height: 62px;
-      }
-
       #jump-button {
         width: 74px;
         height: 74px;
@@ -343,12 +329,6 @@
         border-width: 4px;
 
         font-size: 38px;
-      }
-
-      #dash-button {
-        width: 110px;
-        height: 110px;
-        font-size: 21px;
       }
 
       #jump-button {
@@ -435,13 +415,6 @@
         >
           ジャンプ
         </div>
-
-        <div
-          id="dash-button"
-          class="touch-button"
-        >
-          ダッシュ
-        </div>
       </div>
     </div>
   </div>
@@ -494,9 +467,6 @@
     const jumpButton =
       document.getElementById("jump-button");
 
-    const dashButton =
-      document.getElementById("dash-button");
-
     // =========================================================
     // 基本設定
     // =========================================================
@@ -517,6 +487,12 @@
     */
     const WALK_MAX_SPEED = 240;
     const DASH_MAX_SPEED = 390;
+
+    /*
+      同じ移動ボタンを、この時間以内にもう一度押すと、
+      ダブルタップとして扱います。
+    */
+    const MOVE_DOUBLE_TAP_TIME = 0.30;
 
     /*
       地上と空中での加速度です。
@@ -586,22 +562,22 @@
     */
 
     const STAGE_TEMPLATE = [
-      ".........................................................................................",
-      ".........................................................................................",
-      ".........................................................................................",
-      ".........................................................................................",
-      "....................C.............................................C......................",
-      ".........................................................................................",
-      "..............###..................C........................###..........................",
-      ".................E....................................E..................................",
-      "................................######.........................C.........................",
-      ".......C....................C............................................................",
-      "..................................................#####......................C...........",
-      ".....#####.............########...........................................#####..........",
-      "..P........E................................E.......................................G....",
-      "#############..##################..#################..##############..###################",
-      "#############..##################..#################..##############..###################"
-    ];
+  ".........................................................................................",
+  ".........................................................................................",
+  ".........................................................................................",
+  ".........................................................................................",
+  "....................C.............................................C......................",
+  ".........................................................................................",
+  "..............###..................C........................###..........................",
+  ".................E....................................E..................................",
+  "................................######.........................C.........................",
+  ".......C....................C............................................................",
+  ".....#####.............########...................#####...................#####..........",
+  ".........................................................................................",
+  "..P........E................................E.......................................G....",
+  "#############..##################..#################..##############..###################",
+  "#############..##################..#################..##############..###################"
+];
 
     let stageRows = [];
     let stageWidth = 0;
@@ -670,6 +646,28 @@
       jumpReleased: false,
       dash: false
     };
+
+    /*
+      キーボードのShiftまたはXによる
+      ダッシュ入力を管理します。
+    */
+    let keyboardDashHeld = false;
+
+    /*
+      タッチ操作で現在ダッシュ中の方向を保存します。
+      "left"または"right"が入ります。
+    */
+    const touchDashDirections = new Set();
+
+    /*
+      キーボードとタッチの状態から、
+      実際のダッシュ入力を更新します。
+    */
+    function updateDashInput() {
+      input.dash =
+        keyboardDashHeld ||
+        touchDashDirections.size > 0;
+    }
 
     // =========================================================
     // 効果音
@@ -2986,7 +2984,9 @@
         key === "shift" ||
         key === "x"
       ) {
-        input.dash = true;
+        keyboardDashHeld = true;
+        updateDashInput();
+
         event.preventDefault();
       }
 
@@ -3032,7 +3032,8 @@
         key === "shift" ||
         key === "x"
       ) {
-        input.dash = false;
+        keyboardDashHeld = false;
+        updateDashInput();
       }
     }
 
@@ -3104,6 +3105,98 @@
           onRelease();
         }
       }
+
+      /*
+  移動ボタンへ、
+  通常移動とダブルタップ長押しダッシュを設定します。
+*/
+function bindMoveButton(
+  element,
+  direction
+) {
+  /*
+    前回このボタンを押した時刻です。
+  */
+  let lastPressTime = -Infinity;
+
+  /*
+    現在の押下がダブルタップによる
+    ダッシュ操作かどうかです。
+  */
+  let dashActive = false;
+
+  bindHoldButton(
+    element,
+
+    /*
+      ボタンを押した瞬間の処理です。
+    */
+    () => {
+      const currentTime =
+        performance.now() / 1000;
+
+      /*
+        前回の押下から一定時間以内なら、
+        ダブルタップと判定します。
+      */
+      const isDoubleTap =
+        currentTime - lastPressTime <=
+        MOVE_DOUBLE_TAP_TIME;
+
+      /*
+        今回の押下時刻を保存します。
+      */
+      lastPressTime = currentTime;
+
+      /*
+        指定された方向へ移動を開始します。
+      */
+      if (direction === "left") {
+        input.left = true;
+      } else {
+        input.right = true;
+      }
+
+      /*
+        2回目のタップだった場合は、
+        そのまま押し続けている間ダッシュします。
+      */
+      if (isDoubleTap) {
+        dashActive = true;
+
+        touchDashDirections.add(
+          direction
+        );
+
+        updateDashInput();
+      }
+    },
+
+    /*
+      ボタンから指を離したときの処理です。
+    */
+    () => {
+      if (direction === "left") {
+        input.left = false;
+      } else {
+        input.right = false;
+      }
+
+      /*
+        この押下でダッシュしていた場合は解除します。
+      */
+      if (dashActive) {
+        dashActive = false;
+
+        touchDashDirections.delete(
+          direction
+        );
+
+        updateDashInput();
+      }
+    }
+  );
+}
 
       /*
         このボタンを押している指をすべて解除します。
@@ -3236,43 +3329,22 @@
     }
 
     /*
-      左移動ボタンです。
-    */
-    bindHoldButton(
-      leftButton,
-      () => {
-        input.left = true;
-      },
-      () => {
-        input.left = false;
-      }
-    );
+  左移動ボタンです。
+  ダブルタップ後に押し続けると左方向へダッシュします。
+*/
+bindMoveButton(
+  leftButton,
+  "left"
+);
 
-    /*
-      右移動ボタンです。
-    */
-    bindHoldButton(
-      rightButton,
-      () => {
-        input.right = true;
-      },
-      () => {
-        input.right = false;
-      }
-    );
-
-    /*
-      ダッシュボタンです。
-    */
-    bindHoldButton(
-      dashButton,
-      () => {
-        input.dash = true;
-      },
-      () => {
-        input.dash = false;
-      }
-    );
+/*
+  右移動ボタンです。
+  ダブルタップ後に押し続けると右方向へダッシュします。
+*/
+bindMoveButton(
+  rightButton,
+  "right"
+);
 
     /*
       ジャンプボタンです。
@@ -3332,38 +3404,46 @@
       すべての入力状態を解除します。
     */
     function resetAllInputs() {
-      input.left = false;
-      input.right = false;
-      input.jump = false;
-      input.jumpPressed = false;
-      input.jumpReleased = false;
-      input.dash = false;
+  input.left = false;
+  input.right = false;
+  input.jump = false;
+  input.jumpPressed = false;
+  input.jumpReleased = false;
+  input.dash = false;
 
-      const touchButtons = [
-        leftButton,
-        rightButton,
-        jumpButton,
-        dashButton
-      ];
+  /*
+    キーボードとタッチの
+    ダッシュ状態を解除します。
+  */
+  keyboardDashHeld = false;
+  touchDashDirections.clear();
 
-      for (
-        const button of
-        touchButtons
-      ) {
-        if (
-          typeof button.releaseAllPointers ===
-          "function"
-        ) {
-          button.releaseAllPointers();
-        } else {
-          button.classList.remove(
-            "active"
-          );
-        }
-      }
+  const touchButtons = [
+    leftButton,
+    rightButton,
+    jumpButton
+  ];
 
-      activePointerReleases.clear();
+  for (const button of touchButtons) {
+    if (
+      typeof button.releaseAllPointers ===
+      "function"
+    ) {
+      button.releaseAllPointers();
+    } else {
+      button.classList.remove(
+        "active"
+      );
     }
+  }
+
+  activePointerReleases.clear();
+
+  /*
+    全解除後のダッシュ状態を再計算します。
+  */
+  updateDashInput();
+}
 
     /*
       画面からフォーカスが外れた場合に解除します。
