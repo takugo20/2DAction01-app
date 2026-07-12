@@ -504,14 +504,19 @@
     // =========================================================
 
     function initializeGame(resetMissCount = true) {
-      /*
-        リスタート前に残っている入力状態を解除します。
-      */
+     /*
+      リスタート前に残っている入力状態と、
+      タッチボタンの押下状態を解除します。
+    */
+    if (typeof resetAllInputs === "function") {
+      resetAllInputs();
+    } else {
       input.left = false;
       input.right = false;
       input.jump = false;
       input.jumpPressed = false;
       input.dash = false;
+    }
       stageRows = STAGE_TEMPLATE.map(row => row.split(""));
 
       stageWidth = stageRows[0].length * TILE_SIZE;
@@ -627,20 +632,33 @@
     // =========================================================
 
     function isSolidTile(column, row) {
-      if (row < 0) {
-        return false;
-      }
+  /*
+    ステージ上端より上は空間として扱います。
+  */
+  if (row < 0) {
+    return false;
+  }
 
-      if (
-        row >= stageRows.length ||
-        column < 0 ||
-        column >= stageRows[0].length
-      ) {
-        return true;
-      }
+  /*
+    ステージ最下部より下も空間として扱います。
+    これにより奈落へ落下できます。
+  */
+  if (row >= stageRows.length) {
+    return false;
+  }
 
-      return stageRows[row][column] === "#";
-    }
+  /*
+    ステージ左右の外側は壁として扱います。
+  */
+  if (
+    column < 0 ||
+    column >= stageRows[0].length
+  ) {
+    return true;
+  }
+
+  return stageRows[row][column] === "#";
+}
 
     function getTileRectangle(column, row) {
       return {
