@@ -654,120 +654,120 @@
     const PLAYER_HEIGHT = 42;
 
     const ENEMY_WIDTH = 34;
-const ENEMY_HEIGHT = 30;
+    const ENEMY_HEIGHT = 30;
 
-/*
-  敵の種類を表す内部名称です。
-*/
-const ENEMY_TYPES = {
-  WALKER: "walker",
-  CAUTIOUS: "cautious",
-  JUMPER: "jumper",
-  FLYER: "flyer",
-  CHARGER: "charger",
-  MID_BOSS: "midBoss",
-  BOSS: "boss"
-};
+    /*
+      敵の種類を表す内部名称です。
+    */
+    const ENEMY_TYPES = {
+      WALKER: "walker",
+      CAUTIOUS: "cautious",
+      JUMPER: "jumper",
+      FLYER: "flyer",
+      CHARGER: "charger",
+      MID_BOSS: "midBoss",
+      BOSS: "boss"
+    };
 
-/*
-  敵の種類ごとの基本設定です。
+    /*
+      敵の種類ごとの基本設定です。
 
-  今後、敵を追加・調整する場合は、
-  主にこの設定を変更します。
-*/
-const ENEMY_DEFINITIONS = {
-  [ENEMY_TYPES.WALKER]: {
-    speed: 75,
-    avoidsHoles: false,
-    color: "#9c3dad",
-    faceColor: "#f2d0a7"
-  },
+      今後、敵を追加・調整する場合は、
+      主にこの設定を変更します。
+    */
+    const ENEMY_DEFINITIONS = {
+      [ENEMY_TYPES.WALKER]: {
+        speed: 75,
+        avoidsHoles: false,
+        color: "#9c3dad",
+        faceColor: "#f2d0a7"
+      },
 
-  [ENEMY_TYPES.CAUTIOUS]: {
-    speed: 70,
-    avoidsHoles: true,
-    color: "#39a85b",
-    faceColor: "#d7f0c5"
-  },
+      [ENEMY_TYPES.CAUTIOUS]: {
+        speed: 70,
+        avoidsHoles: true,
+        color: "#39a85b",
+        faceColor: "#d7f0c5"
+      },
 
-  [ENEMY_TYPES.JUMPER]: {
-    speed: 60,
-    avoidsHoles: false,
-    color: "#ef8b2c",
-    faceColor: "#ffe0ad",
+      [ENEMY_TYPES.JUMPER]: {
+        speed: 60,
+        avoidsHoles: false,
+        color: "#ef8b2c",
+        faceColor: "#ffe0ad",
 
-    jumpPower: 520,
-    minimumJumpInterval: 1.4,
-    maximumJumpInterval: 2.1
-  }
-};
+        jumpPower: 520,
+        minimumJumpInterval: 1.4,
+        maximumJumpInterval: 2.1
+      }
+    };
 
     // =========================================================
     // ステージデータ
     // =========================================================
 
-    /*
-  =========================================================
-  ステージ記号
-  =========================================================
+        /*
+      =========================================================
+      ステージ記号
+      =========================================================
 
-  【基本】
+      【基本】
 
-  . 空間
-  P プレイヤー開始位置
-  C コイン
-  G ゴール
+      . 空間
+      P プレイヤー開始位置
+      C コイン
+      G ゴール
 
-  【地面・ブロック】
+      【地面・ブロック】
 
-  # 地面
-  B 通常ブロック
-  H 下から叩けるブロック
-  R 壊せるブロック
-  Q コイン入りブロック
-  I アイテム入りブロック
-  U 使用済みブロック
+      # 地面
+      B 通常ブロック
+      H 下から叩けるブロック
+      R 壊せるブロック
+      Q コイン入りブロック
+      I アイテム入りブロック
+      U 使用済みブロック
 
-  現段階では、B・H・R・Q・I・Uは
-  固体ブロックとしてのみ動作します。
-  個別の反応は次回以降に実装します。
+      現段階では、B・H・R・Q・I・Uは
+      固体ブロックとしてのみ動作します。
+      個別の反応は次回以降に実装します。
 
-  【敵】
+      【敵】
 
-  W 通常歩行型
-    壁では反転しますが、
-    穴の手前では止まらず、そのまま落下します。
+      W 通常歩行型
+        壁では反転しますが、
+        穴の手前では止まらず、そのまま落下します。
 
-  A 穴回避型
-    壁と穴の手前で反転します。
+      A 穴回避型
+        壁と穴の手前で反転します。
 
-  J ジャンプ型
-    地上を歩きながら、
-    一定間隔でジャンプします。
+      J ジャンプ型
+        地上を歩きながら、
+        一定間隔でジャンプします。
 
-  E 旧敵記号
-    旧ステージとの互換用です。
-    Aと同じ穴回避型として読み込みます。
+      E 旧敵記号
+        旧ステージとの互換用です。
+        Aと同じ穴回避型として読み込みます。
 
-  F 飛行型・予約
-  D 突進型・予約
-  N 中ボス・予約
-  X ボス・予約
+      F 飛行型・予約
+      D 突進型・予約
+      N 中ボス・予約
+      X ボス・予約
 
-  【ステージギミック・予約】
+      【ステージギミック・予約】
 
-  M 横に動く足場
-  V 縦に動く足場
-  L 落ちる床
-  T トゲ
-  S バネ
+      M 横に動く足場
+      V 縦に動く足場
+      L 落ちる床
+      T トゲ
+      S バネ
 
-  【アイテム・予約】
+      【アイテム・予約】
 
-  1 シールド
-  2 一定時間無敵
-  3 一定時間ジャンプ力上昇
-*/
+      1 シールド
+      2 一定時間無敵
+      3 一定時間ジャンプ力上昇
+    */
 
     const STAGES = [
   {
@@ -1310,327 +1310,309 @@ const ENEMY_DEFINITIONS = {
       );
     }
 
-    /*
-  指定した記号が、
-  固体タイルとして扱われるか判定します。
-*/
-function isSolidSymbol(symbol) {
-  return (
-    symbol === "#" ||
-    symbol === "B" ||
-    symbol === "H" ||
-    symbol === "R" ||
-    symbol === "Q" ||
-    symbol === "I" ||
-    symbol === "U"
-  );
-}
-
-/*
-  敵記号から内部の敵タイプを取得します。
-*/
-function getEnemyTypeFromSymbol(symbol) {
-  switch (symbol) {
-    case "W":
-      return ENEMY_TYPES.WALKER;
-
-    case "A":
-      return ENEMY_TYPES.CAUTIOUS;
-
-    case "J":
-      return ENEMY_TYPES.JUMPER;
-
-    /*
-      旧記号Eは、
-      穴回避型として読み込みます。
+        /*
+      指定した記号が、
+      固体タイルとして扱われるか判定します。
     */
-    case "E":
-      return ENEMY_TYPES.CAUTIOUS;
-
-    default:
-      return null;
-  }
-}
-
-/*
-  指定範囲の乱数を作成します。
-*/
-function randomRange(
-  minimumValue,
-  maximumValue
-) {
-  return (
-    minimumValue +
-    Math.random() *
-    (
-      maximumValue -
-      minimumValue
-    )
-  );
-}
-
-/*
-  敵タイプに応じた敵データを作成します。
-*/
-function createEnemy(
-  enemyType,
-  tileX,
-  tileY
-) {
-  const definition =
-    ENEMY_DEFINITIONS[enemyType];
-
-  if (!definition) {
-    return null;
-  }
-
-  const enemy = {
-    type: enemyType,
-
-    x:
-      tileX +
-      (
-        TILE_SIZE -
-        ENEMY_WIDTH
-      ) /
-      2,
-
-    y:
-      tileY +
-      TILE_SIZE -
-      ENEMY_HEIGHT,
-
-    width:
-      ENEMY_WIDTH,
-
-    height:
-      ENEMY_HEIGHT,
-
-    velocityX:
-      -definition.speed,
-
-    velocityY:
-      0,
-
-    direction:
-      -1,
-
-    speed:
-      definition.speed,
-
-    avoidsHoles:
-      definition.avoidsHoles,
-
-    alive:
-      true,
-
-    grounded:
-      false,
-
-    squashTimer:
-      0,
-
-    jumpPower:
-      definition.jumpPower || 0,
-
-    jumpTimer:
-      0,
-
-    minimumJumpInterval:
-      definition.minimumJumpInterval || 0,
-
-    maximumJumpInterval:
-      definition.maximumJumpInterval || 0
-  };
-
-  /*
-    ジャンプ型は、出現直後から
-    全員が同時に跳ばないようにします。
-  */
-  if (
-    enemyType ===
-    ENEMY_TYPES.JUMPER
-  ) {
-    enemy.jumpTimer =
-      randomRange(
-        enemy.minimumJumpInterval,
-        enemy.maximumJumpInterval
+    function isSolidSymbol(symbol) {
+      return (
+        symbol === "#" ||
+        symbol === "B" ||
+        symbol === "H" ||
+        symbol === "R" ||
+        symbol === "Q" ||
+        symbol === "I" ||
+        symbol === "U"
       );
-  }
+    }
 
-  return enemy;
-}
+    /*
+      敵記号から内部の敵タイプを取得します。
+    */
+    function getEnemyTypeFromSymbol(symbol) {
+      switch (symbol) {
+        case "W":
+          return ENEMY_TYPES.WALKER;
 
-/*
-  敵記号から敵を作成し、
-  enemies配列へ追加します。
-*/
-function createEnemyBySymbol(
-  symbol,
-  tileX,
-  tileY
-) {
-  const enemyType =
-    getEnemyTypeFromSymbol(
-      symbol
-    );
+        case "A":
+          return ENEMY_TYPES.CAUTIOUS;
 
-  if (!enemyType) {
-    return false;
-  }
+        case "J":
+          return ENEMY_TYPES.JUMPER;
 
-  const enemy =
-    createEnemy(
+        /*
+          旧記号Eは、
+          穴回避型として読み込みます。
+        */
+        case "E":
+          return ENEMY_TYPES.CAUTIOUS;
+
+        default:
+          return null;
+      }
+    }
+
+    /*
+      指定範囲の乱数を作成します。
+    */
+    function randomRange(
+      minimumValue,
+      maximumValue
+    ) {
+      return (
+        minimumValue +
+        Math.random() *
+          (
+            maximumValue -
+            minimumValue
+          )
+      );
+    }
+
+    /*
+      敵タイプに応じた敵データを作成します。
+    */
+    function createEnemy(
       enemyType,
       tileX,
       tileY
-    );
+    ) {
+      const definition =
+        ENEMY_DEFINITIONS[enemyType];
 
-  if (!enemy) {
-    return false;
-  }
+      if (!definition) {
+        return null;
+      }
 
-  enemies.push(enemy);
+      const enemy = {
+        type: enemyType,
 
-  return true;
-}
+        x:
+          tileX +
+          (
+            TILE_SIZE -
+            ENEMY_WIDTH
+          ) /
+          2,
 
-/*
-  コインを作成します。
-*/
-function createCoin(
-  tileX,
-  tileY
-) {
-  coins.push({
-    x:
-      tileX +
-      TILE_SIZE / 2,
+        y:
+          tileY +
+          TILE_SIZE -
+          ENEMY_HEIGHT,
 
-    y:
-      tileY +
-      TILE_SIZE / 2,
+        width: ENEMY_WIDTH,
+        height: ENEMY_HEIGHT,
 
-    radius:
-      11,
+        velocityX:
+          -definition.speed,
 
-    collected:
-      false,
+        velocityY: 0,
+        direction: -1,
 
-    animationTime:
-      Math.random() *
-      Math.PI *
-      2
-  });
-}
+        speed:
+          definition.speed,
 
-/*
-  ゴールを作成します。
-*/
-function createGoal(
-  tileX,
-  tileY
-) {
-  goal = {
-    x:
-      tileX +
-      TILE_SIZE / 2,
+        avoidsHoles:
+          definition.avoidsHoles,
 
-    y:
-      tileY,
+        alive: true,
+        grounded: false,
+        squashTimer: 0,
 
-    width:
-      22,
+        jumpPower:
+          definition.jumpPower || 0,
 
-    height:
-      TILE_SIZE
-  };
-}
+        jumpTimer: 0,
 
-/*
-  ステージ上の記号を読み取り、
-  必要なオブジェクトを生成します。
+        minimumJumpInterval:
+          definition.minimumJumpInterval || 0,
 
-  プレイヤー開始位置は、
-  startPositionへ書き込みます。
-*/
-function parseStageSymbol(
-  symbol,
-  column,
-  row,
-  startPosition
-) {
-  const tileX =
-    column *
-    TILE_SIZE;
+        maximumJumpInterval:
+          definition.maximumJumpInterval || 0
+      };
 
-  const tileY =
-    row *
-    TILE_SIZE;
+      /*
+        ジャンプ型は、出現直後から
+        全員が同時に跳ばないようにします。
+      */
+      if (
+        enemyType ===
+        ENEMY_TYPES.JUMPER
+      ) {
+        enemy.jumpTimer =
+          randomRange(
+            enemy.minimumJumpInterval,
+            enemy.maximumJumpInterval
+          );
+      }
 
-  if (symbol === "P") {
-    startPosition.x =
-      tileX +
-      (
-        TILE_SIZE -
-        PLAYER_WIDTH
-      ) /
-      2;
+      return enemy;
+    }
 
-    startPosition.y =
-      tileY +
-      TILE_SIZE -
-      PLAYER_HEIGHT;
-
-    stageRows[row][column] =
-      ".";
-
-    return;
-  }
-
-  if (symbol === "C") {
-    createCoin(
-      tileX,
-      tileY
-    );
-
-    stageRows[row][column] =
-      ".";
-
-    return;
-  }
-
-  if (symbol === "G") {
-    createGoal(
-      tileX,
-      tileY
-    );
-
-    stageRows[row][column] =
-      ".";
-
-    return;
-  }
-
-  if (
-    createEnemyBySymbol(
+    /*
+      敵記号から敵を作成し、
+      enemies配列へ追加します。
+    */
+    function createEnemyBySymbol(
       symbol,
       tileX,
       tileY
-    )
-  ) {
-    stageRows[row][column] =
-      ".";
-  }
+    ) {
+      const enemyType =
+        getEnemyTypeFromSymbol(
+          symbol
+        );
 
-  /*
-    地面やブロック記号は、
-    stageRows内に残します。
+      if (!enemyType) {
+        return false;
+      }
 
-    予約記号については現段階では
-    オブジェクトを生成しません。
-  */
-}
+      const enemy =
+        createEnemy(
+          enemyType,
+          tileX,
+          tileY
+        );
+
+      if (!enemy) {
+        return false;
+      }
+
+      enemies.push(enemy);
+
+      return true;
+    }
+
+    /*
+      コインを作成します。
+    */
+    function createCoin(
+      tileX,
+      tileY
+    ) {
+      coins.push({
+        x:
+          tileX +
+          TILE_SIZE / 2,
+
+        y:
+          tileY +
+          TILE_SIZE / 2,
+
+        radius: 11,
+        collected: false,
+
+        animationTime:
+          Math.random() *
+          Math.PI *
+          2
+      });
+    }
+
+    /*
+      ゴールを作成します。
+    */
+    function createGoal(
+      tileX,
+      tileY
+    ) {
+      goal = {
+        x:
+          tileX +
+          TILE_SIZE / 2,
+
+        y:
+          tileY,
+
+        width: 22,
+        height: TILE_SIZE
+      };
+    }
+
+    /*
+      ステージ上の記号を読み取り、
+      必要なオブジェクトを生成します。
+
+      プレイヤー開始位置は、
+      startPositionへ書き込みます。
+    */
+    function parseStageSymbol(
+      symbol,
+      column,
+      row,
+      startPosition
+    ) {
+      const tileX =
+        column *
+        TILE_SIZE;
+
+      const tileY =
+        row *
+        TILE_SIZE;
+
+      if (symbol === "P") {
+        startPosition.x =
+          tileX +
+          (
+            TILE_SIZE -
+            PLAYER_WIDTH
+          ) /
+          2;
+
+        startPosition.y =
+          tileY +
+          TILE_SIZE -
+          PLAYER_HEIGHT;
+
+        stageRows[row][column] =
+          ".";
+
+        return;
+      }
+
+      if (symbol === "C") {
+        createCoin(
+          tileX,
+          tileY
+        );
+
+        stageRows[row][column] =
+          ".";
+
+        return;
+      }
+
+      if (symbol === "G") {
+        createGoal(
+          tileX,
+          tileY
+        );
+
+        stageRows[row][column] =
+          ".";
+
+        return;
+      }
+
+      if (
+        createEnemyBySymbol(
+          symbol,
+          tileX,
+          tileY
+        )
+      ) {
+        stageRows[row][column] =
+          ".";
+      }
+
+      /*
+        地面やブロック記号は、
+        stageRows内に残します。
+
+        予約記号については現段階では
+        オブジェクトを生成しません。
+      */
+    }
     
     function initializeGame(
       resetMissCount = true
@@ -1677,41 +1659,42 @@ function parseStageSymbol(
       variableJumpActive = false;
       jumpHoldTimer = 0;
 
-      const startPosition = {
-  x:
-    TILE_SIZE * 2,
+            const startPosition = {
+        x:
+          TILE_SIZE * 2,
 
-  y:
-    TILE_SIZE * 10
-};
+        y:
+          TILE_SIZE * 10
+      };
 
-/*
-  ステージ内の全記号を解析します。
-*/
-for (
-  let row = 0;
-  row < stageRows.length;
-  row += 1
-) {
-  for (
-    let column = 0;
-    column < stageRows[row].length;
-    column += 1
-  ) {
-    parseStageSymbol(
-      stageRows[row][column],
-      column,
-      row,
-      startPosition
-    );
-  }
-}
+      /*
+        ステージ内の全記号を解析します。
+      */
+      for (
+        let row = 0;
+        row < stageRows.length;
+        row += 1
+      ) {
+        for (
+          let column = 0;
+          column < stageRows[row].length;
+          column += 1
+        ) {
+          parseStageSymbol(
+            stageRows[row][column],
+            column,
+            row,
+            startPosition
+          );
+        }
+      }
 
-      
+      player = {
+        x:
+          startPosition.x,
 
-     player = {
-  x: startPosition.x,
-  y: startPosition.y,
+        y:
+          startPosition.y,
 
         width:
           PLAYER_WIDTH,
@@ -2010,7 +1993,12 @@ function showStageSelectScreen() {
       const stage =
         STAGES[stageIndex];
 
+     /*
+        ステージ1はセーブデータの状態にかかわらず
+        必ず開始できるようにします。
+      */
       if (
+        stage.id !== 1 &&
         !isStageUnlocked(
           stage.id
         )
@@ -2035,35 +2023,35 @@ function showStageSelectScreen() {
     // 当たり判定
     // =========================================================
 
-    function isSolidTile(
-  column,
-  row
-) {
-  /*
-    ステージ上端と下端の外側は空間です。
-  */
-  if (
-    row < 0 ||
-    row >= stageRows.length
-  ) {
-    return false;
-  }
+        function isSolidTile(
+      column,
+      row
+    ) {
+      /*
+        ステージ上端と下端の外側は空間です。
+      */
+      if (
+        row < 0 ||
+        row >= stageRows.length
+      ) {
+        return false;
+      }
 
-  /*
-    ステージ左右の外側は壁です。
-  */
-  if (
-    column < 0 ||
-    column >=
-      stageRows[0].length
-  ) {
-    return true;
-  }
+      /*
+        ステージ左右の外側は壁です。
+      */
+      if (
+        column < 0 ||
+        column >=
+          stageRows[0].length
+      ) {
+        return true;
+      }
 
-  return isSolidSymbol(
-    stageRows[row][column]
-  );
-}
+      return isSolidSymbol(
+        stageRows[row][column]
+      );
+    }
 
     function rectanglesOverlap(
       rectangleA,
@@ -2686,282 +2674,267 @@ function showStageSelectScreen() {
     // 敵更新
     // =========================================================
 
-    /*
-  敵の前方に地面があるか調べます。
-*/
-function hasGroundInFront(
-  enemy
-) {
-  const footX =
-    enemy.direction > 0
-      ? enemy.x +
-        enemy.width +
-        3
-      : enemy.x -
-        3;
-
-  const footY =
-    enemy.y +
-    enemy.height +
-    4;
-
-  const frontColumn =
-    Math.floor(
-      footX /
-      TILE_SIZE
-    );
-
-  const groundRow =
-    Math.floor(
-      footY /
-      TILE_SIZE
-    );
-
-  return isSolidTile(
-    frontColumn,
-    groundRow
-  );
-}
-
-/*
-  敵の横移動を行います。
-*/
-function updateEnemyHorizontalMovement(
-  enemy,
-  deltaTime
-) {
-  enemy.velocityX =
-    enemy.direction *
-    enemy.speed;
-
-  const hitWall =
-    moveEntityHorizontally(
-      enemy,
-      enemy.velocityX *
-      deltaTime
-    );
-
-  /*
-    壁へ衝突した場合は反転します。
-  */
-  if (hitWall) {
-    enemy.direction *=
-      -1;
-
-    enemy.velocityX =
-      enemy.direction *
-      enemy.speed;
-  }
-}
-
-/*
-  敵へ重力を加え、
-  縦方向へ移動させます。
-*/
-function updateEnemyGravity(
-  enemy,
-  deltaTime
-) {
-  enemy.velocityY =
-    Math.min(
-      enemy.velocityY +
-      GRAVITY *
-      deltaTime,
-
-      MAX_FALL_SPEED
-    );
-
-  moveEntityVertically(
-    enemy,
-    enemy.velocityY *
-      deltaTime
-  );
-}
-
-/*
-  通常歩行型を更新します。
-
-  穴の手前では反転しないため、
-  そのまま落下します。
-*/
-function updateWalkerEnemy(
-  enemy,
-  deltaTime
-) {
-  updateEnemyHorizontalMovement(
-    enemy,
-    deltaTime
-  );
-
-  updateEnemyGravity(
-    enemy,
-    deltaTime
-  );
-}
-
-/*
-  穴回避型を更新します。
-*/
-function updateCautiousEnemy(
-  enemy,
-  deltaTime
-) {
-  updateEnemyHorizontalMovement(
-    enemy,
-    deltaTime
-  );
-
-  updateEnemyGravity(
-    enemy,
-    deltaTime
-  );
-
-  /*
-    地面にいるときだけ、
-    前方の穴を確認します。
-  */
-  if (
-    enemy.grounded &&
-    !hasGroundInFront(enemy)
-  ) {
-    enemy.direction *=
-      -1;
-
-    enemy.velocityX =
-      enemy.direction *
-      enemy.speed;
-  }
-}
-
-/*
-  ジャンプ型を更新します。
-*/
-function updateJumperEnemy(
-  enemy,
-  deltaTime
-) {
-  updateEnemyHorizontalMovement(
-    enemy,
-    deltaTime
-  );
-
-  updateEnemyGravity(
-    enemy,
-    deltaTime
-  );
-
-  /*
-    地面にいる間だけ、
-    次のジャンプまでの時間を減らします。
-  */
-  if (enemy.grounded) {
-    enemy.jumpTimer -=
-      deltaTime;
-
-    if (
-      enemy.jumpTimer <= 0
+        /*
+      敵の前方に地面があるか調べます。
+    */
+    function hasGroundInFront(
+      enemy
     ) {
-      enemy.velocityY =
-        -enemy.jumpPower;
+      const footX =
+        enemy.direction > 0
+          ? enemy.x +
+            enemy.width +
+            3
+          : enemy.x -
+            3;
 
-      enemy.grounded =
-        false;
+      const footY =
+        enemy.y +
+        enemy.height +
+        4;
 
-      enemy.jumpTimer =
-        randomRange(
-          enemy.minimumJumpInterval,
-          enemy.maximumJumpInterval
+      const frontColumn =
+        Math.floor(
+          footX /
+          TILE_SIZE
         );
+
+      const groundRow =
+        Math.floor(
+          footY /
+          TILE_SIZE
+        );
+
+      return isSolidTile(
+        frontColumn,
+        groundRow
+      );
     }
-  }
-}
 
-/*
-  敵の種類に応じて、
-  対応する更新処理を呼び出します。
-*/
-function updateEnemy(
-  enemy,
-  deltaTime
-) {
-  switch (enemy.type) {
-    case ENEMY_TYPES.WALKER:
-      updateWalkerEnemy(
-        enemy,
-        deltaTime
-      );
-      break;
-
-    case ENEMY_TYPES.CAUTIOUS:
-      updateCautiousEnemy(
-        enemy,
-        deltaTime
-      );
-      break;
-
-    case ENEMY_TYPES.JUMPER:
-      updateJumperEnemy(
-        enemy,
-        deltaTime
-      );
-      break;
-
-    default:
-      updateWalkerEnemy(
-        enemy,
-        deltaTime
-      );
-      break;
-  }
-}
-
-/*
-  すべての敵を更新します。
-*/
-function updateEnemies(
-  deltaTime
-) {
-  for (
-    const enemy of
-    enemies
-  ) {
     /*
-      倒された敵は、
-      潰れる表示時間だけ減らします。
+      敵の横移動を行います。
     */
-    if (!enemy.alive) {
-      enemy.squashTimer -=
-        deltaTime;
-
-      continue;
-    }
-
-    updateEnemy(
+    function updateEnemyHorizontalMovement(
       enemy,
       deltaTime
-    );
+    ) {
+      enemy.velocityX =
+        enemy.direction *
+        enemy.speed;
+
+      const hitWall =
+        moveEntityHorizontally(
+          enemy,
+          enemy.velocityX *
+            deltaTime
+        );
+
+      /*
+        壁へ衝突した場合は反転します。
+      */
+      if (hitWall) {
+        enemy.direction *=
+          -1;
+
+        enemy.velocityX =
+          enemy.direction *
+          enemy.speed;
+      }
+    }
 
     /*
-      奈落へ完全に落下した敵は消滅します。
+      敵へ重力を加え、
+      縦方向へ移動させます。
     */
-    if (
-      enemy.y >=
-      stageHeight
+    function updateEnemyGravity(
+      enemy,
+      deltaTime
     ) {
-      enemy.alive =
-        false;
-
-      enemy.squashTimer =
-        0;
-
-      enemy.velocityX =
-        0;
-
       enemy.velocityY =
-        0;
+        Math.min(
+          enemy.velocityY +
+            GRAVITY *
+            deltaTime,
+
+          MAX_FALL_SPEED
+        );
+
+      moveEntityVertically(
+        enemy,
+        enemy.velocityY *
+          deltaTime
+      );
     }
-  }
-}
+
+    /*
+      通常歩行型を更新します。
+
+      穴の手前では反転しないため、
+      そのまま落下します。
+    */
+    function updateWalkerEnemy(
+      enemy,
+      deltaTime
+    ) {
+      updateEnemyHorizontalMovement(
+        enemy,
+        deltaTime
+      );
+
+      updateEnemyGravity(
+        enemy,
+        deltaTime
+      );
+    }
+
+    /*
+      穴回避型を更新します。
+    */
+    function updateCautiousEnemy(
+      enemy,
+      deltaTime
+    ) {
+      updateEnemyHorizontalMovement(
+        enemy,
+        deltaTime
+      );
+
+      updateEnemyGravity(
+        enemy,
+        deltaTime
+      );
+
+      if (
+        enemy.grounded &&
+        !hasGroundInFront(enemy)
+      ) {
+        enemy.direction *=
+          -1;
+
+        enemy.velocityX =
+          enemy.direction *
+          enemy.speed;
+      }
+    }
+
+    /*
+      ジャンプ型を更新します。
+    */
+    function updateJumperEnemy(
+      enemy,
+      deltaTime
+    ) {
+      updateEnemyHorizontalMovement(
+        enemy,
+        deltaTime
+      );
+
+      updateEnemyGravity(
+        enemy,
+        deltaTime
+      );
+
+      if (enemy.grounded) {
+        enemy.jumpTimer -=
+          deltaTime;
+
+        if (
+          enemy.jumpTimer <= 0
+        ) {
+          enemy.velocityY =
+            -enemy.jumpPower;
+
+          enemy.grounded =
+            false;
+
+          enemy.jumpTimer =
+            randomRange(
+              enemy.minimumJumpInterval,
+              enemy.maximumJumpInterval
+            );
+        }
+      }
+    }
+
+    /*
+      敵の種類に応じて、
+      対応する更新処理を呼び出します。
+    */
+    function updateEnemy(
+      enemy,
+      deltaTime
+    ) {
+      switch (enemy.type) {
+        case ENEMY_TYPES.WALKER:
+          updateWalkerEnemy(
+            enemy,
+            deltaTime
+          );
+          break;
+
+        case ENEMY_TYPES.CAUTIOUS:
+          updateCautiousEnemy(
+            enemy,
+            deltaTime
+          );
+          break;
+
+        case ENEMY_TYPES.JUMPER:
+          updateJumperEnemy(
+            enemy,
+            deltaTime
+          );
+          break;
+
+        default:
+          updateWalkerEnemy(
+            enemy,
+            deltaTime
+          );
+          break;
+      }
+    }
+
+    /*
+      すべての敵を更新します。
+    */
+    function updateEnemies(
+      deltaTime
+    ) {
+      for (
+        const enemy of
+        enemies
+      ) {
+        if (!enemy.alive) {
+          enemy.squashTimer -=
+            deltaTime;
+
+          continue;
+        }
+
+        updateEnemy(
+          enemy,
+          deltaTime
+        );
+
+        if (
+          enemy.y >=
+          stageHeight
+        ) {
+          enemy.alive =
+            false;
+
+          enemy.squashTimer =
+            0;
+
+          enemy.velocityX =
+            0;
+
+          enemy.velocityY =
+            0;
+        }
+      }
+    }
 
     // =========================================================
     // オブジェクトとの接触
@@ -3532,202 +3505,214 @@ function updateEnemies(
     /*
   ブロック記号ごとの色を取得します。
 */
-function getBlockColors(
-  symbol
-) {
-  switch (symbol) {
-    case "B":
-      return {
-        body: "#b56a32",
-        top: "#d1924e"
-      };
-
-    case "H":
-      return {
-        body: "#4d86c6",
-        top: "#78afe8"
-      };
-
-    case "R":
-      return {
-        body: "#b65342",
-        top: "#db7967"
-      };
-
-    case "Q":
-      return {
-        body: "#d79519",
-        top: "#ffc94b"
-      };
-
-    case "I":
-      return {
-        body: "#6c55b8",
-        top: "#9a80e1"
-      };
-
-    case "U":
-      return {
-        body: "#777777",
-        top: "#999999"
-      };
-
-    case "#":
-    default:
-      return {
-        body: "#8b572a",
-        top: "#5fbf54"
-      };
-  }
-}
-
-function drawStage() {
-  const firstColumn =
-    Math.max(
-      0,
-      Math.floor(
-        cameraX /
-        TILE_SIZE
-      ) -
-      1
-    );
-
-  const lastColumn =
-    Math.min(
-      stageRows[0].length -
-        1,
-
-      Math.floor(
-        (
-          cameraX +
-          viewportWidth
-        ) /
-        TILE_SIZE
-      ) +
-      1
-    );
-
-  for (
-    let row = 0;
-    row < stageRows.length;
-    row += 1
-  ) {
-    for (
-      let column =
-        firstColumn;
-
-      column <=
-        lastColumn;
-
-      column += 1
+    /*
+      ブロック記号ごとの色を取得します。
+    */
+    function getBlockColors(
+      symbol
     ) {
-      const symbol =
-        stageRows[row][column];
+      switch (symbol) {
+        case "B":
+          return {
+            body: "#b56a32",
+            top: "#d1924e"
+          };
 
-      if (
-        !isSolidSymbol(symbol)
-      ) {
-        continue;
-      }
+        case "H":
+          return {
+            body: "#4d86c6",
+            top: "#78afe8"
+          };
 
-      const x =
-        column *
-        TILE_SIZE;
+        case "R":
+          return {
+            body: "#b65342",
+            top: "#db7967"
+          };
 
-      const y =
-        row *
-        TILE_SIZE;
+        case "Q":
+          return {
+            body: "#d79519",
+            top: "#ffc94b"
+          };
 
-      const colors =
-        getBlockColors(symbol);
+        case "I":
+          return {
+            body: "#6c55b8",
+            top: "#9a80e1"
+          };
 
-      context.fillStyle =
-        colors.body;
+        case "U":
+          return {
+            body: "#777777",
+            top: "#999999"
+          };
 
-      context.fillRect(
-        x,
-        y,
-        TILE_SIZE,
-        TILE_SIZE
-      );
-
-      context.fillStyle =
-        colors.top;
-
-      context.fillRect(
-        x,
-        y,
-        TILE_SIZE,
-        9
-      );
-
-      context.strokeStyle =
-        "rgba(40, 25, 10, 0.45)";
-
-      context.lineWidth =
-        2;
-
-      context.strokeRect(
-        x + 1,
-        y + 1,
-        TILE_SIZE - 2,
-        TILE_SIZE - 2
-      );
-
-      context.fillStyle =
-        "rgba(255, 255, 255, 0.10)";
-
-      context.fillRect(
-        x + 6,
-        y + 16,
-        12,
-        5
-      );
-
-      context.fillRect(
-        x + 28,
-        y + 31,
-        11,
-        5
-      );
-
-      /*
-        特殊ブロックには、
-        中央へ記号を表示します。
-      */
-      if (
-        symbol !== "#"
-      ) {
-        context.fillStyle =
-          "rgba(255, 255, 255, 0.8)";
-
-        context.font =
-          "bold 21px sans-serif";
-
-        context.textAlign =
-          "center";
-
-        context.textBaseline =
-          "middle";
-
-        const displaySymbol =
-          symbol === "Q"
-            ? "?"
-            : symbol === "I"
-              ? "!"
-              : symbol;
-
-        context.fillText(
-          displaySymbol,
-          x +
-            TILE_SIZE / 2,
-          y +
-            TILE_SIZE / 2 +
-            2
-        );
+        case "#":
+        default:
+          return {
+            body: "#8b572a",
+            top: "#5fbf54"
+          };
       }
     }
-  }
+
+    function drawStage() {
+      context.save();
+
+      const firstColumn =
+        Math.max(
+          0,
+          Math.floor(
+            cameraX /
+            TILE_SIZE
+          ) -
+          1
+        );
+
+      const lastColumn =
+        Math.min(
+          stageRows[0].length -
+            1,
+
+          Math.floor(
+            (
+              cameraX +
+              viewportWidth
+            ) /
+            TILE_SIZE
+          ) +
+          1
+        );
+
+      for (
+        let row = 0;
+        row < stageRows.length;
+        row += 1
+      ) {
+        for (
+          let column =
+            firstColumn;
+
+          column <=
+            lastColumn;
+
+          column += 1
+        ) {
+          const symbol =
+            stageRows[row][column];
+
+          if (
+            !isSolidSymbol(symbol)
+          ) {
+            continue;
+          }
+
+          const x =
+            column *
+            TILE_SIZE;
+
+          const y =
+            row *
+            TILE_SIZE;
+
+          const colors =
+            getBlockColors(symbol);
+
+          context.fillStyle =
+            colors.body;
+
+          context.fillRect(
+            x,
+            y,
+            TILE_SIZE,
+            TILE_SIZE
+          );
+
+          context.fillStyle =
+            colors.top;
+
+          context.fillRect(
+            x,
+            y,
+            TILE_SIZE,
+            9
+          );
+
+          context.strokeStyle =
+            "rgba(40, 25, 10, 0.45)";
+
+          context.lineWidth =
+            2;
+
+          context.strokeRect(
+            x + 1,
+            y + 1,
+            TILE_SIZE - 2,
+            TILE_SIZE - 2
+          );
+
+          context.fillStyle =
+            "rgba(255, 255, 255, 0.10)";
+
+          context.fillRect(
+            x + 6,
+            y + 16,
+            12,
+            5
+          );
+
+          context.fillRect(
+            x + 28,
+            y + 31,
+            11,
+            5
+          );
+
+          /*
+            地面以外のブロックには、
+            中央へ識別記号を表示します。
+          */
+          if (symbol !== "#") {
+            context.fillStyle =
+              "rgba(255, 255, 255, 0.8)";
+
+            context.font =
+              "bold 21px sans-serif";
+
+            context.textAlign =
+              "center";
+
+            context.textBaseline =
+              "middle";
+
+            let displaySymbol =
+              symbol;
+
+            if (symbol === "Q") {
+              displaySymbol =
+                "?";
+            } else if (
+              symbol === "I"
+            ) {
+              displaySymbol =
+                "!";
+            }
+
+            context.fillText(
+              displaySymbol,
+              x +
+                TILE_SIZE / 2,
+              y +
+                TILE_SIZE / 2 +
+                2
+            );
+          }
+        }
+      }
+
+      context.restore();
+    }
 
   /*
     他の描画処理へ影響を残さないように戻します。
@@ -3888,253 +3873,231 @@ function drawStage() {
       context.restore();
     }
 
-    /*
-  敵の種類ごとの描画設定を取得します。
-*/
-function getEnemyDrawDefinition(
-  enemy
-) {
-  return (
-    ENEMY_DEFINITIONS[enemy.type] ||
-    ENEMY_DEFINITIONS[
-      ENEMY_TYPES.WALKER
-    ]
-  );
-}
-
-/*
-  通常歩行型の追加装飾です。
-*/
-function drawWalkerEnemyDecoration(
-  enemy
-) {
-  context.fillStyle =
-    "rgba(255, 255, 255, 0.35)";
-
-  context.fillRect(
-    -enemy.width / 2 + 5,
-    1,
-    8,
-    4
-  );
-}
-
-/*
-  穴回避型の追加装飾です。
-*/
-function drawCautiousEnemyDecoration(
-  enemy
-) {
-  /*
-    穴を警戒しているような眉を描きます。
-  */
-  context.fillStyle =
-    "#214b2a";
-
-  context.save();
-
-  context.translate(
-    6,
-    -10
-  );
-
-  context.rotate(
-    -0.25
-  );
-
-  context.fillRect(
-    -5,
-    -1,
-    10,
-    2
-  );
-
-  context.restore();
-}
-
-/*
-  ジャンプ型の追加装飾です。
-*/
-function drawJumperEnemyDecoration(
-  enemy
-) {
-  /*
-    頭上の突起です。
-  */
-  context.fillStyle =
-    "#b64f18";
-
-  context.beginPath();
-
-  context.moveTo(
-    -8,
-    -enemy.height / 2
-  );
-
-  context.lineTo(
-    -2,
-    -enemy.height / 2 -
-      9
-  );
-
-  context.lineTo(
-    3,
-    -enemy.height / 2
-  );
-
-  context.closePath();
-  context.fill();
-
-  context.beginPath();
-
-  context.moveTo(
-    2,
-    -enemy.height / 2
-  );
-
-  context.lineTo(
-    8,
-    -enemy.height / 2 -
-      8
-  );
-
-  context.lineTo(
-    13,
-    -enemy.height / 2
-  );
-
-  context.closePath();
-  context.fill();
-}
-
-/*
-  敵の種類に応じた装飾を描きます。
-*/
-function drawEnemyDecoration(
-  enemy
-) {
-  switch (enemy.type) {
-    case ENEMY_TYPES.WALKER:
-      drawWalkerEnemyDecoration(
-        enemy
-      );
-      break;
-
-    case ENEMY_TYPES.CAUTIOUS:
-      drawCautiousEnemyDecoration(
-        enemy
-      );
-      break;
-
-    case ENEMY_TYPES.JUMPER:
-      drawJumperEnemyDecoration(
-        enemy
-      );
-      break;
-  }
-}
-
-/*
-  すべての敵を描画します。
-*/
-function drawEnemies() {
-  for (
-    const enemy of
-    enemies
-  ) {
-    if (
-      !enemy.alive &&
-      enemy.squashTimer <= 0
+        /*
+      敵の種類ごとの描画設定を取得します。
+    */
+    function getEnemyDrawDefinition(
+      enemy
     ) {
-      continue;
+      return (
+        ENEMY_DEFINITIONS[enemy.type] ||
+        ENEMY_DEFINITIONS[
+          ENEMY_TYPES.WALKER
+        ]
+      );
     }
 
-    const definition =
-      getEnemyDrawDefinition(
-        enemy
+    /*
+      通常歩行型の追加装飾です。
+    */
+    function drawWalkerEnemyDecoration(
+      enemy
+    ) {
+      context.fillStyle =
+        "rgba(255, 255, 255, 0.35)";
+
+      context.fillRect(
+        -enemy.width / 2 + 5,
+        1,
+        8,
+        4
+      );
+    }
+
+    /*
+      穴回避型の追加装飾です。
+    */
+    function drawCautiousEnemyDecoration() {
+      context.fillStyle =
+        "#214b2a";
+
+      context.save();
+
+      context.translate(
+        6,
+        -10
       );
 
-    context.save();
+      context.rotate(
+        -0.25
+      );
 
-    context.translate(
-      enemy.x +
-        enemy.width / 2,
+      context.fillRect(
+        -5,
+        -1,
+        10,
+        2
+      );
 
-      enemy.y +
-        enemy.height / 2
-    );
-
-    context.scale(
-      enemy.direction,
-
-      enemy.alive
-        ? 1
-        : 0.35
-    );
+      context.restore();
+    }
 
     /*
-      敵の胴体です。
+      ジャンプ型の追加装飾です。
     */
-    context.fillStyle =
-      definition.color;
-
-    context.fillRect(
-      -enemy.width / 2,
-      -enemy.height / 2,
-      enemy.width,
-      enemy.height
-    );
-
-    /*
-      敵の顔部分です。
-    */
-    context.fillStyle =
-      definition.faceColor;
-
-    context.fillRect(
-      -enemy.width / 2 + 4,
-      -enemy.height / 2 + 4,
-      enemy.width - 8,
-      12
-    );
-
-    /*
-      目を描きます。
-    */
-    context.fillStyle =
-      "#222";
-
-    context.fillRect(
-      4,
-      -8,
-      4,
-      5
-    );
-
-    /*
-      足を描きます。
-    */
-    context.fillRect(
-      -14,
-      enemy.height / 2 - 4,
-      11,
-      5
-    );
-
-    context.fillRect(
-      3,
-      enemy.height / 2 - 4,
-      11,
-      5
-    );
-
-    drawEnemyDecoration(
+    function drawJumperEnemyDecoration(
       enemy
-    );
+    ) {
+      context.fillStyle =
+        "#b64f18";
 
-    context.restore();
-  }
-}
+      context.beginPath();
+
+      context.moveTo(
+        -8,
+        -enemy.height / 2
+      );
+
+      context.lineTo(
+        -2,
+        -enemy.height / 2 -
+          9
+      );
+
+      context.lineTo(
+        3,
+        -enemy.height / 2
+      );
+
+      context.closePath();
+      context.fill();
+
+      context.beginPath();
+
+      context.moveTo(
+        2,
+        -enemy.height / 2
+      );
+
+      context.lineTo(
+        8,
+        -enemy.height / 2 -
+          8
+      );
+
+      context.lineTo(
+        13,
+        -enemy.height / 2
+      );
+
+      context.closePath();
+      context.fill();
+    }
+
+    /*
+      敵の種類に応じた装飾を描きます。
+    */
+    function drawEnemyDecoration(
+      enemy
+    ) {
+      switch (enemy.type) {
+        case ENEMY_TYPES.WALKER:
+          drawWalkerEnemyDecoration(
+            enemy
+          );
+          break;
+
+        case ENEMY_TYPES.CAUTIOUS:
+          drawCautiousEnemyDecoration();
+          break;
+
+        case ENEMY_TYPES.JUMPER:
+          drawJumperEnemyDecoration(
+            enemy
+          );
+          break;
+      }
+    }
+
+    /*
+      すべての敵を描画します。
+    */
+    function drawEnemies() {
+      for (
+        const enemy of
+        enemies
+      ) {
+        if (
+          !enemy.alive &&
+          enemy.squashTimer <= 0
+        ) {
+          continue;
+        }
+
+        const definition =
+          getEnemyDrawDefinition(
+            enemy
+          );
+
+        context.save();
+
+        context.translate(
+          enemy.x +
+            enemy.width / 2,
+
+          enemy.y +
+            enemy.height / 2
+        );
+
+        context.scale(
+          enemy.direction,
+
+          enemy.alive
+            ? 1
+            : 0.35
+        );
+
+        context.fillStyle =
+          definition.color;
+
+        context.fillRect(
+          -enemy.width / 2,
+          -enemy.height / 2,
+          enemy.width,
+          enemy.height
+        );
+
+        context.fillStyle =
+          definition.faceColor;
+
+        context.fillRect(
+          -enemy.width / 2 + 4,
+          -enemy.height / 2 + 4,
+          enemy.width - 8,
+          12
+        );
+
+        context.fillStyle =
+          "#222";
+
+        context.fillRect(
+          4,
+          -8,
+          4,
+          5
+        );
+
+        context.fillRect(
+          -14,
+          enemy.height / 2 - 4,
+          11,
+          5
+        );
+
+        context.fillRect(
+          3,
+          enemy.height / 2 - 4,
+          11,
+          5
+        );
+
+        drawEnemyDecoration(
+          enemy
+        );
+
+        context.restore();
+      }
+    }
 
     function drawCoins() {
       for (
