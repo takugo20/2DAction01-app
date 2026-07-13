@@ -1601,18 +1601,70 @@ function renderStageSelectButtons() {
   }
 }
 
-    function showStageSelectScreen() {
-      resetAllInputs();
-      hideMessage();
+    /*
+  ステージ選択画面を表示します。
+*/
+function showStageSelectScreen() {
+  resetAllInputs();
+  hideMessage();
 
-      gamePaused =
-        true;
+  gamePaused = true;
 
-      renderStageSelectButtons();
+  /*
+    先に選択画面を表示します。
+  */
+  stageSelectScreen.style.display =
+    "flex";
 
-      stageSelectScreen.style.display =
-        "flex";
-    }
+  /*
+    ステージボタンを作成します。
+  */
+  try {
+    renderStageSelectButtons();
+  } catch (error) {
+    console.error(
+      "ステージ選択ボタンの作成に失敗しました。",
+      error
+    );
+
+    /*
+      予期しないエラーが起きた場合でも、
+      ステージ1を開始できるボタンを表示します。
+    */
+    stageButtonList.innerHTML = "";
+
+    const emergencyButton =
+      document.createElement(
+        "button"
+      );
+
+    emergencyButton.type =
+      "button";
+
+    emergencyButton.className =
+      "stage-select-item";
+
+    emergencyButton.textContent =
+      "ステージ1を開始";
+
+    emergencyButton.addEventListener(
+      "click",
+      () => {
+        currentStageIndex = 0;
+
+        hideStageSelectScreen();
+        initializeGame(true);
+
+        gamePaused = false;
+        lastTime = performance.now();
+      }
+    );
+
+    stageButtonList.appendChild(
+      emergencyButton
+    );
+  }
+}
 
     function hideStageSelectScreen() {
       stageSelectScreen.style.display =
