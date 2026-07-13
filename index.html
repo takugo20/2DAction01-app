@@ -5,37 +5,19 @@
 
   <meta
     name="viewport"
-    content="
-      width=device-width,
-      initial-scale=1.0,
-      maximum-scale=1.0,
-      user-scalable=no
-    "
+    content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"
   >
 
   <title>2Dアクション</title>
 
   <style>
-    /*
-      すべての要素について、
-      サイズ計算とタッチ時の表示を統一します。
-    */
     * {
       box-sizing: border-box;
       -webkit-tap-highlight-color: transparent;
-
-      /*
-        操作中に文字が選択されることを防ぎます。
-      */
       user-select: none;
       -webkit-user-select: none;
       -moz-user-select: none;
       -ms-user-select: none;
-
-      /*
-        iPhone・iPadで長押ししたときの
-        コピーや検索などのメニューを抑制します。
-      */
       -webkit-touch-callout: none;
     }
 
@@ -47,10 +29,6 @@
       overflow: hidden;
       background: #1a1a1a;
       font-family: sans-serif;
-
-      /*
-        ブラウザ側のスクロールやズーム操作を無効にします。
-      */
       touch-action: none;
       -ms-touch-action: none;
     }
@@ -59,9 +37,6 @@
     canvas,
     div,
     span {
-      /*
-        要素のドラッグを防ぎます。
-      */
       -webkit-user-drag: none;
     }
 
@@ -84,9 +59,10 @@
       -ms-touch-action: none;
     }
 
-    /*
-      スコアなどの表示です。
-    */
+    /* =======================================================
+       HUD
+       ======================================================= */
+
     #hud {
       position: absolute;
       top: 12px;
@@ -109,17 +85,17 @@
       pointer-events: none;
     }
 
-    /*
-      画面右上のリスタートボタンです。
-    */
-    #restart-button {
+    /* =======================================================
+       右上ボタン
+       ======================================================= */
+
+    #restart-button,
+    #stage-select-button {
       position: absolute;
-      top: 12px;
       right: 12px;
       z-index: 10;
 
       min-width: 86px;
-      min-height: 42px;
 
       border: 2px solid white;
       border-radius: 10px;
@@ -127,16 +103,28 @@
       color: white;
       background: rgba(0, 0, 0, 0.5);
 
-      font-size: 15px;
       font-weight: bold;
 
       cursor: pointer;
       touch-action: manipulation;
     }
 
-    /*
-      クリア時の画面全体を覆う表示です。
-    */
+    #restart-button {
+      top: 12px;
+      min-height: 42px;
+      font-size: 15px;
+    }
+
+    #stage-select-button {
+      top: 62px;
+      min-height: 38px;
+      font-size: 13px;
+    }
+
+    /* =======================================================
+       クリア画面
+       ======================================================= */
+
     #message-overlay {
       position: absolute;
       inset: 0;
@@ -173,9 +161,15 @@
       line-height: 1.8;
     }
 
-    #message-restart-button {
-      min-width: 150px;
-      min-height: 48px;
+    #message-buttons {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    #message-buttons button {
+      min-width: 170px;
+      min-height: 46px;
 
       border: 0;
       border-radius: 12px;
@@ -183,16 +177,21 @@
       color: #222;
       background: white;
 
-      font-size: 17px;
+      font-size: 16px;
       font-weight: bold;
 
       cursor: pointer;
       touch-action: manipulation;
     }
 
-    /*
-      スマートフォン・タブレット用の操作領域です。
-    */
+    #next-stage-button {
+      display: none;
+    }
+
+    /* =======================================================
+       タッチ操作
+       ======================================================= */
+
     #touch-controls {
       position: absolute;
       inset: 0;
@@ -213,17 +212,11 @@
       pointer-events: auto;
     }
 
-    /*
-      左右ボタンは画面左下に配置します。
-    */
     #move-controls {
       left: 20px;
       align-items: flex-end;
     }
 
-    /*
-      ジャンプボタンを画面右下へ配置します。
-    */
     #action-controls {
       right: 20px;
       align-items: flex-end;
@@ -251,9 +244,6 @@
       touch-action: none;
     }
 
-    /*
-      ボタンを押している間の見た目です。
-    */
     .touch-button.active {
       transform: scale(0.94);
       background: rgba(255, 255, 255, 0.45);
@@ -265,165 +255,101 @@
       font-size: 18px;
     }
 
-    /*
-  ステージ選択画面です。
-*/
-#stage-select-screen {
-  position: absolute;
-  inset: 0;
-  z-index: 30;
+    /* =======================================================
+       ステージ選択画面
+       ======================================================= */
 
-  display: flex;
-  align-items: center;
-  justify-content: center;
+    #stage-select-screen {
+      position: absolute;
+      inset: 0;
+      z-index: 30;
 
-  padding: 20px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
 
-  background:
-    linear-gradient(
-      #74c9f5,
-      #d8f3ff
-    );
-}
+      padding: 20px;
 
-#stage-select-panel {
-  width: min(620px, 100%);
-  max-height: 90vh;
-  overflow-y: auto;
+      background: linear-gradient(
+        #74c9f5,
+        #d8f3ff
+      );
+    }
 
-  padding: 28px;
+    #stage-select-panel {
+      width: min(620px, 100%);
+      max-height: 90vh;
+      overflow-y: auto;
 
-  border: 3px solid white;
-  border-radius: 18px;
+      padding: 28px;
 
-  color: white;
-  background: rgba(20, 20, 20, 0.88);
+      border: 3px solid white;
+      border-radius: 18px;
 
-  text-align: center;
-}
+      color: white;
+      background: rgba(20, 20, 20, 0.88);
 
-#stage-select-panel h1 {
-  margin: 0 0 10px;
-  font-size: 36px;
-}
+      text-align: center;
+    }
 
-#stage-select-panel p {
-  margin: 0 0 22px;
-}
+    #stage-select-panel h1 {
+      margin: 0 0 10px;
+      font-size: 36px;
+    }
 
-#stage-button-list {
-  display: grid;
-  grid-template-columns:
-    repeat(
-      auto-fit,
-      minmax(150px, 1fr)
-    );
+    #stage-select-panel p {
+      margin: 0 0 22px;
+    }
 
-  gap: 14px;
-}
+    #stage-button-list {
+      display: grid;
+      grid-template-columns: repeat(
+        auto-fit,
+        minmax(150px, 1fr)
+      );
+      gap: 14px;
+    }
 
-.stage-select-item {
-  min-height: 100px;
-  padding: 12px;
+    .stage-select-item {
+      min-height: 100px;
+      padding: 12px;
 
-  border: 2px solid white;
-  border-radius: 12px;
+      border: 2px solid white;
+      border-radius: 12px;
 
-  color: white;
-  background: rgba(255, 255, 255, 0.13);
+      color: white;
+      background: rgba(255, 255, 255, 0.13);
 
-  font-size: 16px;
-  font-weight: bold;
+      font-size: 16px;
+      font-weight: bold;
 
-  cursor: pointer;
-  touch-action: manipulation;
-}
+      cursor: pointer;
+      touch-action: manipulation;
+    }
 
-.stage-select-item:hover {
-  background: rgba(255, 255, 255, 0.25);
-}
+    .stage-select-item:hover {
+      background: rgba(255, 255, 255, 0.25);
+    }
 
-.stage-select-item.locked {
-  color: rgba(255, 255, 255, 0.5);
-  background: rgba(0, 0, 0, 0.25);
+    .stage-select-item.locked {
+      color: rgba(255, 255, 255, 0.5);
+      background: rgba(0, 0, 0, 0.25);
+      cursor: default;
+    }
 
-  cursor: default;
-}
+    .stage-select-item .stage-record {
+      display: block;
+      margin-top: 8px;
 
-.stage-select-item .stage-record {
-  display: block;
+      font-size: 12px;
+      font-weight: normal;
+      line-height: 1.5;
+    }
 
-  margin-top: 8px;
+    /* =======================================================
+       小型画面・タッチ端末
+       ======================================================= */
 
-  font-size: 12px;
-  font-weight: normal;
-  line-height: 1.5;
-}
-
-#stage-select-button {
-  position: absolute;
-  top: 62px;
-  right: 12px;
-  z-index: 10;
-
-  min-width: 86px;
-  min-height: 38px;
-
-  border: 2px solid white;
-  border-radius: 10px;
-
-  color: white;
-  background: rgba(0, 0, 0, 0.5);
-
-  font-size: 13px;
-  font-weight: bold;
-
-  cursor: pointer;
-  touch-action: manipulation;
-}
-
-#message-buttons {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-
-#message-buttons button {
-  min-width: 170px;
-  min-height: 46px;
-
-  border: 0;
-  border-radius: 12px;
-
-  color: #222;
-  background: white;
-
-  font-size: 16px;
-  font-weight: bold;
-
-  cursor: pointer;
-  touch-action: manipulation;
-}
-
-#next-stage-button {
-  display: none;
-}
-
-@media (pointer: coarse), (max-width: 900px) {
-  #stage-select-button {
-    top: 56px;
-
-    min-width: 74px;
-    min-height: 34px;
-
-    font-size: 12px;
-  }
-}
-
-    /*
-      タッチ操作端末または幅900px以下の画面で、
-      仮想ボタンを表示します。
-    */
     @media (pointer: coarse), (max-width: 900px) {
       #touch-controls {
         display: block;
@@ -440,11 +366,17 @@
         min-height: 36px;
         font-size: 13px;
       }
+
+      #stage-select-button {
+        top: 56px;
+
+        min-width: 74px;
+        min-height: 34px;
+
+        font-size: 12px;
+      }
     }
 
-    /*
-      高さの小さい画面向けの設定です。
-    */
     @media (max-height: 500px) {
       .control-group {
         bottom: 12px;
@@ -461,9 +393,10 @@
       }
     }
 
-    /*
-      タブレット向けの設定です。
-    */
+    /* =======================================================
+       タブレット
+       ======================================================= */
+
     @media (pointer: coarse) and (min-width: 768px) {
       #move-controls {
         left: 32px;
@@ -474,7 +407,6 @@
       #action-controls {
         right: 32px;
         bottom: 32px;
-        gap: 20px;
       }
 
       .touch-button {
@@ -498,38 +430,39 @@
 <body>
   <div id="game-wrapper">
     <canvas id="game-canvas"></canvas>
+
     <div id="stage-select-screen">
-  <div id="stage-select-panel">
-    <h1>2Dアクション</h1>
+      <div id="stage-select-panel">
+        <h1>2Dアクション</h1>
 
-    <p>
-      ステージを選択してください
-    </p>
+        <p>
+          ステージを選択してください
+        </p>
 
-    <div id="stage-button-list"></div>
-  </div>
-</div>
+        <div id="stage-button-list"></div>
+      </div>
+    </div>
 
     <div id="hud">
-  <span id="stage-name-value">
-    ステージ1
-  </span>
+      <span id="stage-name-value">
+        ステージ1
+      </span>
 
-  <span>
-    スコア:
-    <span id="score-value">0</span>
-  </span>
+      <span>
+        スコア:
+        <span id="score-value">0</span>
+      </span>
 
-  <span>
-    コイン:
-    <span id="coin-value">0</span>
-  </span>
+      <span>
+        コイン:
+        <span id="coin-value">0</span>
+      </span>
 
-  <span>
-    ミス:
-    <span id="miss-value">0</span>
-  </span>
-</div>
+      <span>
+        ミス:
+        <span id="miss-value">0</span>
+      </span>
+    </div>
 
     <button
       id="restart-button"
@@ -537,13 +470,13 @@
     >
       リスタート
     </button>
-    
+
     <button
-  id="stage-select-button"
-  type="button"
->
-  ステージ選択
-</button>
+      id="stage-select-button"
+      type="button"
+    >
+      ステージ選択
+    </button>
 
     <div id="message-overlay">
       <div id="message-panel">
@@ -554,27 +487,27 @@
         <p id="message-result"></p>
 
         <div id="message-buttons">
-  <button
-    id="next-stage-button"
-    type="button"
-  >
-    次のステージ
-  </button>
+          <button
+            id="next-stage-button"
+            type="button"
+          >
+            次のステージ
+          </button>
 
-  <button
-    id="message-restart-button"
-    type="button"
-  >
-    もう一度遊ぶ
-  </button>
+          <button
+            id="message-restart-button"
+            type="button"
+          >
+            もう一度遊ぶ
+          </button>
 
-  <button
-    id="message-stage-select-button"
-    type="button"
-  >
-    ステージ選択
-  </button>
-</div>
+          <button
+            id="message-stage-select-button"
+            type="button"
+          >
+            ステージ選択
+          </button>
+        </div>
       </div>
     </div>
 
@@ -634,8 +567,14 @@
     const missValue =
       document.getElementById("miss-value");
 
+    const stageNameValue =
+      document.getElementById("stage-name-value");
+
     const restartButton =
       document.getElementById("restart-button");
+
+    const stageSelectButton =
+      document.getElementById("stage-select-button");
 
     const messageOverlay =
       document.getElementById("message-overlay");
@@ -651,6 +590,26 @@
         "message-restart-button"
       );
 
+    const messageStageSelectButton =
+      document.getElementById(
+        "message-stage-select-button"
+      );
+
+    const nextStageButton =
+      document.getElementById(
+        "next-stage-button"
+      );
+
+    const stageSelectScreen =
+      document.getElementById(
+        "stage-select-screen"
+      );
+
+    const stageButtonList =
+      document.getElementById(
+        "stage-button-list"
+      );
+
     const leftButton =
       document.getElementById("left-button");
 
@@ -660,111 +619,40 @@
     const jumpButton =
       document.getElementById("jump-button");
 
-    const stageSelectScreen =
-  document.getElementById(
-    "stage-select-screen"
-  );
-
-const stageButtonList =
-  document.getElementById(
-    "stage-button-list"
-  );
-
-const stageNameValue =
-  document.getElementById(
-    "stage-name-value"
-  );
-
-const stageSelectButton =
-  document.getElementById(
-    "stage-select-button"
-  );
-
-const nextStageButton =
-  document.getElementById(
-    "next-stage-button"
-  );
-
-const messageStageSelectButton =
-  document.getElementById(
-    "message-stage-select-button"
-  );
-
     // =========================================================
     // 基本設定
     // =========================================================
 
-    /*
-      タイル1マスの大きさです。
-    */
     const TILE_SIZE = 48;
 
-    /*
-      重力と最大落下速度です。
-    */
     const GRAVITY = 1900;
     const MAX_FALL_SPEED = 900;
 
-    /*
-      通常移動とダッシュの最高速度です。
-    */
     const WALK_MAX_SPEED = 240;
     const DASH_MAX_SPEED = 390;
 
-    /*
-      同じ移動ボタンを、この時間以内にもう一度押すと、
-      ダブルタップとして扱います。
-    */
     const MOVE_DOUBLE_TAP_TIME = 0.30;
 
-    /*
-      地上と空中での加速度です。
-    */
     const GROUND_ACCELERATION = 1800;
     const GROUND_DECELERATION = 2200;
     const AIR_ACCELERATION = 850;
 
-    /*
-      ジャンプ開始時の上向き速度です。
-    */
     const JUMP_POWER = 760;
 
-    /*
-      小・中・大ジャンプの判定時間です。
-    */
     const SMALL_JUMP_RELEASE_TIME = 0.10;
     const LARGE_JUMP_HOLD_TIME = 0.22;
 
-    /*
-      小ジャンプと中ジャンプ時に残す上向き速度です。
-    */
     const SMALL_JUMP_RELEASE_SPEED = 280;
     const MEDIUM_JUMP_RELEASE_SPEED = 480;
 
-    /*
-      敵を踏んだときの跳ね返り速度です。
-    */
     const STOMP_BOUNCE_POWER = 390;
 
-    /*
-      着地直前のジャンプ入力を保存する時間です。
-    */
     const JUMP_BUFFER_TIME = 0.15;
-
-    /*
-      足場を離れた直後でもジャンプできる時間です。
-    */
     const COYOTE_TIME = 0.10;
 
-    /*
-      プレイヤーの大きさです。
-    */
     const PLAYER_WIDTH = 32;
     const PLAYER_HEIGHT = 42;
 
-    /*
-      敵の大きさと移動速度です。
-    */
     const ENEMY_WIDTH = 34;
     const ENEMY_HEIGHT = 30;
     const ENEMY_SPEED = 75;
@@ -774,144 +662,138 @@ const messageStageSelectButton =
     // =========================================================
 
     /*
-      記号の意味
+      記号
 
       . 空間
-      # 地面・ブロック
-      P プレイヤー開始位置
+      # 地面
+      P プレイヤー
       C コイン
       E 敵
       G ゴール
     */
 
-    /*
-  ゲーム内の全ステージを管理します。
+    const STAGES = [
+      {
+        id: 1,
+        name: "ステージ1",
+        description: "基本操作",
 
-  現時点では、敵やブロックの追加前なので、
-  既存要素を使った5つの仮ステージです。
-*/
-const STAGES = [
-  {
-    id: 1,
-    name: "ステージ1",
-    description: "基本操作",
+        map: [
+          ".........................................................................................",
+          ".........................................................................................",
+          ".........................................................................................",
+          ".........................................................................................",
+          "....................C.............................................C......................",
+          ".........................................................................................",
+          "..............###..................C........................###...........................",
+          ".................E....................................E..................................",
+          "................................######.........................C.........................",
+          ".......C....................C.............................................................",
+          ".....#####.............########...................#####...................#####...........",
+          ".........................................................................................",
+          "..P........E................................E.......................................G.....",
+          "#############..##################..#################..##############..####################",
+          "#############..##################..#################..##############..####################"
+        ]
+      },
 
-    map: [
-      ".........................................................................................",
-      ".........................................................................................",
-      ".........................................................................................",
-      ".........................................................................................",
-      "....................C.............................................C......................",
-      ".........................................................................................",
-      "..............###..................C........................###...........................",
-      ".................E....................................E..................................",
-      "................................######.........................C.........................",
-      ".......C....................C.............................................................",
-      ".....#####.............########...................#####...................#####...........",
-      ".........................................................................................",
-      "..P........E................................E.......................................G.....",
-      "#############..##################..#################..##############..####################",
-      "#############..##################..#################..##############..####################"
-    ]
-  },
+      {
+        id: 2,
+        name: "ステージ2",
+        description: "ジャンプ練習",
 
-  {
-    id: 2,
-    name: "ステージ2",
-    description: "ジャンプ練習",
+        map: [
+          ".........................................................................................",
+          ".........................................................................................",
+          ".........................................................................................",
+          ".........................................................C...............................",
+          ".......................................................#####.............................",
+          ".................................C.......................................................",
+          "...............................#####.....................................................",
+          ".................C........................................................C...............",
+          "...............#####....................................................#####.............",
+          "........................................C................................................",
+          "......................................#####..............................................",
+          ".........................................................................................",
+          "..P......E........................E.................................................G......",
+          "################..################..################..################..##################",
+          "################..################..################..################..##################"
+        ]
+      },
 
-    map: [
-      ".........................................................................................",
-      ".........................................................................................",
-      ".........................................................................................",
-      ".........................................................C...............................",
-      ".......................................................#####.............................",
-      ".................................C.......................................................",
-      "...............................#####.....................................................",
-      ".................C........................................................C...............",
-      "...............#####....................................................#####.............",
-      "........................................C................................................",
-      "......................................#####..............................................",
-      ".........................................................................................",
-      "..P......E........................E.................................................G......",
-      "################..################..################..################..##################",
-      "################..################..################..################..##################"
-    ]
-  },
+      {
+        id: 3,
+        name: "ステージ3",
+        description: "穴と敵",
 
-  {
-    id: 3,
-    name: "ステージ3",
-    description: "穴と敵",
+        map: [
+          ".........................................................................................",
+          ".........................................................................................",
+          ".........................................................................................",
+          ".........................................................................................",
+          "....................C.........................C........................C..................",
+          "..................#####.....................#####....................#####................",
+          ".........................................................................................",
+          "............E.......................E........................E.............................",
+          ".........................................................................................",
+          "............................C............................................................",
+          "..........................#####..........................................................",
+          ".........................................................................................",
+          "..P................................................................................G......",
+          "##########..##########..##########..##########..##########..##########..##################",
+          "##########..##########..##########..##########..##########..##########..##################"
+        ]
+      },
 
-    map: [
-      ".........................................................................................",
-      ".........................................................................................",
-      ".........................................................................................",
-      ".........................................................................................",
-      "....................C.........................C........................C..................",
-      "..................#####.....................#####....................#####................",
-      ".........................................................................................",
-      "............E.......................E........................E.............................",
-      ".........................................................................................",
-      "............................C............................................................",
-      "..........................#####..........................................................",
-      ".........................................................................................",
-      "..P................................................................................G......",
-      "##########..##########..##########..##########..##########..##########..##################",
-      "##########..##########..##########..##########..##########..##########..##################"
-    ]
-  },
+      {
+        id: 4,
+        name: "ステージ4",
+        description: "複合ステージ",
 
-  {
-    id: 4,
-    name: "ステージ4",
-    description: "複合ステージ",
+        map: [
+          ".........................................................................................",
+          ".........................................................................................",
+          ".......................................................C.................................",
+          ".....................................................#####...............................",
+          "..............................C..........................................................",
+          "............................#####........................................................",
+          "............C.................................................C..........................",
+          "..........#####.............................................#####........................",
+          ".....................E....................E...............................................",
+          ".........................................................................................",
+          ".................................#####...................................................",
+          ".........................................................................................",
+          "..P......E........................................................E................G......",
+          "############..############..############..############..############..####################",
+          "############..############..############..############..############..####################"
+        ]
+      },
 
-    map: [
-      ".........................................................................................",
-      ".........................................................................................",
-      ".......................................................C.................................",
-      ".....................................................#####...............................",
-      "..............................C..........................................................",
-      "............................#####........................................................",
-      "............C.................................................C..........................",
-      "..........#####.............................................#####........................",
-      ".....................E....................E...............................................",
-      ".........................................................................................",
-      ".................................#####...................................................",
-      ".........................................................................................",
-      "..P......E........................................................E................G......",
-      "############..############..############..############..############..####################",
-      "############..############..############..############..############..####################"
-    ]
-  },
+      {
+        id: 5,
+        name: "ステージ5",
+        description: "最終ステージ",
 
-  {
-    id: 5,
-    name: "ステージ5",
-    description: "最終ステージ",
+        map: [
+          ".........................................................................................",
+          ".........................................................................................",
+          ".....................C......................C.......................C.....................",
+          "...................#####..................#####...................#####...................",
+          ".........................................................................................",
+          ".........C....................C.......................C...................................",
+          ".......#####................#####...................#####.................................",
+          "................E......................E.......................E..........................",
+          ".........................................................................................",
+          ".................................#####...................................................",
+          ".........................................................................................",
+          ".........................................................................................",
+          "..P....E..............E...................E...................E.....................G......",
+          "########..########..########..########..########..########..########..####################",
+          "########..########..########..########..########..########..########..####################"
+        ]
+      }
+    ];
 
-    map: [
-      ".........................................................................................",
-      ".........................................................................................",
-      ".....................C......................C.......................C.....................",
-      "...................#####..................#####...................#####...................",
-      ".........................................................................................",
-      ".........C....................C.......................C...................................",
-      ".......#####................#####...................#####.................................",
-      "................E......................E.......................E..........................",
-      ".........................................................................................",
-      ".................................#####...................................................",
-      ".........................................................................................",
-      ".........................................................................................",
-      "..P....E..............E...................E...................E.....................G......",
-      "########..########..########..########..########..########..########..####################",
-      "########..########..########..########..########..########..########..####################"
-    ]
-  }
-];
-    
     let stageRows = [];
     let stageWidth = 0;
     let stageHeight = 0;
@@ -921,9 +803,12 @@ const STAGES = [
     // =========================================================
 
     let player = null;
+
     let enemies = [];
     let coins = [];
     let goal = null;
+
+    const particles = [];
 
     let cameraX = 0;
 
@@ -933,259 +818,202 @@ const STAGES = [
 
     let gameCleared = false;
     let playerDisabled = false;
-    let missTimer = 0;
+    let gamePaused = true;
 
+    let missTimer = 0;
     let lastTime = 0;
 
-    /*
-  ステージ選択画面などを表示している間、
-  ゲーム処理を停止するための状態です。
-*/
-let gamePaused = true;
+    let currentStageIndex = 0;
 
-    /*
-  現在選択されているステージの配列番号です。
-*/
-let currentStageIndex = 0;
+    let viewportWidth =
+      window.innerWidth;
 
-/*
-  localStorageへ保存するときの識別名です。
-*/
-const SAVE_KEY =
-  "twoDActionSaveData_v1";
+    let viewportHeight =
+      window.innerHeight;
 
-/*
-  初回起動時のセーブ内容です。
-*/
-const DEFAULT_SAVE_DATA = {
-  unlockedStageIds: [1],
-  clearedStageIds: [],
+    // =========================================================
+    // セーブ
+    // =========================================================
 
-  bestScores: {},
-  bestMisses: {}
-};
+    const SAVE_KEY =
+      "twoDActionSaveData_v1";
 
-let saveData =
-  loadSaveData();
+    const DEFAULT_SAVE_DATA = {
+      unlockedStageIds: [1],
+      clearedStageIds: [],
+      bestScores: {},
+      bestMisses: {}
+    };
 
-    /*
-  保存データを読み込みます。
-*/
-function loadSaveData() {
-  try {
-    const savedText =
-      localStorage.getItem(
-        SAVE_KEY
-      );
-
-    if (!savedText) {
-      return structuredClone(
-        DEFAULT_SAVE_DATA
+    function createDefaultSaveData() {
+      return JSON.parse(
+        JSON.stringify(
+          DEFAULT_SAVE_DATA
+        )
       );
     }
 
-    const parsedData =
-      JSON.parse(savedText);
+    function loadSaveData() {
+      try {
+        const savedText =
+          localStorage.getItem(
+            SAVE_KEY
+          );
 
-    return {
-      unlockedStageIds:
-        Array.isArray(
-          parsedData.unlockedStageIds
-        )
-          ? parsedData.unlockedStageIds
-          : [1],
+        if (!savedText) {
+          return createDefaultSaveData();
+        }
 
-      clearedStageIds:
-        Array.isArray(
-          parsedData.clearedStageIds
-        )
-          ? parsedData.clearedStageIds
-          : [],
+        const parsedData =
+          JSON.parse(savedText);
 
-      bestScores:
-        parsedData.bestScores &&
-        typeof parsedData.bestScores ===
-          "object"
-          ? parsedData.bestScores
-          : {},
+        const unlockedStageIds =
+          Array.isArray(
+            parsedData.unlockedStageIds
+          )
+            ? parsedData.unlockedStageIds
+            : [1];
 
-      bestMisses:
-        parsedData.bestMisses &&
-        typeof parsedData.bestMisses ===
-          "object"
-          ? parsedData.bestMisses
-          : {}
-    };
-  } catch (error) {
-    console.warn(
-      "セーブデータを読み込めませんでした。",
-      error
-    );
+        /*
+          セーブデータが壊れていても、
+          ステージ1だけは必ず解放します。
+        */
+        if (
+          !unlockedStageIds.includes(1)
+        ) {
+          unlockedStageIds.push(1);
+        }
 
-    return structuredClone(
-      DEFAULT_SAVE_DATA
-    );
-  }
-}
+        return {
+          unlockedStageIds,
 
-/*
-  セーブ内容をlocalStorageへ保存します。
-*/
-function writeSaveData() {
-  try {
-    localStorage.setItem(
-      SAVE_KEY,
-      JSON.stringify(saveData)
-    );
-  } catch (error) {
-    console.warn(
-      "セーブデータを保存できませんでした。",
-      error
-    );
-  }
-}
+          clearedStageIds:
+            Array.isArray(
+              parsedData.clearedStageIds
+            )
+              ? parsedData.clearedStageIds
+              : [],
 
-/*
-  指定ステージが解放されているか確認します。
-*/
-function isStageUnlocked(stageId) {
-  return saveData.unlockedStageIds
-    .includes(stageId);
-}
+          bestScores:
+            parsedData.bestScores &&
+            typeof parsedData.bestScores ===
+              "object"
+              ? parsedData.bestScores
+              : {},
 
-/*
-  指定ステージがクリア済みか確認します。
-*/
-function isStageCleared(stageId) {
-  return saveData.clearedStageIds
-    .includes(stageId);
-}
+          bestMisses:
+            parsedData.bestMisses &&
+            typeof parsedData.bestMisses ===
+              "object"
+              ? parsedData.bestMisses
+              : {}
+        };
+      } catch (error) {
+        console.warn(
+          "セーブデータを読み込めませんでした。",
+          error
+        );
 
-/*
-  ステージクリア結果を保存します。
-*/
-function saveStageClearResult() {
-  const stage =
-    STAGES[currentStageIndex];
+        return createDefaultSaveData();
+      }
+    }
 
-  const stageKey =
-    String(stage.id);
+    const saveData =
+      loadSaveData();
 
-  /*
-    クリア済み一覧へ追加します。
-  */
-  if (
-    !saveData.clearedStageIds
-      .includes(stage.id)
-  ) {
-    saveData.clearedStageIds.push(
-      stage.id
-    );
-  }
+    function writeSaveData() {
+      try {
+        localStorage.setItem(
+          SAVE_KEY,
+          JSON.stringify(saveData)
+        );
+      } catch (error) {
+        console.warn(
+          "セーブデータを保存できませんでした。",
+          error
+        );
+      }
+    }
 
-  /*
-    最高スコアを更新します。
-  */
-  const previousBestScore =
-    saveData.bestScores[stageKey];
+    function isStageUnlocked(
+      stageId
+    ) {
+      return (
+        saveData.unlockedStageIds
+          .includes(stageId)
+      );
+    }
 
-  if (
-    previousBestScore === undefined ||
-    score > previousBestScore
-  ) {
-    saveData.bestScores[stageKey] =
-      score;
-  }
+    function isStageCleared(
+      stageId
+    ) {
+      return (
+        saveData.clearedStageIds
+          .includes(stageId)
+      );
+    }
 
-  /*
-    最少ミス数を更新します。
-  */
-  const previousBestMisses =
-    saveData.bestMisses[stageKey];
+    function saveStageClearResult() {
+      const stage =
+        STAGES[currentStageIndex];
 
-  if (
-    previousBestMisses === undefined ||
-    missCount < previousBestMisses
-  ) {
-    saveData.bestMisses[stageKey] =
-      missCount;
-  }
+      const stageKey =
+        String(stage.id);
 
-  /*
-    次のステージを解放します。
-  */
-  const nextStage =
-    STAGES[currentStageIndex + 1];
+      if (
+        !saveData.clearedStageIds
+          .includes(stage.id)
+      ) {
+        saveData.clearedStageIds
+          .push(stage.id);
+      }
 
-  if (
-    nextStage &&
-    !saveData.unlockedStageIds
-      .includes(nextStage.id)
-  ) {
-    saveData.unlockedStageIds.push(
-      nextStage.id
-    );
-  }
+      const previousBestScore =
+        saveData.bestScores[stageKey];
 
-  writeSaveData();
-}
+      if (
+        previousBestScore === undefined ||
+        score > previousBestScore
+      ) {
+        saveData.bestScores[stageKey] =
+          score;
+      }
 
-    /*
-  ステージ内で最も長い行に合わせて、
-  すべての行を空間で埋めます。
-*/
-function normalizeStageMap(mapRows) {
-  const maximumLength =
-    Math.max(
-      ...mapRows.map(
-        row => row.length
-      )
-    );
+      const previousBestMisses =
+        saveData.bestMisses[stageKey];
 
-  return mapRows.map(
-    row =>
-      row
-        .padEnd(
-          maximumLength,
-          "."
-        )
-        .split("")
-  );
-}
+      if (
+        previousBestMisses === undefined ||
+        missCount < previousBestMisses
+      ) {
+        saveData.bestMisses[stageKey] =
+          missCount;
+      }
 
-    /*
-      Canvasの表示上の幅と高さです。
-    */
-    let viewportWidth = window.innerWidth;
-    let viewportHeight = window.innerHeight;
+      const nextStage =
+        STAGES[currentStageIndex + 1];
+
+      if (
+        nextStage &&
+        !saveData.unlockedStageIds
+          .includes(nextStage.id)
+      ) {
+        saveData.unlockedStageIds
+          .push(nextStage.id);
+      }
+
+      writeSaveData();
+    }
 
     // =========================================================
-    // ジャンプ状態
+    // ジャンプ・入力状態
     // =========================================================
 
-    /*
-      ジャンプ入力を保存するタイマーです。
-    */
     let jumpBufferTimer = 0;
-
-    /*
-      足場を離れた直後のジャンプ猶予時間です。
-    */
     let coyoteTimer = 0;
 
-    /*
-      小・中・大ジャンプの判定中かどうかです。
-    */
     let variableJumpActive = false;
-
-    /*
-      ジャンプボタンを押し続けている時間です。
-    */
     let jumpHoldTimer = 0;
-
-    // =========================================================
-    // 入力状態
-    // =========================================================
 
     const input = {
       left: false,
@@ -1196,22 +1024,11 @@ function normalizeStageMap(mapRows) {
       dash: false
     };
 
-    /*
-      キーボードのShiftまたはXによる
-      ダッシュ入力を管理します。
-    */
     let keyboardDashHeld = false;
 
-    /*
-      タッチ操作で現在ダッシュ中の方向を保存します。
-      "left"または"right"が入ります。
-    */
-    const touchDashDirections = new Set();
+    const touchDashDirections =
+      new Set();
 
-    /*
-      キーボードとタッチの状態から、
-      実際のダッシュ入力を更新します。
-    */
     function updateDashInput() {
       input.dash =
         keyboardDashHeld ||
@@ -1224,9 +1041,6 @@ function normalizeStageMap(mapRows) {
 
     let audioContext = null;
 
-    /*
-      初回操作時にAudioContextを作成します。
-    */
     function ensureAudioContext() {
       if (!audioContext) {
         const AudioContextClass =
@@ -1247,9 +1061,6 @@ function normalizeStageMap(mapRows) {
       }
     }
 
-    /*
-      指定した周波数の音を再生します。
-    */
     function playTone({
       frequency = 440,
       duration = 0.12,
@@ -1272,17 +1083,22 @@ function normalizeStageMap(mapRows) {
       const gain =
         audioContext.createGain();
 
-      oscillator.type = type;
+      oscillator.type =
+        type;
 
-      oscillator.frequency.setValueAtTime(
-        frequency,
-        now
-      );
+      oscillator.frequency
+        .setValueAtTime(
+          frequency,
+          now
+        );
 
       if (endFrequency !== null) {
         oscillator.frequency
           .exponentialRampToValueAtTime(
-            Math.max(1, endFrequency),
+            Math.max(
+              1,
+              endFrequency
+            ),
             now + duration
           );
       }
@@ -1292,16 +1108,21 @@ function normalizeStageMap(mapRows) {
         now
       );
 
-      gain.gain.exponentialRampToValueAtTime(
-        0.0001,
-        now + duration
-      );
+      gain.gain
+        .exponentialRampToValueAtTime(
+          0.0001,
+          now + duration
+        );
 
       oscillator.connect(gain);
-      gain.connect(audioContext.destination);
+      gain.connect(
+        audioContext.destination
+      );
 
       oscillator.start(now);
-      oscillator.stop(now + duration);
+      oscillator.stop(
+        now + duration
+      );
     }
 
     function playJumpSound() {
@@ -1353,36 +1174,57 @@ function normalizeStageMap(mapRows) {
         volume: 0.09
       });
 
-      window.setTimeout(() => {
-        playTone({
-          frequency: 780,
-          endFrequency: 1560,
-          duration: 0.45,
-          type: "sine",
-          volume: 0.08
-        });
-      }, 200);
+      window.setTimeout(
+        () => {
+          playTone({
+            frequency: 780,
+            endFrequency: 1560,
+            duration: 0.45,
+            type: "sine",
+            volume: 0.08
+          });
+        },
+        200
+      );
     }
 
     // =========================================================
-    // 初期化
+    // ステージ初期化
     // =========================================================
 
-    /*
-      ゲームを最初の状態へ戻します。
-    */
+    function normalizeStageMap(
+      mapRows
+    ) {
+      const maximumLength =
+        Math.max(
+          ...mapRows.map(
+            row => row.length
+          )
+        );
+
+      return mapRows.map(
+        row =>
+          row
+            .padEnd(
+              maximumLength,
+              "."
+            )
+            .split("")
+      );
+    }
+
     function initializeGame(
       resetMissCount = true
     ) {
       resetAllInputs();
 
       const currentStage =
-  STAGES[currentStageIndex];
+        STAGES[currentStageIndex];
 
-stageRows =
-  normalizeStageMap(
-    currentStage.map
-  );
+      stageRows =
+        normalizeStageMap(
+          currentStage.map
+        );
 
       stageWidth =
         stageRows[0].length *
@@ -1396,6 +1238,8 @@ stageRows =
       coins = [];
       goal = null;
 
+      particles.length = 0;
+
       score = 0;
       collectedCoins = 0;
 
@@ -1405,8 +1249,8 @@ stageRows =
 
       gameCleared = false;
       playerDisabled = false;
-      missTimer = 0;
 
+      missTimer = 0;
       cameraX = 0;
 
       jumpBufferTimer = 0;
@@ -1414,18 +1258,12 @@ stageRows =
       variableJumpActive = false;
       jumpHoldTimer = 0;
 
-      particles.length = 0;
-
       let startX =
         TILE_SIZE * 2;
 
       let startY =
         TILE_SIZE * 10;
 
-      /*
-        ステージ内の記号から、
-        プレイヤー・敵・コイン・ゴールを作成します。
-      */
       for (
         let row = 0;
         row < stageRows.length;
@@ -1448,17 +1286,20 @@ stageRows =
           if (symbol === "P") {
             startX =
               tileX +
-              (TILE_SIZE - PLAYER_WIDTH) / 2;
+              (
+                TILE_SIZE -
+                PLAYER_WIDTH
+              ) /
+              2;
 
             startY =
               tileY +
               TILE_SIZE -
               PLAYER_HEIGHT;
 
-            stageRows[row][column] = ".";
-          }
-
-          if (symbol === "C") {
+            stageRows[row][column] =
+              ".";
+          } else if (symbol === "C") {
             coins.push({
               x:
                 tileX +
@@ -1477,63 +1318,81 @@ stageRows =
                 2
             });
 
-            stageRows[row][column] = ".";
-          }
-
-          if (symbol === "E") {
+            stageRows[row][column] =
+              ".";
+          } else if (symbol === "E") {
             enemies.push({
               x:
                 tileX +
-                (TILE_SIZE - ENEMY_WIDTH) / 2,
+                (
+                  TILE_SIZE -
+                  ENEMY_WIDTH
+                ) /
+                2,
 
               y:
                 tileY +
                 TILE_SIZE -
                 ENEMY_HEIGHT,
 
-              width: ENEMY_WIDTH,
-              height: ENEMY_HEIGHT,
+              width:
+                ENEMY_WIDTH,
 
-              velocityX: -ENEMY_SPEED,
-              velocityY: 0,
+              height:
+                ENEMY_HEIGHT,
 
-              direction: -1,
-              alive: true,
-              grounded: false,
-              squashTimer: 0
+              velocityX:
+                -ENEMY_SPEED,
+
+              velocityY:
+                0,
+
+              direction:
+                -1,
+
+              alive:
+                true,
+
+              grounded:
+                false,
+
+              squashTimer:
+                0
             });
 
-            stageRows[row][column] = ".";
-          }
-
-          if (symbol === "G") {
+            stageRows[row][column] =
+              ".";
+          } else if (symbol === "G") {
             goal = {
               x:
                 tileX +
                 TILE_SIZE / 2,
 
-              y: tileY,
+              y:
+                tileY,
 
-              width: 22,
-              height: TILE_SIZE,
+              width:
+                22,
 
-              reached: false
+              height:
+                TILE_SIZE
             };
 
-            stageRows[row][column] = ".";
+            stageRows[row][column] =
+              ".";
           }
         }
       }
 
-            player = {
+      player = {
         x: startX,
         y: startY,
 
-        startX,
-        startY,
+        width:
+          PLAYER_WIDTH,
 
-        width: PLAYER_WIDTH,
-        height: PLAYER_HEIGHT,
+        height:
+          PLAYER_HEIGHT,
 
         velocityX: 0,
         velocityY: 0,
@@ -1554,10 +1413,7 @@ stageRows =
       hideMessage();
       updateHud();
     }
-    
-    /*
-      ミス後にステージを再開します。
-    */
+
     function restartAfterMiss() {
       const currentMissCount =
         missCount;
@@ -1570,11 +1426,38 @@ stageRows =
       updateHud();
     }
 
-      /*
-  ステージ選択ボタンを作り直します。
+    // =========================================================
+    // ステージ選択
+    // =========================================================
+
+    /*
+  ステージ選択ボタンを作成します。
 */
 function renderStageSelectButtons() {
+  /*
+    前回作成したボタンをすべて削除します。
+  */
   stageButtonList.innerHTML = "";
+
+  /*
+    ステージデータが存在しない場合の安全対策です。
+  */
+  if (
+    !Array.isArray(STAGES) ||
+    STAGES.length === 0
+  ) {
+    const errorMessage =
+      document.createElement("p");
+
+    errorMessage.textContent =
+      "ステージデータを読み込めませんでした。";
+
+    stageButtonList.appendChild(
+      errorMessage
+    );
+
+    return;
+  }
 
   for (
     let index = 0;
@@ -1584,72 +1467,129 @@ function renderStageSelectButtons() {
     const stage =
       STAGES[index];
 
+    /*
+      ステージ1は、セーブデータの状態に関係なく
+      必ず選択可能にします。
+    */
     const unlocked =
+      stage.id === 1 ||
       isStageUnlocked(stage.id);
 
     const cleared =
       isStageCleared(stage.id);
+
+    const stageKey =
+      String(stage.id);
 
     const button =
       document.createElement(
         "button"
       );
 
-    button.type = "button";
+    button.type =
+      "button";
+
     button.className =
       "stage-select-item";
 
+    /*
+      ステージ名を表示します。
+    */
+    const nameElement =
+      document.createElement(
+        "span"
+      );
+
+    nameElement.textContent =
+      stage.name;
+
+    button.appendChild(
+      nameElement
+    );
+
+    button.appendChild(
+      document.createElement("br")
+    );
+
+    /*
+      ステージの説明を表示します。
+    */
+    const descriptionElement =
+      document.createElement(
+        "small"
+      );
+
+    descriptionElement.textContent =
+      stage.description;
+
+    button.appendChild(
+      descriptionElement
+    );
+
+    /*
+      クリア状況や記録を表示します。
+    */
+    const recordElement =
+      document.createElement(
+        "span"
+      );
+
+    recordElement.className =
+      "stage-record";
+
+    if (cleared) {
+      const bestScore =
+        saveData.bestScores[
+          stageKey
+        ];
+
+      const bestMisses =
+        saveData.bestMisses[
+          stageKey
+        ];
+
+      recordElement.innerHTML =
+        "クリア済み<br>" +
+        "最高スコア: " +
+        (
+          bestScore !== undefined
+            ? bestScore
+            : 0
+        ) +
+        "<br>" +
+        "最少ミス: " +
+        (
+          bestMisses !== undefined
+            ? bestMisses
+            : 0
+        );
+    } else if (unlocked) {
+      recordElement.textContent =
+        "未クリア";
+    } else {
+      recordElement.textContent =
+        "未解放";
+    }
+
+    button.appendChild(
+      recordElement
+    );
+
+    /*
+      未解放ステージは押せないようにします。
+    */
     if (!unlocked) {
       button.classList.add(
         "locked"
       );
-    }
 
-    const stageKey =
-      String(stage.id);
-
-    const bestScore =
-      saveData.bestScores[stageKey];
-
-    const bestMisses =
-      saveData.bestMisses[stageKey];
-
-    let recordText = "";
-
-    if (cleared) {
-      recordText +=
-        "クリア済み<br>";
-
-      recordText +=
-        "最高スコア: " +
-        bestScore +
-        "<br>";
-
-      recordText +=
-        "最少ミス: " +
-        bestMisses;
-    } else if (unlocked) {
-      recordText =
-        "未クリア";
+      button.disabled =
+        true;
     } else {
-      recordText =
-        "未解放";
-    }
-
-    button.innerHTML =
-      stage.name +
-      "<br>" +
-      "<small>" +
-      stage.description +
-      "</small>" +
-      '<span class="stage-record">' +
-      recordText +
-      "</span>";
-
-    if (unlocked) {
       button.addEventListener(
         "click",
         () => {
+          ensureAudioContext();
           startStage(index);
         }
       );
@@ -1661,252 +1601,88 @@ function renderStageSelectButtons() {
   }
 }
 
-/*
-  ミス後に現在のステージを再開します。
-*/
-function restartAfterMiss() {
-  const currentMissCount =
-    missCount;
+    function showStageSelectScreen() {
+      resetAllInputs();
+      hideMessage();
 
-  initializeGame(false);
+      gamePaused =
+        true;
 
-  missCount =
-    currentMissCount;
+      renderStageSelectButtons();
 
-  updateHud();
-}
-
-/*
-  ステージ選択ボタンを作り直します。
-*/
-function renderStageSelectButtons() {
-  stageButtonList.innerHTML = "";
-
-  for (
-    let index = 0;
-    index < STAGES.length;
-    index += 1
-  ) {
-    const stage =
-      STAGES[index];
-
-    const unlocked =
-      isStageUnlocked(stage.id);
-
-    const cleared =
-      isStageCleared(stage.id);
-
-    const button =
-      document.createElement("button");
-
-    button.type = "button";
-    button.className =
-      "stage-select-item";
-
-    if (!unlocked) {
-      button.classList.add("locked");
-      button.disabled = true;
+      stageSelectScreen.style.display =
+        "flex";
     }
 
-    const stageKey =
-      String(stage.id);
-
-    const bestScore =
-      saveData.bestScores[stageKey];
-
-    const bestMisses =
-      saveData.bestMisses[stageKey];
-
-    let recordText = "";
-
-    if (cleared) {
-      recordText =
-        "クリア済み<br>" +
-        "最高スコア: " +
-        (bestScore ?? 0) +
-        "<br>" +
-        "最少ミス: " +
-        (bestMisses ?? 0);
-    } else if (unlocked) {
-      recordText =
-        "未クリア";
-    } else {
-      recordText =
-        "未解放";
+    function hideStageSelectScreen() {
+      stageSelectScreen.style.display =
+        "none";
     }
 
-    button.innerHTML =
-      stage.name +
-      "<br>" +
-      "<small>" +
-      stage.description +
-      "</small>" +
-      '<span class="stage-record">' +
-      recordText +
-      "</span>";
+    function startStage(
+      stageIndex
+    ) {
+      if (
+        stageIndex < 0 ||
+        stageIndex >=
+          STAGES.length
+      ) {
+        return;
+      }
 
-    if (unlocked) {
-      button.addEventListener(
-        "click",
-        () => {
-          startStage(index);
-        }
-      );
+      const stage =
+        STAGES[stageIndex];
+
+      if (
+        !isStageUnlocked(
+          stage.id
+        )
+      ) {
+        return;
+      }
+
+      currentStageIndex =
+        stageIndex;
+
+      hideStageSelectScreen();
+      initializeGame(true);
+
+      gamePaused =
+        false;
+
+      lastTime =
+        performance.now();
     }
-
-    stageButtonList.appendChild(
-      button
-    );
-  }
-}
-
-/*
-  ステージ選択画面を表示します。
-*/
-function showStageSelectScreen() {
-  resetAllInputs();
-  hideMessage();
-
-  gamePaused = true;
-
-  renderStageSelectButtons();
-
-  stageSelectScreen.style.display =
-    "flex";
-}
-
-/*
-  ステージ選択画面を閉じます。
-*/
-function hideStageSelectScreen() {
-  stageSelectScreen.style.display =
-    "none";
-}
-
-/*
-  指定したステージを開始します。
-*/
-function startStage(stageIndex) {
-  if (
-    stageIndex < 0 ||
-    stageIndex >= STAGES.length
-  ) {
-    return;
-  }
-
-  const stage =
-    STAGES[stageIndex];
-
-  if (!isStageUnlocked(stage.id)) {
-    return;
-  }
-
-  currentStageIndex =
-    stageIndex;
-
-  hideStageSelectScreen();
-  initializeGame(true);
-
-  gamePaused = false;
-
-  /*
-    長時間ステージ選択画面を表示した後に、
-    大きなdeltaTimeが発生するのを防ぎます。
-  */
-  lastTime =
-    performance.now();
-}
-    
-/*
-  ステージ選択画面を表示します。
-*/
-function showStageSelectScreen() {
-  resetAllInputs();
-  hideMessage();
-
-  renderStageSelectButtons();
-
-  stageSelectScreen.style.display =
-    "flex";
-}
-
-/*
-  ステージ選択画面を閉じます。
-*/
-function hideStageSelectScreen() {
-  stageSelectScreen.style.display =
-    "none";
-}
-
-/*
-  指定したステージを開始します。
-*/
-function startStage(stageIndex) {
-  if (
-    stageIndex < 0 ||
-    stageIndex >= STAGES.length
-  ) {
-    return;
-  }
-
-  const stage =
-    STAGES[stageIndex];
-
-  if (!isStageUnlocked(stage.id)) {
-    return;
-  }
-
-  currentStageIndex =
-    stageIndex;
-
-  hideStageSelectScreen();
-  initializeGame(true);
-}
 
     // =========================================================
-    // ステージ判定
+    // 当たり判定
     // =========================================================
 
-    /*
-      指定したタイルが地面か判定します。
-    */
     function isSolidTile(
       column,
       row
     ) {
-      /*
-        ステージ上端より上は空間です。
-      */
-      if (row < 0) {
+      if (
+        row < 0 ||
+        row >= stageRows.length
+      ) {
         return false;
       }
 
-      /*
-        ステージ下端より下も空間です。
-        奈落へ落下できるようにします。
-      */
-      if (row >= stageRows.length) {
-        return false;
-      }
-
-      /*
-        ステージ左右の外側は壁です。
-      */
       if (
         column < 0 ||
-        column >= stageRows[0].length
+        column >=
+          stageRows[0].length
       ) {
         return true;
       }
 
       return (
-        stageRows[row][column] === "#"
+        stageRows[row][column] ===
+        "#"
       );
     }
 
-    /*
-      長方形同士が重なっているか判定します。
-    */
     function rectanglesOverlap(
       rectangleA,
       rectangleB
@@ -1930,9 +1706,6 @@ function startStage(stageIndex) {
       );
     }
 
-    /*
-      円と長方形が重なっているか判定します。
-    */
     function circleRectangleOverlap(
       circle,
       rectangle
@@ -1958,15 +1731,20 @@ function startStage(stageIndex) {
         );
 
       const differenceX =
-        circle.x - nearestX;
+        circle.x -
+        nearestX;
 
       const differenceY =
-        circle.y - nearestY;
+        circle.y -
+        nearestY;
 
       return (
-        differenceX * differenceX +
-        differenceY * differenceY <
-        circle.radius * circle.radius
+        differenceX *
+          differenceX +
+        differenceY *
+          differenceY <
+        circle.radius *
+          circle.radius
       );
     }
 
@@ -1974,14 +1752,12 @@ function startStage(stageIndex) {
     // 物理処理
     // =========================================================
 
-    /*
-      キャラクターを横方向へ移動させます。
-    */
     function moveEntityHorizontally(
       entity,
       deltaX
     ) {
-      entity.x += deltaX;
+      entity.x +=
+        deltaX;
 
       const leftColumn =
         Math.floor(
@@ -2032,7 +1808,8 @@ function startStage(stageIndex) {
               TILE_SIZE -
             entity.width;
 
-          entity.velocityX = 0;
+          entity.velocityX =
+            0;
 
           return true;
         }
@@ -2045,10 +1822,14 @@ function startStage(stageIndex) {
           )
         ) {
           entity.x =
-            (leftColumn + 1) *
+            (
+              leftColumn +
+              1
+            ) *
             TILE_SIZE;
 
-          entity.velocityX = 0;
+          entity.velocityX =
+            0;
 
           return true;
         }
@@ -2057,15 +1838,15 @@ function startStage(stageIndex) {
       return false;
     }
 
-    /*
-      キャラクターを縦方向へ移動させます。
-    */
     function moveEntityVertically(
       entity,
       deltaY
     ) {
-      entity.y += deltaY;
-      entity.grounded = false;
+      entity.y +=
+        deltaY;
+
+      entity.grounded =
+        false;
 
       const leftColumn =
         Math.floor(
@@ -2100,8 +1881,12 @@ function startStage(stageIndex) {
         );
 
       for (
-        let column = leftColumn;
-        column <= rightColumn;
+        let column =
+          leftColumn;
+
+        column <=
+          rightColumn;
+
         column += 1
       ) {
         if (
@@ -2116,8 +1901,11 @@ function startStage(stageIndex) {
               TILE_SIZE -
             entity.height;
 
-          entity.velocityY = 0;
-          entity.grounded = true;
+          entity.velocityY =
+            0;
+
+          entity.grounded =
+            true;
 
           return true;
         }
@@ -2130,10 +1918,14 @@ function startStage(stageIndex) {
           )
         ) {
           entity.y =
-            (topRow + 1) *
+            (
+              topRow +
+              1
+            ) *
             TILE_SIZE;
 
-          entity.velocityY = 0;
+          entity.velocityY =
+            0;
 
           return true;
         }
@@ -2142,9 +1934,6 @@ function startStage(stageIndex) {
       return false;
     }
 
-    /*
-      数値を目標値へ徐々に近付けます。
-    */
     function approach(
       currentValue,
       targetValue,
@@ -2155,7 +1944,8 @@ function startStage(stageIndex) {
         targetValue
       ) {
         return Math.min(
-          currentValue + amount,
+          currentValue +
+            amount,
           targetValue
         );
       }
@@ -2165,7 +1955,8 @@ function startStage(stageIndex) {
         targetValue
       ) {
         return Math.max(
-          currentValue - amount,
+          currentValue -
+            amount,
           targetValue
         );
       }
@@ -2174,47 +1965,45 @@ function startStage(stageIndex) {
     }
 
     // =========================================================
-    // ジャンプ処理
+    // ジャンプ
     // =========================================================
 
-    /*
-      プレイヤーのジャンプを開始します。
-    */
     function startPlayerJump() {
       player.velocityY =
         -JUMP_POWER;
 
-      player.grounded = false;
+      player.grounded =
+        false;
 
-      variableJumpActive = true;
-      jumpHoldTimer = 0;
+      variableJumpActive =
+        true;
 
-      jumpBufferTimer = 0;
-      coyoteTimer = 0;
+      jumpHoldTimer =
+        0;
+
+      jumpBufferTimer =
+        0;
+
+      coyoteTimer =
+        0;
 
       playJumpSound();
     }
 
-    /*
-      ボタンを離した時間に応じて、
-      小ジャンプまたは中ジャンプへ調整します。
-    */
     function finishVariableJump() {
       if (!variableJumpActive) {
         return;
       }
 
-      /*
-        すでに落下中なら調整しません。
-      */
-      if (player.velocityY >= 0) {
-        variableJumpActive = false;
+      if (
+        player.velocityY >= 0
+      ) {
+        variableJumpActive =
+          false;
+
         return;
       }
 
-      /*
-        0.10秒未満なら小ジャンプです。
-      */
       if (
         jumpHoldTimer <
         SMALL_JUMP_RELEASE_TIME
@@ -2224,9 +2013,6 @@ function startStage(stageIndex) {
             player.velocityY,
             -SMALL_JUMP_RELEASE_SPEED
           );
-      /*
-        0.22秒未満なら中ジャンプです。
-      */
       } else if (
         jumpHoldTimer <
         LARGE_JUMP_HOLD_TIME
@@ -2238,25 +2024,21 @@ function startStage(stageIndex) {
           );
       }
 
-      /*
-        0.22秒以上押した場合は速度を変更せず、
-        大ジャンプになります。
-      */
-      variableJumpActive = false;
+      variableJumpActive =
+        false;
     }
 
     // =========================================================
     // プレイヤー更新
     // =========================================================
 
-    function updatePlayer(deltaTime) {
+    function updatePlayer(
+      deltaTime
+    ) {
       if (gameCleared) {
         return;
       }
 
-      /*
-        ミス演出中の処理です。
-      */
       if (playerDisabled) {
         player.velocityY =
           Math.min(
@@ -2288,14 +2070,17 @@ function startStage(stageIndex) {
         return;
       }
 
-      let horizontalInput = 0;
+      let horizontalInput =
+        0;
 
       if (input.left) {
-        horizontalInput -= 1;
+        horizontalInput -=
+          1;
       }
 
       if (input.right) {
-        horizontalInput += 1;
+        horizontalInput +=
+          1;
       }
 
       player.dashing =
@@ -2310,10 +2095,9 @@ function startStage(stageIndex) {
           ? DASH_MAX_SPEED
           : WALK_MAX_SPEED;
 
-      /*
-        左右移動処理です。
-      */
-      if (horizontalInput !== 0) {
+      if (
+        horizontalInput !== 0
+      ) {
         player.facing =
           horizontalInput;
 
@@ -2333,7 +2117,9 @@ function startStage(stageIndex) {
             acceleration *
               deltaTime
           );
-      } else if (player.grounded) {
+      } else if (
+        player.grounded
+      ) {
         player.velocityX =
           approach(
             player.velocityX,
@@ -2343,38 +2129,33 @@ function startStage(stageIndex) {
           );
       }
 
-      /*
-        ジャンプボタンが押された瞬間の入力を保存します。
-      */
-      if (input.jumpPressed) {
+      if (
+        input.jumpPressed
+      ) {
         jumpBufferTimer =
           JUMP_BUFFER_TIME;
       }
 
-      input.jumpPressed = false;
+      input.jumpPressed =
+        false;
 
-      /*
-        ジャンプ入力の保存時間を減らします。
-      */
-      if (jumpBufferTimer > 0) {
+      if (
+        jumpBufferTimer > 0
+      ) {
         jumpBufferTimer -=
           deltaTime;
       }
 
-      /*
-        地面にいる間はコヨーテタイムを回復します。
-      */
       if (player.grounded) {
         coyoteTimer =
           COYOTE_TIME;
-      } else if (coyoteTimer > 0) {
+      } else if (
+        coyoteTimer > 0
+      ) {
         coyoteTimer -=
           deltaTime;
       }
 
-      /*
-        ジャンプ可能ならジャンプを開始します。
-      */
       if (
         jumpBufferTimer > 0 &&
         coyoteTimer > 0
@@ -2382,35 +2163,28 @@ function startStage(stageIndex) {
         startPlayerJump();
       }
 
-      /*
-        ジャンプボタンを押している時間を計測します。
-      */
       if (
         variableJumpActive &&
         input.jump
       ) {
-        jumpHoldTimer +=
-          deltaTime;
-
         jumpHoldTimer =
           Math.min(
-            jumpHoldTimer,
+            jumpHoldTimer +
+              deltaTime,
+
             LARGE_JUMP_HOLD_TIME
           );
       }
 
-      /*
-        ジャンプボタンを離した瞬間に、
-        小・中・大ジャンプを決定します。
-      */
-      if (input.jumpReleased) {
+      if (
+        input.jumpReleased
+      ) {
         finishVariableJump();
-        input.jumpReleased = false;
+
+        input.jumpReleased =
+          false;
       }
 
-      /*
-        重力を加えます。
-      */
       player.velocityY =
         Math.min(
           player.velocityY +
@@ -2420,71 +2194,54 @@ function startStage(stageIndex) {
           MAX_FALL_SPEED
         );
 
-      /*
-        横方向へ移動します。
-      */
       moveEntityHorizontally(
         player,
         player.velocityX *
           deltaTime
       );
 
-      /*
-        縦方向へ移動します。
-      */
       moveEntityVertically(
         player,
         player.velocityY *
           deltaTime
       );
 
-      /*
-        着地した場合の処理です。
-      */
       if (player.grounded) {
         coyoteTimer =
           COYOTE_TIME;
 
-        variableJumpActive = false;
-        jumpHoldTimer = 0;
+        variableJumpActive =
+          false;
+
+        jumpHoldTimer =
+          0;
       }
 
-      /*
-        着地直前にジャンプが押されていた場合は、
-        着地した瞬間にジャンプします。
-      */
       if (
         player.grounded &&
         jumpBufferTimer > 0
       ) {
         startPlayerJump();
 
-        /*
-          すでにボタンを離していた場合は、
-          小ジャンプとして処理します。
-        */
         if (!input.jump) {
           finishVariableJump();
         }
       }
 
-      /*
-        頂点を越えて落下し始めた場合は、
-        可変ジャンプ処理を終了します。
-      */
       if (
         variableJumpActive &&
         player.velocityY >= 0
       ) {
-        variableJumpActive = false;
+        variableJumpActive =
+          false;
       }
 
-      /*
-        ステージ左右の外へ出ないようにします。
-      */
       if (player.x < 0) {
-        player.x = 0;
-        player.velocityX = 0;
+        player.x =
+          0;
+
+        player.velocityX =
+          0;
       }
 
       if (
@@ -2496,15 +2253,13 @@ function startStage(stageIndex) {
           stageWidth -
           player.width;
 
-        player.velocityX = 0;
+        player.velocityX =
+          0;
       }
 
       player.animationTime +=
         deltaTime;
 
-      /*
-        ダッシュ中の土煙を作成します。
-      */
       if (
         player.dashing &&
         player.grounded &&
@@ -2519,7 +2274,8 @@ function startStage(stageIndex) {
         if (
           player.dustTimer <= 0
         ) {
-          player.dustTimer = 0.08;
+          player.dustTimer =
+            0.08;
 
           createDustParticle(
             player.x +
@@ -2531,12 +2287,10 @@ function startStage(stageIndex) {
           );
         }
       } else {
-        player.dustTimer = 0;
+        player.dustTimer =
+          0;
       }
 
-      /*
-        奈落へ落下した場合はミスです。
-      */
       if (
         player.y +
         player.height >=
@@ -2550,11 +2304,13 @@ function startStage(stageIndex) {
     // 敵更新
     // =========================================================
 
-    function updateEnemies(deltaTime) {
-      for (const enemy of enemies) {
-        /*
-          倒された敵は移動させません。
-      */
+    function updateEnemies(
+      deltaTime
+    ) {
+      for (
+        const enemy of
+        enemies
+      ) {
         if (!enemy.alive) {
           enemy.squashTimer -=
             deltaTime;
@@ -2566,9 +2322,6 @@ function startStage(stageIndex) {
           enemy.direction *
           ENEMY_SPEED;
 
-        /*
-          壁にぶつかった場合は反転します。
-        */
         const hitWall =
           moveEntityHorizontally(
             enemy,
@@ -2577,16 +2330,10 @@ function startStage(stageIndex) {
           );
 
         if (hitWall) {
-          enemy.direction *= -1;
-
-          enemy.velocityX =
-            enemy.direction *
-            ENEMY_SPEED;
+          enemy.direction *=
+            -1;
         }
 
-        /*
-          敵にも重力を加えます。
-        */
         enemy.velocityY =
           Math.min(
             enemy.velocityY +
@@ -2603,7 +2350,8 @@ function startStage(stageIndex) {
         );
 
         /*
-          現在の敵は穴の手前で引き返します。
+          現段階の敵は、
+          穴の直前で反転します。
         */
         if (enemy.grounded) {
           const footX =
@@ -2611,7 +2359,8 @@ function startStage(stageIndex) {
               ? enemy.x +
                 enemy.width +
                 3
-              : enemy.x - 3;
+              : enemy.x -
+                3;
 
           const footY =
             enemy.y +
@@ -2636,22 +2385,26 @@ function startStage(stageIndex) {
               groundRow
             )
           ) {
-            enemy.direction *= -1;
+            enemy.direction *=
+              -1;
           }
         }
 
-        /*
-          何らかの理由で奈落へ落ちた敵は消滅します。
-        */
         if (
           enemy.y >=
           stageHeight
         ) {
-          enemy.alive = false;
-          enemy.squashTimer = 0;
+          enemy.alive =
+            false;
 
-          enemy.velocityX = 0;
-          enemy.velocityY = 0;
+          enemy.squashTimer =
+            0;
+
+          enemy.velocityX =
+            0;
+
+          enemy.velocityY =
+            0;
         }
       }
     }
@@ -2668,10 +2421,10 @@ function startStage(stageIndex) {
         return;
       }
 
-      /*
-        コインとの接触判定です。
-      */
-      for (const coin of coins) {
+      for (
+        const coin of
+        coins
+      ) {
         if (coin.collected) {
           continue;
         }
@@ -2682,20 +2435,24 @@ function startStage(stageIndex) {
             player
           )
         ) {
-          coin.collected = true;
+          coin.collected =
+            true;
 
-          collectedCoins += 1;
-          score += 100;
+          collectedCoins +=
+            1;
+
+          score +=
+            100;
 
           playCoinSound();
           updateHud();
         }
       }
 
-      /*
-        敵との接触判定です。
-      */
-      for (const enemy of enemies) {
+      for (
+        const enemy of
+        enemies
+      ) {
         if (!enemy.alive) {
           continue;
         }
@@ -2713,32 +2470,30 @@ function startStage(stageIndex) {
           player.y +
           player.height;
 
-        /*
-          直前のフレームに近い足元位置を計算します。
-        */
         const previousPlayerBottom =
           playerBottom -
           player.velocityY /
           60;
 
         const isFalling =
-          player.velocityY > 0;
+          player.velocityY >
+          0;
 
         const isAboveEnemy =
           previousPlayerBottom <=
           enemy.y +
-          enemy.height *
+            enemy.height *
             0.45;
 
-        /*
-          上から踏んだ場合は敵を倒します。
-        */
         if (
           isFalling &&
           isAboveEnemy
         ) {
-          enemy.alive = false;
-          enemy.squashTimer = 0.35;
+          enemy.alive =
+            false;
+
+          enemy.squashTimer =
+            0.35;
 
           player.y =
             enemy.y -
@@ -2747,13 +2502,14 @@ function startStage(stageIndex) {
           player.velocityY =
             -STOMP_BOUNCE_POWER;
 
-          /*
-            踏みつけ後は可変ジャンプ状態を解除します。
-          */
-          variableJumpActive = false;
-          jumpHoldTimer = 0;
+          variableJumpActive =
+            false;
 
-          score += 200;
+          jumpHoldTimer =
+            0;
+
+          score +=
+            200;
 
           playStompSound();
           updateHud();
@@ -2763,19 +2519,20 @@ function startStage(stageIndex) {
         }
       }
 
-      /*
-        ゴールとの接触判定です。
-      */
       if (goal) {
         const goalRectangle = {
           x:
             goal.x -
             goal.width / 2,
 
-          y: goal.y,
+          y:
+            goal.y,
 
-          width: goal.width,
-          height: goal.height
+          width:
+            goal.width,
+
+          height:
+            goal.height
         };
 
         if (
@@ -2803,98 +2560,112 @@ function startStage(stageIndex) {
 
       resetAllInputs();
 
-      missCount += 1;
-      playerDisabled = true;
-      missTimer = 1.15;
+      missCount +=
+        1;
 
-      variableJumpActive = false;
-      jumpHoldTimer = 0;
-      jumpBufferTimer = 0;
-      coyoteTimer = 0;
+      playerDisabled =
+        true;
+
+      missTimer =
+        1.15;
+
+      variableJumpActive =
+        false;
+
+      jumpHoldTimer =
+        0;
+
+      jumpBufferTimer =
+        0;
+
+      coyoteTimer =
+        0;
 
       player.velocityX =
         -player.facing *
         120;
 
-      player.velocityY = -430;
-      player.grounded = false;
+      player.velocityY =
+        -430;
+
+      player.grounded =
+        false;
 
       playMissSound();
       updateHud();
     }
 
     function triggerClear() {
-  if (gameCleared) {
-    return;
-  }
+      if (gameCleared) {
+        return;
+      }
 
-  resetAllInputs();
+      resetAllInputs();
 
-  gameCleared = true;
+      gameCleared =
+        true;
 
-  player.velocityX = 0;
-  player.velocityY = 0;
+      gamePaused =
+        true;
 
-  score += 1000;
+      player.velocityX =
+        0;
 
-  /*
-    ステージのクリア結果と、
-    次ステージの解放状態を保存します。
-  */
-  saveStageClearResult();
+      player.velocityY =
+        0;
 
-  updateHud();
-  playClearSound();
+      score +=
+        1000;
 
-  window.setTimeout(
-    () => {
-      showClearMessage();
-    },
-    500
-  );
-}
+      saveStageClearResult();
+      updateHud();
+      playClearSound();
+
+      window.setTimeout(
+        () => {
+          showClearMessage();
+        },
+        500
+      );
+    }
 
     function showClearMessage() {
-  const currentStage =
-    STAGES[currentStageIndex];
+      const currentStage =
+        STAGES[currentStageIndex];
 
-  messageTitle.textContent =
-    "CLEAR";
+      const nextStage =
+        STAGES[
+          currentStageIndex +
+          1
+        ];
 
-  messageResult.innerHTML =
-    currentStage.name +
-    " クリア！" +
-    "<br><br>" +
-    "スコア: " +
-    score +
-    "<br>" +
-    "コイン: " +
-    collectedCoins +
-    "<br>" +
-    "ミス: " +
-    missCount;
+      messageTitle.textContent =
+        "CLEAR";
 
-  /*
-    次のステージが存在し、
-    解放されている場合だけ表示します。
-  */
-  const nextStage =
-    STAGES[currentStageIndex + 1];
+      messageResult.innerHTML =
+        currentStage.name +
+        " クリア！" +
+        "<br><br>" +
+        "スコア: " +
+        score +
+        "<br>" +
+        "コイン: " +
+        collectedCoins +
+        "<br>" +
+        "ミス: " +
+        missCount;
 
-  if (
-    nextStage &&
-    isStageUnlocked(nextStage.id)
-  ) {
-    nextStageButton.style.display =
-      "block";
-  } else {
-    nextStageButton.style.display =
-      "none";
-  }
+      nextStageButton.style.display =
+        nextStage &&
+        isStageUnlocked(
+          nextStage.id
+        )
+          ? "block"
+          : "none";
 
-  messageOverlay.style.display =
-    "flex";
-}
+      messageOverlay.style.display =
+        "flex";
+    }
 
     function hideMessage() {
       messageOverlay.style.display =
@@ -2905,8 +2676,6 @@ function startStage(stageIndex) {
     // パーティクル
     // =========================================================
 
-    const particles = [];
-
     function createDustParticle(
       x,
       y
@@ -2916,7 +2685,10 @@ function startStage(stageIndex) {
         y,
 
         velocityX:
-          (Math.random() - 0.5) *
+          (
+            Math.random() -
+            0.5
+          ) *
           80,
 
         velocityY:
@@ -2924,8 +2696,11 @@ function startStage(stageIndex) {
           Math.random() *
           50,
 
-        life: 0.35,
-        maximumLife: 0.35,
+        life:
+          0.35,
+
+        maximumLife:
+          0.35,
 
         size:
           7 +
@@ -2939,7 +2714,8 @@ function startStage(stageIndex) {
     ) {
       for (
         let index =
-          particles.length - 1;
+          particles.length -
+          1;
 
         index >= 0;
 
@@ -2963,7 +2739,9 @@ function startStage(stageIndex) {
           240 *
           deltaTime;
 
-        if (particle.life <= 0) {
+        if (
+          particle.life <= 0
+        ) {
           particles.splice(
             index,
             1
@@ -3014,7 +2792,7 @@ function startStage(stageIndex) {
     }
 
     // =========================================================
-    // 背景描画
+    // 描画
     // =========================================================
 
     function drawBackground() {
@@ -3159,7 +2937,6 @@ function startStage(stageIndex) {
       );
 
       context.fill();
-
       context.restore();
     }
 
@@ -3179,24 +2956,24 @@ function startStage(stageIndex) {
       );
 
       context.lineTo(
-        x + width / 2,
+        x +
+          width / 2,
+
         baseY -
           width *
           0.55
       );
 
       context.lineTo(
-        x + width,
+        x +
+          width,
+
         baseY
       );
 
       context.closePath();
       context.fill();
     }
-
-    // =========================================================
-    // ステージ描画
-    // =========================================================
 
     function drawStage() {
       const firstColumn =
@@ -3205,12 +2982,14 @@ function startStage(stageIndex) {
           Math.floor(
             cameraX /
             TILE_SIZE
-          ) - 1
+          ) -
+          1
         );
 
       const lastColumn =
         Math.min(
-          stageRows[0].length - 1,
+          stageRows[0].length -
+            1,
 
           Math.floor(
             (
@@ -3218,7 +2997,8 @@ function startStage(stageIndex) {
               viewportWidth
             ) /
             TILE_SIZE
-          ) + 1
+          ) +
+          1
         );
 
       for (
@@ -3273,7 +3053,8 @@ function startStage(stageIndex) {
           context.strokeStyle =
             "rgba(70, 35, 10, 0.45)";
 
-          context.lineWidth = 2;
+          context.lineWidth =
+            2;
 
           context.strokeRect(
             x + 1,
@@ -3302,21 +3083,14 @@ function startStage(stageIndex) {
       }
     }
 
-    // =========================================================
-    // プレイヤー描画
-    // =========================================================
-
     function drawPlayer() {
-      const x = player.x;
-      const y = player.y;
-
       context.save();
 
       context.translate(
-        x +
+        player.x +
           player.width / 2,
 
-        y +
+        player.y +
           player.height / 2
       );
 
@@ -3335,7 +3109,6 @@ function startStage(stageIndex) {
       const speedRatio =
         Math.min(
           1,
-
           Math.abs(
             player.velocityX
           ) /
@@ -3346,7 +3119,8 @@ function startStage(stageIndex) {
         player.grounded &&
         Math.abs(
           player.velocityX
-        ) > 20
+        ) >
+          20
           ? Math.sin(
               player.animationTime *
               (
@@ -3354,7 +3128,8 @@ function startStage(stageIndex) {
                   ? 24
                   : 15
               )
-            ) * 5
+            ) *
+            5
           : 0;
 
       context.fillStyle =
@@ -3419,16 +3194,14 @@ function startStage(stageIndex) {
       } else {
         context.fillRect(
           -13,
-          13 +
-            legSwing,
+          13 + legSwing,
           9,
           8
         );
 
         context.fillRect(
           4,
-          13 -
-            legSwing,
+          13 - legSwing,
           9,
           8
         );
@@ -3459,12 +3232,11 @@ function startStage(stageIndex) {
       context.restore();
     }
 
-    // =========================================================
-    // 敵描画
-    // =========================================================
-
     function drawEnemies() {
-      for (const enemy of enemies) {
+      for (
+        const enemy of
+        enemies
+      ) {
         if (
           !enemy.alive &&
           enemy.squashTimer <= 0
@@ -3538,12 +3310,11 @@ function startStage(stageIndex) {
       }
     }
 
-    // =========================================================
-    // コイン描画
-    // =========================================================
-
     function drawCoins() {
-      for (const coin of coins) {
+      for (
+        const coin of
+        coins
+      ) {
         if (coin.collected) {
           continue;
         }
@@ -3590,7 +3361,9 @@ function startStage(stageIndex) {
         context.strokeStyle =
           "#db8d00";
 
-        context.lineWidth = 3;
+        context.lineWidth =
+          3;
+
         context.stroke();
 
         context.fillStyle =
@@ -3606,10 +3379,6 @@ function startStage(stageIndex) {
         context.restore();
       }
     }
-
-    // =========================================================
-    // ゴール描画
-    // =========================================================
 
     function drawGoal() {
       if (!goal) {
@@ -3668,12 +3437,11 @@ function startStage(stageIndex) {
       );
     }
 
-    // =========================================================
-    // パーティクル描画
-    // =========================================================
-
     function drawParticles() {
-      for (const particle of particles) {
+      for (
+        const particle of
+        particles
+      ) {
         const alpha =
           particle.life /
           particle.maximumLife;
@@ -3688,8 +3456,10 @@ function startStage(stageIndex) {
         context.arc(
           particle.x,
           particle.y,
+
           particle.size *
             alpha,
+
           0,
           Math.PI * 2
         );
@@ -3697,10 +3467,6 @@ function startStage(stageIndex) {
         context.fill();
       }
     }
-
-    // =========================================================
-    // ゲーム全体の描画
-    // =========================================================
 
     function drawGame() {
       const ratio =
@@ -3710,9 +3476,6 @@ function startStage(stageIndex) {
           2
         );
 
-      /*
-        CSSピクセルを基準に描画できるようにします。
-      */
       context.setTransform(
         ratio,
         0,
@@ -3733,9 +3496,6 @@ function startStage(stageIndex) {
 
       context.save();
 
-      /*
-        ステージ下端を画面下端に揃えます。
-      */
       const verticalOffset =
         viewportHeight -
         stageHeight;
@@ -3756,7 +3516,7 @@ function startStage(stageIndex) {
     }
 
     // =========================================================
-    // HUD
+    // HUD・ゲームループ
     // =========================================================
 
     function updateHud() {
@@ -3770,21 +3530,19 @@ function startStage(stageIndex) {
         missCount;
     }
 
-    // =========================================================
-    // ゲームループ
-    // =========================================================
+    function updateGame(
+      deltaTime
+    ) {
+      if (gamePaused) {
+        return;
+      }
 
-    function updateGame(deltaTime) {
-  if (gamePaused) {
-    return;
-  }
-
-  updatePlayer(deltaTime);
-  updateEnemies(deltaTime);
-  updateObjectCollisions();
-  updateParticles(deltaTime);
-  updateCamera(deltaTime);
-}
+      updatePlayer(deltaTime);
+      updateEnemies(deltaTime);
+      updateObjectCollisions();
+      updateParticles(deltaTime);
+      updateCamera(deltaTime);
+    }
 
     function gameLoop(
       currentTime
@@ -3820,17 +3578,25 @@ function startStage(stageIndex) {
     // キーボード操作
     // =========================================================
 
-    function handleKeyDown(event) {
-      ensureAudioContext();
-
+    function handleKeyDown(
+      event
+    ) {
       const key =
         event.key.toLowerCase();
+
+      if (gamePaused) {
+        return;
+      }
+
+      ensureAudioContext();
 
       if (
         key === "arrowleft" ||
         key === "a"
       ) {
-        input.left = true;
+        input.left =
+          true;
+
         event.preventDefault();
       }
 
@@ -3838,7 +3604,9 @@ function startStage(stageIndex) {
         key === "arrowright" ||
         key === "d"
       ) {
-        input.right = true;
+        input.right =
+          true;
+
         event.preventDefault();
       }
 
@@ -3847,18 +3615,19 @@ function startStage(stageIndex) {
         key === "w" ||
         key === " "
       ) {
-        /*
-          キーリピートでは新しいジャンプ入力にしません。
-        */
         if (
           !input.jump &&
           !event.repeat
         ) {
-          input.jumpPressed = true;
+          input.jumpPressed =
+            true;
         }
 
-        input.jump = true;
-        input.jumpReleased = false;
+        input.jump =
+          true;
+
+        input.jumpReleased =
+          false;
 
         event.preventDefault();
       }
@@ -3867,21 +3636,25 @@ function startStage(stageIndex) {
         key === "shift" ||
         key === "x"
       ) {
-        keyboardDashHeld = true;
+        keyboardDashHeld =
+          true;
+
         updateDashInput();
 
         event.preventDefault();
       }
-if (
-  key === "r" &&
-  !event.repeat &&
-  !gamePaused
-) {
-  initializeGame(true);
-}
+
+      if (
+        key === "r" &&
+        !event.repeat
+      ) {
+        initializeGame(true);
+      }
     }
 
-    function handleKeyUp(event) {
+    function handleKeyUp(
+      event
+    ) {
       const key =
         event.key.toLowerCase();
 
@@ -3889,14 +3662,16 @@ if (
         key === "arrowleft" ||
         key === "a"
       ) {
-        input.left = false;
+        input.left =
+          false;
       }
 
       if (
         key === "arrowright" ||
         key === "d"
       ) {
-        input.right = false;
+        input.right =
+          false;
       }
 
       if (
@@ -3905,17 +3680,21 @@ if (
         key === " "
       ) {
         if (input.jump) {
-          input.jumpReleased = true;
+          input.jumpReleased =
+            true;
         }
 
-        input.jump = false;
+        input.jump =
+          false;
       }
 
       if (
         key === "shift" ||
         key === "x"
       ) {
-        keyboardDashHeld = false;
+        keyboardDashHeld =
+          false;
+
         updateDashInput();
       }
     }
@@ -3937,385 +3716,99 @@ if (
     // タッチ操作
     // =========================================================
 
-    /*
-      指IDごとの解除処理を保存します。
-      Pointer Captureに失敗した場合でも、
-      document側で指を解除できます。
-    */
     const activePointerReleases =
       new Map();
 
-    /*
-  押している間だけ有効になるボタンを設定します。
-*/
-function bindHoldButton(
-  element,
-  onPress,
-  onRelease
-) {
-  const pointerIds =
-    new Set();
+    function bindHoldButton(
+      element,
+      onPress,
+      onRelease
+    ) {
+      const pointerIds =
+        new Set();
 
-  function releasePointerById(
-    pointerId
-  ) {
-    if (!pointerIds.has(pointerId)) {
-      return;
-    }
-
-    pointerIds.delete(pointerId);
-
-    activePointerReleases.delete(
-      pointerId
-    );
-
-    if (pointerIds.size === 0) {
-      element.classList.remove(
-        "active"
-      );
-
-      onRelease();
-    }
-  }
-
-  function releaseAllPointers() {
-    const ids =
-      Array.from(pointerIds);
-
-    for (const pointerId of ids) {
-      releasePointerById(
+      function releasePointerById(
         pointerId
-      );
-    }
-
-    element.classList.remove(
-      "active"
-    );
-
-    onRelease();
-  }
-
-  element.addEventListener(
-    "pointerdown",
-    event => {
-      ensureAudioContext();
-      event.preventDefault();
-
-      if (
-        pointerIds.has(
-          event.pointerId
-        )
       ) {
-        return;
-      }
-
-      pointerIds.add(
-        event.pointerId
-      );
-
-      activePointerReleases.set(
-        event.pointerId,
-        () => {
-          releasePointerById(
-            event.pointerId
-          );
+        if (
+          !pointerIds.has(
+            pointerId
+          )
+        ) {
+          return;
         }
-      );
 
-      try {
-        element.setPointerCapture(
-          event.pointerId
-        );
-      } catch (error) {
-        /*
-          Pointer Captureが利用できない場合も、
-          document側のpointerupで解除します。
-        */
-      }
-
-      element.classList.add(
-        "active"
-      );
-
-      onPress();
-    },
-    {
-      passive: false
-    }
-  );
-
-  element.addEventListener(
-    "pointerup",
-    event => {
-      event.preventDefault();
-
-      releasePointerById(
-        event.pointerId
-      );
-    },
-    {
-      passive: false
-    }
-  );
-
-  element.addEventListener(
-    "pointercancel",
-    event => {
-      event.preventDefault();
-
-      releasePointerById(
-        event.pointerId
-      );
-    },
-    {
-      passive: false
-    }
-  );
-
-  element.addEventListener(
-    "lostpointercapture",
-    event => {
-      releasePointerById(
-        event.pointerId
-      );
-    }
-  );
-
-  element.addEventListener(
-    "contextmenu",
-    event => {
-      event.preventDefault();
-      releaseAllPointers();
-    }
-  );
-
-  element.addEventListener(
-    "dragstart",
-    event => {
-      event.preventDefault();
-      releaseAllPointers();
-    }
-  );
-
-  element.releaseAllPointers =
-    releaseAllPointers;
-}
-
-/*
-  移動ボタンに、
-  通常移動とダブルタップ長押しダッシュを設定します。
-*/
-function bindMoveButton(
-  element,
-  direction
-) {
-  let lastPressTime =
-    -Infinity;
-
-  let dashActive =
-    false;
-
-  bindHoldButton(
-    element,
-
-    () => {
-      const currentTime =
-        performance.now() /
-        1000;
-
-      const isDoubleTap =
-        currentTime -
-        lastPressTime <=
-        MOVE_DOUBLE_TAP_TIME;
-
-      lastPressTime =
-        currentTime;
-
-      if (direction === "left") {
-        input.left = true;
-      } else {
-        input.right = true;
-      }
-
-      if (isDoubleTap) {
-        dashActive = true;
-
-        touchDashDirections.add(
-          direction
+        pointerIds.delete(
+          pointerId
         );
 
-        updateDashInput();
-      }
-    },
-
-    () => {
-      if (direction === "left") {
-        input.left = false;
-      } else {
-        input.right = false;
-      }
-
-      if (dashActive) {
-        dashActive = false;
-
-        touchDashDirections.delete(
-          direction
+        activePointerReleases.delete(
+          pointerId
         );
 
-        updateDashInput();
-      }
-    }
-  );
-}
-
-    bindMoveButton(
-  leftButton,
-  "left"
-);
-
-bindMoveButton(
-  rightButton,
-  "right"
-);
-
-bindHoldButton(
-  jumpButton,
-  () => {
-    if (!input.jump) {
-      input.jumpPressed = true;
-    }
-
-    input.jump = true;
-    input.jumpReleased = false;
-  },
-  () => {
-    if (input.jump) {
-      input.jumpReleased = true;
-    }
-
-    input.jump = false;
-  }
-);
-    
-    /*
-  移動ボタンへ、
-  通常移動とダブルタップ長押しダッシュを設定します。
-*/
-function bindMoveButton(
-  element,
-  direction
-) {
-  /*
-    前回このボタンを押した時刻です。
-  */
-  let lastPressTime = -Infinity;
-
-  /*
-    現在の押下がダブルタップによる
-    ダッシュ操作かどうかです。
-  */
-  let dashActive = false;
-
-  bindHoldButton(
-    element,
-
-    /*
-      ボタンを押した瞬間の処理です。
-    */
-    () => {
-      const currentTime =
-        performance.now() / 1000;
-
-      /*
-        前回の押下から一定時間以内なら、
-        ダブルタップと判定します。
-      */
-      const isDoubleTap =
-        currentTime - lastPressTime <=
-        MOVE_DOUBLE_TAP_TIME;
-
-      /*
-        今回の押下時刻を保存します。
-      */
-      lastPressTime = currentTime;
-
-      /*
-        指定された方向へ移動を開始します。
-      */
-      if (direction === "left") {
-        input.left = true;
-      } else {
-        input.right = true;
-      }
-
-      /*
-        2回目のタップだった場合は、
-        そのまま押し続けている間ダッシュします。
-      */
-      if (isDoubleTap) {
-        dashActive = true;
-
-        touchDashDirections.add(
-          direction
-        );
-
-        updateDashInput();
-      }
-    },
-
-    /*
-      ボタンから指を離したときの処理です。
-    */
-    () => {
-      if (direction === "left") {
-        input.left = false;
-      } else {
-        input.right = false;
-      }
-
-      /*
-        この押下でダッシュしていた場合は解除します。
-      */
-      if (dashActive) {
-        dashActive = false;
-
-        touchDashDirections.delete(
-          direction
-        );
-
-        updateDashInput();
-      }
-    }
-  );
-}
-
-      /*
-        このボタンを押している指をすべて解除します。
-      */
-      function releaseAllPointers() {
-        const ids =
-          Array.from(
-            pointerIds
+        if (
+          pointerIds.size === 0
+        ) {
+          element.classList.remove(
+            "active"
           );
+
+          onRelease();
+        }
+      }
+
+      function releaseAllPointers() {
+        const hadPointers =
+          pointerIds.size > 0;
 
         for (
-          const pointerId of ids
+          const pointerId of
+          pointerIds
         ) {
-          releasePointerById(
+          activePointerReleases.delete(
             pointerId
           );
+
+          try {
+            if (
+              element.hasPointerCapture(
+                pointerId
+              )
+            ) {
+              element.releasePointerCapture(
+                pointerId
+              );
+            }
+          } catch (error) {
+            /*
+              Pointer Captureを解除できなくても
+              入力状態の解除は続行します。
+            */
+          }
         }
+
+        pointerIds.clear();
 
         element.classList.remove(
           "active"
         );
 
-        onRelease();
+        /*
+          押されていた場合だけ、
+          解除処理を1回実行します。
+        */
+        if (hadPointers) {
+          onRelease();
+        }
       }
 
       element.addEventListener(
         "pointerdown",
         event => {
+          if (gamePaused) {
+            return;
+          }
+
           ensureAudioContext();
           event.preventDefault();
 
@@ -4346,7 +3839,7 @@ function bindMoveButton(
             );
           } catch (error) {
             /*
-              Pointer Captureに失敗しても、
+              Pointer Captureに失敗した場合も、
               document側のpointerupで解除します。
             */
           }
@@ -4419,50 +3912,135 @@ function bindMoveButton(
         releaseAllPointers;
     }
 
-    /*
-  左移動ボタンです。
-  ダブルタップ後に押し続けると左方向へダッシュします。
-*/
-bindMoveButton(
-  leftButton,
-  "left"
-);
+    function bindMoveButton(
+      element,
+      direction
+    ) {
+      let lastPressTime =
+        -Infinity;
 
-/*
-  右移動ボタンです。
-  ダブルタップ後に押し続けると右方向へダッシュします。
-*/
-bindMoveButton(
-  rightButton,
-  "right"
-);
+      let dashActive =
+        false;
 
-    /*
-      ジャンプボタンです。
-    */
+      bindHoldButton(
+        element,
+
+        () => {
+          const currentTime =
+            performance.now() /
+            1000;
+
+          const isDoubleTap =
+            currentTime -
+              lastPressTime <=
+            MOVE_DOUBLE_TAP_TIME;
+
+          lastPressTime =
+            currentTime;
+
+          if (
+            direction ===
+            "left"
+          ) {
+            input.left =
+              true;
+          } else {
+            input.right =
+              true;
+          }
+
+          if (isDoubleTap) {
+            dashActive =
+              true;
+
+            touchDashDirections.add(
+              direction
+            );
+
+            updateDashInput();
+          }
+        },
+
+        () => {
+          if (
+            direction ===
+            "left"
+          ) {
+            input.left =
+              false;
+          } else {
+            input.right =
+              false;
+          }
+
+          if (dashActive) {
+            dashActive =
+              false;
+
+            touchDashDirections.delete(
+              direction
+            );
+
+            updateDashInput();
+          }
+        }
+      );
+
+      /*
+        ステージ移動などの際に、
+        古いダブルタップ時刻を破棄します。
+      */
+      element.resetMoveTapState =
+        () => {
+          lastPressTime =
+            -Infinity;
+
+          dashActive =
+            false;
+
+          touchDashDirections.delete(
+            direction
+          );
+        };
+    }
+
+    bindMoveButton(
+      leftButton,
+      "left"
+    );
+
+    bindMoveButton(
+      rightButton,
+      "right"
+    );
+
     bindHoldButton(
       jumpButton,
+
       () => {
         if (!input.jump) {
-          input.jumpPressed = true;
+          input.jumpPressed =
+            true;
         }
 
-        input.jump = true;
-        input.jumpReleased = false;
+        input.jump =
+          true;
+
+        input.jumpReleased =
+          false;
       },
+
       () => {
         if (input.jump) {
-          input.jumpReleased = true;
+          input.jumpReleased =
+            true;
         }
 
-        input.jump = false;
+        input.jump =
+          false;
       }
     );
 
-    /*
-      ボタン外で指を離した場合でも、
-      該当する指だけを解除します。
-    */
     document.addEventListener(
       "pointerup",
       event => {
@@ -4491,102 +4069,68 @@ bindMoveButton(
       }
     );
 
-      /*
-  ゲーム中のステージ選択ボタンです。
-*/
-stageSelectButton.addEventListener(
-  "click",
-  () => {
-    showStageSelectScreen();
-  }
-);
-
-/*
-  クリア画面から次のステージへ進みます。
-*/
-nextStageButton.addEventListener(
-  "click",
-  () => {
-    const nextStageIndex =
-      currentStageIndex + 1;
-
-    if (
-      nextStageIndex <
-      STAGES.length
-    ) {
-      startStage(
-        nextStageIndex
-      );
-    }
-  }
-);
-
-/*
-  クリア画面からステージ選択へ戻ります。
-*/
-messageStageSelectButton.addEventListener(
-  "click",
-  () => {
-    showStageSelectScreen();
-  }
-);
-
-    /*
-      すべての入力状態を解除します。
-    */
     function resetAllInputs() {
-  input.left = false;
-  input.right = false;
-  input.jump = false;
-  input.jumpPressed = false;
-  input.jumpReleased = false;
-  input.dash = false;
+      input.left =
+        false;
 
-  /*
-    キーボードとタッチの
-    ダッシュ状態を解除します。
-  */
-  keyboardDashHeld = false;
-  touchDashDirections.clear();
+      input.right =
+        false;
 
-  const touchButtons = [
-    leftButton,
-    rightButton,
-    jumpButton
-  ];
+      input.jump =
+        false;
 
-  for (const button of touchButtons) {
-    if (
-      typeof button.releaseAllPointers ===
-      "function"
-    ) {
-      button.releaseAllPointers();
-    } else {
-      button.classList.remove(
-        "active"
-      );
+      input.jumpPressed =
+        false;
+
+      input.jumpReleased =
+        false;
+
+      input.dash =
+        false;
+
+      keyboardDashHeld =
+        false;
+
+      touchDashDirections.clear();
+
+      const touchButtons = [
+        leftButton,
+        rightButton,
+        jumpButton
+      ];
+
+      for (
+        const button of
+        touchButtons
+      ) {
+        if (
+          typeof button.releaseAllPointers ===
+          "function"
+        ) {
+          button.releaseAllPointers();
+        } else {
+          button.classList.remove(
+            "active"
+          );
+        }
+
+        if (
+          typeof button.resetMoveTapState ===
+          "function"
+        ) {
+          button.resetMoveTapState();
+        }
+      }
+
+      activePointerReleases.clear();
+      updateDashInput();
     }
-  }
 
-  activePointerReleases.clear();
-
-  /*
-    全解除後のダッシュ状態を再計算します。
-  */
-  updateDashInput();
-}
-
-    /*
-      画面からフォーカスが外れた場合に解除します。
-    */
     window.addEventListener(
       "blur",
       resetAllInputs
     );
 
-    /*
-      アプリやブラウザがバックグラウンドへ移動した場合です。
-    */
     document.addEventListener(
       "visibilitychange",
       () => {
@@ -4596,24 +4140,18 @@ messageStageSelectButton.addEventListener(
       }
     );
 
-    /*
-      画面の向きが変わった場合です。
-    */
     window.addEventListener(
       "orientationchange",
       resetAllInputs
     );
 
     // =========================================================
-    // ブラウザのズーム防止
+    // ズーム防止
     // =========================================================
 
-    let lastNonButtonTouchEndTime = 0;
+    let lastNonButtonTouchEndTime =
+      0;
 
-    /*
-      ボタン以外の場所をダブルタップした際の
-      ズームを防止します。
-    */
     document.addEventListener(
       "touchend",
       event => {
@@ -4651,10 +4189,6 @@ messageStageSelectButton.addEventListener(
       }
     );
 
-    /*
-      ダブルクリック扱いになった場合の
-      ズームも防止します。
-    */
     document.addEventListener(
       "dblclick",
       event => {
@@ -4677,67 +4211,90 @@ messageStageSelectButton.addEventListener(
       }
     );
 
-    /*
-      iPhone・iPadでのピンチズームを防止します。
-    */
-    document.addEventListener(
+    const gestureEventNames = [
       "gesturestart",
-      event => {
-        event.preventDefault();
-      },
-      {
-        passive: false
-      }
-    );
-
-    document.addEventListener(
       "gesturechange",
-      event => {
-        event.preventDefault();
-      },
-      {
-        passive: false
-      }
-    );
+      "gestureend"
+    ];
 
-    document.addEventListener(
-      "gestureend",
-      event => {
-        event.preventDefault();
-      },
-      {
-        passive: false
-      }
-    );
+    for (
+      const eventName of
+      gestureEventNames
+    ) {
+      document.addEventListener(
+        eventName,
+        event => {
+          event.preventDefault();
+        },
+        {
+          passive: false
+        }
+      );
+    }
 
     // =========================================================
-    // ボタン
+    // 画面ボタン
     // =========================================================
 
     restartButton.addEventListener(
-  "click",
-  () => {
-    if (gamePaused) {
-      return;
-    }
+      "click",
+      () => {
+        if (gamePaused) {
+          return;
+        }
 
-    ensureAudioContext();
-    initializeGame(true);
-  }
-);
+        ensureAudioContext();
+        initializeGame(true);
+      }
+    );
 
-   messageRestartButton.addEventListener(
-  "click",
-  () => {
-    ensureAudioContext();
+    stageSelectButton.addEventListener(
+      "click",
+      () => {
+        showStageSelectScreen();
+      }
+    );
 
-    hideMessage();
-    initializeGame(true);
+    nextStageButton.addEventListener(
+      "click",
+      () => {
+        const nextStageIndex =
+          currentStageIndex +
+          1;
 
-    gamePaused = false;
-    lastTime = performance.now();
-  }
-);
+        if (
+          nextStageIndex <
+          STAGES.length
+        ) {
+          startStage(
+            nextStageIndex
+          );
+        }
+      }
+    );
+
+    messageRestartButton.addEventListener(
+      "click",
+      () => {
+        ensureAudioContext();
+
+        hideMessage();
+        initializeGame(true);
+
+        gamePaused =
+          false;
+
+        lastTime =
+          performance.now();
+      }
+    );
+
+    messageStageSelectButton.addEventListener(
+      "click",
+      () => {
+        showStageSelectScreen();
+      }
+    );
 
     // =========================================================
     // Canvasサイズ
@@ -4806,23 +4363,17 @@ messageStageSelectButton.addEventListener(
     // ゲーム開始
     // =========================================================
 
-   resizeCanvas();
+    resizeCanvas();
 
-/*
-  ステージ1を内部的に準備します。
-*/
-currentStageIndex = 0;
-initializeGame(true);
+    currentStageIndex =
+      0;
 
-/*
-  起動時はステージ選択画面を表示し、
-  ゲーム処理を停止します。
-*/
-showStageSelectScreen();
+    initializeGame(true);
+    showStageSelectScreen();
 
-window.requestAnimationFrame(
-  gameLoop
-);
+    window.requestAnimationFrame(
+      gameLoop
+    );
   </script>
 </body>
 </html>
