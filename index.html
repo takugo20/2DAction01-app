@@ -669,39 +669,127 @@
       BOSS: "boss"
     };
 
-    /*
+        /*
       敵の種類ごとの基本設定です。
-
-      今後、敵を追加・調整する場合は、
-      主にこの設定を変更します。
     */
     const ENEMY_DEFINITIONS = {
       [ENEMY_TYPES.WALKER]: {
+        width: 34,
+        height: 30,
+
         speed: 75,
         avoidsHoles: false,
+
+        maximumHealth: 1,
+
         color: "#9c3dad",
         faceColor: "#f2d0a7"
       },
 
       [ENEMY_TYPES.CAUTIOUS]: {
+        width: 34,
+        height: 30,
+
         speed: 70,
         avoidsHoles: true,
+
+        maximumHealth: 1,
+
         color: "#39a85b",
         faceColor: "#d7f0c5"
       },
 
       [ENEMY_TYPES.JUMPER]: {
+        width: 34,
+        height: 30,
+
         speed: 60,
         avoidsHoles: false,
-        color: "#ef8b2c",
-        faceColor: "#ffe0ad",
+
+        maximumHealth: 1,
 
         jumpPower: 520,
         minimumJumpInterval: 1.4,
-        maximumJumpInterval: 2.1
+        maximumJumpInterval: 2.1,
+
+        color: "#ef8b2c",
+        faceColor: "#ffe0ad"
+      },
+
+      [ENEMY_TYPES.FLYER]: {
+        width: 38,
+        height: 28,
+
+        speed: 85,
+
+        maximumHealth: 1,
+
+        horizontalRange: 190,
+        verticalRange: 24,
+        verticalSpeed: 2.4,
+
+        color: "#3d87d8",
+        faceColor: "#cce8ff"
+      },
+
+      [ENEMY_TYPES.CHARGER]: {
+        width: 38,
+        height: 32,
+
+        speed: 55,
+        chargeSpeed: 230,
+        chargeAcceleration: 850,
+        detectionRange: 320,
+        detectionHeight: 100,
+
+        avoidsHoles: false,
+
+        maximumHealth: 1,
+
+        color: "#d84343",
+        faceColor: "#ffd1c7"
+      },
+
+      [ENEMY_TYPES.MID_BOSS]: {
+        width: 52,
+        height: 46,
+
+        speed: 65,
+        avoidsHoles: true,
+
+        maximumHealth: 2,
+
+        jumpPower: 560,
+        minimumJumpInterval: 1.6,
+        maximumJumpInterval: 2.4,
+
+        color: "#6f3ab2",
+        faceColor: "#e2cef7"
+      },
+
+      [ENEMY_TYPES.BOSS]: {
+        width: 68,
+        height: 58,
+
+        speed: 70,
+        chargeSpeed: 190,
+        chargeAcceleration: 600,
+        detectionRange: 520,
+        detectionHeight: 160,
+
+        avoidsHoles: true,
+
+        maximumHealth: 3,
+
+        jumpPower: 620,
+        minimumJumpInterval: 1.25,
+        maximumJumpInterval: 1.9,
+
+        color: "#292929",
+        faceColor: "#ffcc63"
       }
     };
-
+    
     // =========================================================
     // ステージデータ
     // =========================================================
@@ -1326,10 +1414,12 @@
       );
     }
 
-    /*
+        /*
       敵記号から内部の敵タイプを取得します。
     */
-    function getEnemyTypeFromSymbol(symbol) {
+    function getEnemyTypeFromSymbol(
+      symbol
+    ) {
       switch (symbol) {
         case "W":
           return ENEMY_TYPES.WALKER;
@@ -1339,6 +1429,18 @@
 
         case "J":
           return ENEMY_TYPES.JUMPER;
+
+        case "F":
+          return ENEMY_TYPES.FLYER;
+
+        case "D":
+          return ENEMY_TYPES.CHARGER;
+
+        case "N":
+          return ENEMY_TYPES.MID_BOSS;
+
+        case "X":
+          return ENEMY_TYPES.BOSS;
 
         /*
           旧記号Eは、
@@ -1369,7 +1471,7 @@
       );
     }
 
-    /*
+        /*
       敵タイプに応じた敵データを作成します。
     */
     function createEnemy(
@@ -1384,60 +1486,149 @@
         return null;
       }
 
+      const width =
+        definition.width ||
+        ENEMY_WIDTH;
+
+      const height =
+        definition.height ||
+        ENEMY_HEIGHT;
+
+      const startX =
+        tileX +
+        (
+          TILE_SIZE -
+          width
+        ) /
+        2;
+
+      const startY =
+        enemyType ===
+        ENEMY_TYPES.FLYER
+          ? tileY +
+            (
+              TILE_SIZE -
+              height
+            ) /
+            2
+          : tileY +
+            TILE_SIZE -
+            height;
+
       const enemy = {
-        type: enemyType,
+        type:
+          enemyType,
 
         x:
-          tileX +
-          (
-            TILE_SIZE -
-            ENEMY_WIDTH
-          ) /
-          2,
+          startX,
 
         y:
-          tileY +
-          TILE_SIZE -
-          ENEMY_HEIGHT,
+          startY,
 
-        width: ENEMY_WIDTH,
-        height: ENEMY_HEIGHT,
+        startX,
+        startY,
+
+        width,
+        height,
 
         velocityX:
           -definition.speed,
 
-        velocityY: 0,
-        direction: -1,
+        velocityY:
+          0,
+
+        direction:
+          -1,
 
         speed:
           definition.speed,
 
         avoidsHoles:
-          definition.avoidsHoles,
+          Boolean(
+            definition.avoidsHoles
+          ),
 
-        alive: true,
-        grounded: false,
-        squashTimer: 0,
+        alive:
+          true,
+
+        grounded:
+          false,
+
+        squashTimer:
+          0,
+
+        maximumHealth:
+          definition.maximumHealth ||
+          1,
+
+        health:
+          definition.maximumHealth ||
+          1,
+
+        hitInvincibleTimer:
+          0,
+
+        flashTimer:
+          0,
 
         jumpPower:
-          definition.jumpPower || 0,
+          definition.jumpPower ||
+          0,
 
-        jumpTimer: 0,
+        jumpTimer:
+          0,
 
         minimumJumpInterval:
-          definition.minimumJumpInterval || 0,
+          definition.minimumJumpInterval ||
+          0,
 
         maximumJumpInterval:
-          definition.maximumJumpInterval || 0
+          definition.maximumJumpInterval ||
+          0,
+
+        chargeSpeed:
+          definition.chargeSpeed ||
+          definition.speed,
+
+        chargeAcceleration:
+          definition.chargeAcceleration ||
+          0,
+
+        detectionRange:
+          definition.detectionRange ||
+          0,
+
+        detectionHeight:
+          definition.detectionHeight ||
+          0,
+
+        charging:
+          false,
+
+        horizontalRange:
+          definition.horizontalRange ||
+          0,
+
+        verticalRange:
+          definition.verticalRange ||
+          0,
+
+        verticalSpeed:
+          definition.verticalSpeed ||
+          0,
+
+        flightTime:
+          Math.random() *
+          Math.PI *
+          2
       };
 
       /*
-        ジャンプ型は、出現直後から
-        全員が同時に跳ばないようにします。
+        ジャンプを行う敵は、
+        出現直後から全員が同時に跳ばないようにします。
       */
       if (
-        enemyType ===
-        ENEMY_TYPES.JUMPER
+        enemy.jumpPower > 0
       ) {
         enemy.jumpTimer =
           randomRange(
@@ -2856,6 +3047,356 @@ function showStageSelectScreen() {
       }
     }
 
+        /*
+      飛行型を更新します。
+
+      重力の影響を受けず、
+      出現地点を中心に左右へ往復します。
+    */
+    function updateFlyerEnemy(
+      enemy,
+      deltaTime
+    ) {
+      enemy.flightTime +=
+        deltaTime;
+
+      enemy.x +=
+        enemy.direction *
+        enemy.speed *
+        deltaTime;
+
+      /*
+        移動範囲の端へ到達したら反転します。
+      */
+      if (
+        enemy.x >=
+        enemy.startX +
+          enemy.horizontalRange
+      ) {
+        enemy.x =
+          enemy.startX +
+          enemy.horizontalRange;
+
+        enemy.direction =
+          -1;
+      } else if (
+        enemy.x <=
+        enemy.startX -
+          enemy.horizontalRange
+      ) {
+        enemy.x =
+          enemy.startX -
+          enemy.horizontalRange;
+
+        enemy.direction =
+          1;
+      }
+
+      /*
+        上下へ緩やかに揺れます。
+      */
+      enemy.y =
+        enemy.startY +
+        Math.sin(
+          enemy.flightTime *
+          enemy.verticalSpeed
+        ) *
+        enemy.verticalRange;
+
+      enemy.velocityX =
+        enemy.direction *
+        enemy.speed;
+
+      enemy.velocityY =
+        Math.cos(
+          enemy.flightTime *
+          enemy.verticalSpeed
+        ) *
+        enemy.verticalRange *
+        enemy.verticalSpeed;
+
+      enemy.grounded =
+        false;
+    }
+
+    /*
+      プレイヤーが突進対象の範囲にいるか判定します。
+    */
+    function canEnemyDetectPlayer(
+      enemy
+    ) {
+      const enemyCenterX =
+        enemy.x +
+        enemy.width / 2;
+
+      const enemyCenterY =
+        enemy.y +
+        enemy.height / 2;
+
+      const playerCenterX =
+        player.x +
+        player.width / 2;
+
+      const playerCenterY =
+        player.y +
+        player.height / 2;
+
+      const horizontalDistance =
+        Math.abs(
+          playerCenterX -
+          enemyCenterX
+        );
+
+      const verticalDistance =
+        Math.abs(
+          playerCenterY -
+          enemyCenterY
+        );
+
+      return (
+        horizontalDistance <=
+          enemy.detectionRange &&
+        verticalDistance <=
+          enemy.detectionHeight
+      );
+    }
+
+    /*
+      プレイヤーがいる方向を取得します。
+    */
+    function getDirectionTowardPlayer(
+      enemy
+    ) {
+      const enemyCenterX =
+        enemy.x +
+        enemy.width / 2;
+
+      const playerCenterX =
+        player.x +
+        player.width / 2;
+
+      return (
+        playerCenterX <
+        enemyCenterX
+          ? -1
+          : 1
+      );
+    }
+
+    /*
+      突進型を更新します。
+    */
+    function updateChargerEnemy(
+      enemy,
+      deltaTime
+    ) {
+      const playerDetected =
+        canEnemyDetectPlayer(
+          enemy
+        );
+
+      enemy.charging =
+        playerDetected;
+
+      if (playerDetected) {
+        enemy.direction =
+          getDirectionTowardPlayer(
+            enemy
+          );
+
+        const targetVelocityX =
+          enemy.direction *
+          enemy.chargeSpeed;
+
+        enemy.velocityX =
+          approach(
+            enemy.velocityX,
+            targetVelocityX,
+            enemy.chargeAcceleration *
+              deltaTime
+          );
+      } else {
+        const targetVelocityX =
+          enemy.direction *
+          enemy.speed;
+
+        enemy.velocityX =
+          approach(
+            enemy.velocityX,
+            targetVelocityX,
+            enemy.chargeAcceleration *
+              deltaTime
+          );
+      }
+
+      const hitWall =
+        moveEntityHorizontally(
+          enemy,
+          enemy.velocityX *
+            deltaTime
+        );
+
+      if (hitWall) {
+        enemy.direction *=
+          -1;
+
+        enemy.charging =
+          false;
+      }
+
+      updateEnemyGravity(
+        enemy,
+        deltaTime
+      );
+    }
+
+    /*
+      中ボスを更新します。
+
+      穴を回避しながら歩き、
+      一定間隔でジャンプします。
+    */
+    function updateMidBossEnemy(
+      enemy,
+      deltaTime
+    ) {
+      updateEnemyHorizontalMovement(
+        enemy,
+        deltaTime
+      );
+
+      updateEnemyGravity(
+        enemy,
+        deltaTime
+      );
+
+      if (
+        enemy.grounded &&
+        !hasGroundInFront(enemy)
+      ) {
+        enemy.direction *=
+          -1;
+      }
+
+      if (enemy.grounded) {
+        enemy.jumpTimer -=
+          deltaTime;
+
+        if (
+          enemy.jumpTimer <= 0
+        ) {
+          enemy.velocityY =
+            -enemy.jumpPower;
+
+          enemy.grounded =
+            false;
+
+          enemy.jumpTimer =
+            randomRange(
+              enemy.minimumJumpInterval,
+              enemy.maximumJumpInterval
+            );
+        }
+      }
+    }
+
+    /*
+      ボスを更新します。
+
+      プレイヤーを追跡しながら、
+      一定間隔でジャンプします。
+    */
+    function updateBossEnemy(
+      enemy,
+      deltaTime
+    ) {
+      const playerDetected =
+        canEnemyDetectPlayer(
+          enemy
+        );
+
+      enemy.charging =
+        playerDetected;
+
+      if (playerDetected) {
+        enemy.direction =
+          getDirectionTowardPlayer(
+            enemy
+          );
+
+        enemy.velocityX =
+          approach(
+            enemy.velocityX,
+            enemy.direction *
+              enemy.chargeSpeed,
+            enemy.chargeAcceleration *
+              deltaTime
+          );
+      } else {
+        enemy.velocityX =
+          approach(
+            enemy.velocityX,
+            enemy.direction *
+              enemy.speed,
+            enemy.chargeAcceleration *
+              deltaTime
+          );
+      }
+
+      /*
+        ボスは穴の手前で反転します。
+      */
+      if (
+        enemy.grounded &&
+        !hasGroundInFront(enemy)
+      ) {
+        enemy.direction *=
+          -1;
+
+        enemy.velocityX =
+          enemy.direction *
+          enemy.speed;
+      }
+
+      const hitWall =
+        moveEntityHorizontally(
+          enemy,
+          enemy.velocityX *
+            deltaTime
+        );
+
+      if (hitWall) {
+        enemy.direction *=
+          -1;
+      }
+
+      updateEnemyGravity(
+        enemy,
+        deltaTime
+      );
+
+      if (enemy.grounded) {
+        enemy.jumpTimer -=
+          deltaTime;
+
+        if (
+          enemy.jumpTimer <= 0
+        ) {
+          enemy.velocityY =
+            -enemy.jumpPower;
+
+          enemy.grounded =
+            false;
+
+          enemy.jumpTimer =
+            randomRange(
+              enemy.minimumJumpInterval,
+              enemy.maximumJumpInterval
+            );
+        }
+      }
+    }
+    
     /*
       敵の種類に応じて、
       対応する更新処理を呼び出します。
@@ -2886,6 +3427,34 @@ function showStageSelectScreen() {
           );
           break;
 
+        case ENEMY_TYPES.FLYER:
+          updateFlyerEnemy(
+            enemy,
+            deltaTime
+          );
+          break;
+
+        case ENEMY_TYPES.CHARGER:
+          updateChargerEnemy(
+            enemy,
+            deltaTime
+          );
+          break;
+
+        case ENEMY_TYPES.MID_BOSS:
+          updateMidBossEnemy(
+            enemy,
+            deltaTime
+          );
+          break;
+
+        case ENEMY_TYPES.BOSS:
+          updateBossEnemy(
+            enemy,
+            deltaTime
+          );
+          break;
+
         default:
           updateWalkerEnemy(
             enemy,
@@ -2905,6 +3474,20 @@ function showStageSelectScreen() {
         const enemy of
         enemies
       ) {
+        if (
+          enemy.hitInvincibleTimer > 0
+        ) {
+          enemy.hitInvincibleTimer -=
+            deltaTime;
+        }
+
+        if (
+          enemy.flashTimer > 0
+        ) {
+          enemy.flashTimer -=
+            deltaTime;
+        }
+
         if (!enemy.alive) {
           enemy.squashTimer -=
             deltaTime;
@@ -2917,9 +3500,15 @@ function showStageSelectScreen() {
           deltaTime
         );
 
+        /*
+          飛行型以外の敵が奈落へ落ちた場合は、
+          消滅させます。
+        */
         if (
+          enemy.type !==
+            ENEMY_TYPES.FLYER &&
           enemy.y >=
-          stageHeight
+            stageHeight
         ) {
           enemy.alive =
             false;
@@ -2936,6 +3525,102 @@ function showStageSelectScreen() {
       }
     }
 
+        /*
+      敵を踏んだときの処理です。
+    */
+    function stompEnemy(
+      enemy
+    ) {
+      /*
+        短時間に複数回判定されることを防ぎます。
+      */
+      if (
+        enemy.hitInvincibleTimer > 0
+      ) {
+        return;
+      }
+
+      enemy.health -=
+        1;
+
+      enemy.hitInvincibleTimer =
+        0.35;
+
+      enemy.flashTimer =
+        0.25;
+
+      player.y =
+        enemy.y -
+        player.height;
+
+      player.velocityY =
+        -STOMP_BOUNCE_POWER;
+
+      player.grounded =
+        false;
+
+      variableJumpActive =
+        false;
+
+      jumpHoldTimer =
+        0;
+
+      if (
+        enemy.health <= 0
+      ) {
+        enemy.alive =
+          false;
+
+        enemy.squashTimer =
+          enemy.maximumHealth > 1
+            ? 0.55
+            : 0.35;
+
+        enemy.velocityX =
+          0;
+
+        enemy.velocityY =
+          0;
+
+        if (
+          enemy.type ===
+          ENEMY_TYPES.MID_BOSS
+        ) {
+          score +=
+            1000;
+        } else if (
+          enemy.type ===
+          ENEMY_TYPES.BOSS
+        ) {
+          score +=
+            3000;
+        } else {
+          score +=
+            200;
+        }
+      } else {
+        /*
+          中ボス・ボスがまだ生きている場合は、
+          一時的に反対方向へ押し戻します。
+        */
+        enemy.direction =
+          player.x <
+          enemy.x
+            ? 1
+            : -1;
+
+        enemy.velocityX =
+          enemy.direction *
+          enemy.speed;
+
+        score +=
+          300;
+      }
+
+      playStompSound();
+      updateHud();
+    }
+    
     // =========================================================
     // オブジェクトとの接触
     // =========================================================
@@ -3016,31 +3701,12 @@ function showStageSelectScreen() {
           isFalling &&
           isAboveEnemy
         ) {
-          enemy.alive =
-            false;
-
-          enemy.squashTimer =
-            0.35;
-
-          player.y =
-            enemy.y -
-            player.height;
-
-          player.velocityY =
-            -STOMP_BOUNCE_POWER;
-
-          variableJumpActive =
-            false;
-
-          jumpHoldTimer =
-            0;
-
-          score +=
-            200;
-
-          playStompSound();
-          updateHud();
-        } else {
+          stompEnemy(
+            enemy
+          );
+        } else if (
+          enemy.hitInvincibleTimer <= 0
+        ) {
           triggerMiss();
           return;
         }
@@ -3984,7 +4650,223 @@ function showStageSelectScreen() {
       context.fill();
     }
 
+        /*
+      飛行型の追加装飾です。
+    */
+    function drawFlyerEnemyDecoration(
+      enemy
+    ) {
+      context.fillStyle =
+        "#d9f3ff";
+
+      /*
+        左右の羽です。
+      */
+      context.beginPath();
+
+      context.ellipse(
+        -enemy.width / 2 - 5,
+        0,
+        10,
+        5,
+        -0.35,
+        0,
+        Math.PI * 2
+      );
+
+      context.fill();
+
+      context.beginPath();
+
+      context.ellipse(
+        enemy.width / 2 + 5,
+        0,
+        10,
+        5,
+        0.35,
+        0,
+        Math.PI * 2
+      );
+
+      context.fill();
+    }
+
     /*
+      突進型の追加装飾です。
+    */
+    function drawChargerEnemyDecoration(
+      enemy
+    ) {
+      context.fillStyle =
+        "#7a1717";
+
+      /*
+        前方の角です。
+      */
+      context.beginPath();
+
+      context.moveTo(
+        enemy.width / 2,
+        -6
+      );
+
+      context.lineTo(
+        enemy.width / 2 + 13,
+        0
+      );
+
+      context.lineTo(
+        enemy.width / 2,
+        6
+      );
+
+      context.closePath();
+      context.fill();
+
+      if (enemy.charging) {
+        context.fillStyle =
+          "rgba(255, 255, 255, 0.6)";
+
+        context.fillRect(
+          -enemy.width / 2 - 18,
+          -5,
+          12,
+          3
+        );
+
+        context.fillRect(
+          -enemy.width / 2 - 24,
+          4,
+          17,
+          3
+        );
+      }
+    }
+
+    /*
+      中ボスの追加装飾です。
+    */
+    function drawMidBossEnemyDecoration(
+      enemy
+    ) {
+      context.fillStyle =
+        "#e4c24f";
+
+      /*
+        小さな王冠です。
+      */
+      context.beginPath();
+
+      context.moveTo(
+        -14,
+        -enemy.height / 2
+      );
+
+      context.lineTo(
+        -9,
+        -enemy.height / 2 - 12
+      );
+
+      context.lineTo(
+        -2,
+        -enemy.height / 2 - 4
+      );
+
+      context.lineTo(
+        5,
+        -enemy.height / 2 - 13
+      );
+
+      context.lineTo(
+        13,
+        -enemy.height / 2
+      );
+
+      context.closePath();
+      context.fill();
+    }
+
+    /*
+      ボスの追加装飾です。
+    */
+    function drawBossEnemyDecoration(
+      enemy
+    ) {
+      context.fillStyle =
+        "#d4af37";
+
+      /*
+        大きな王冠です。
+      */
+      context.beginPath();
+
+      context.moveTo(
+        -22,
+        -enemy.height / 2
+      );
+
+      context.lineTo(
+        -16,
+        -enemy.height / 2 - 17
+      );
+
+      context.lineTo(
+        -6,
+        -enemy.height / 2 - 7
+      );
+
+      context.lineTo(
+        0,
+        -enemy.height / 2 - 20
+      );
+
+      context.lineTo(
+        8,
+        -enemy.height / 2 - 7
+      );
+
+      context.lineTo(
+        18,
+        -enemy.height / 2 - 17
+      );
+
+      context.lineTo(
+        23,
+        -enemy.height / 2
+      );
+
+      context.closePath();
+      context.fill();
+
+      /*
+        残りHPを丸で表示します。
+      */
+      for (
+        let index = 0;
+        index < enemy.maximumHealth;
+        index += 1
+      ) {
+        context.fillStyle =
+          index < enemy.health
+            ? "#ff4a4a"
+            : "#555";
+
+        context.beginPath();
+
+        context.arc(
+          -12 +
+            index * 12,
+          enemy.height / 2 + 10,
+          4,
+          0,
+          Math.PI * 2
+        );
+
+        context.fill();
+      }
+    }
+
+        /*
       敵の種類に応じた装飾を描きます。
     */
     function drawEnemyDecoration(
@@ -4003,6 +4885,30 @@ function showStageSelectScreen() {
 
         case ENEMY_TYPES.JUMPER:
           drawJumperEnemyDecoration(
+            enemy
+          );
+          break;
+
+        case ENEMY_TYPES.FLYER:
+          drawFlyerEnemyDecoration(
+            enemy
+          );
+          break;
+
+        case ENEMY_TYPES.CHARGER:
+          drawChargerEnemyDecoration(
+            enemy
+          );
+          break;
+
+        case ENEMY_TYPES.MID_BOSS:
+          drawMidBossEnemyDecoration(
+            enemy
+          );
+          break;
+
+        case ENEMY_TYPES.BOSS:
+          drawBossEnemyDecoration(
             enemy
           );
           break;
@@ -4038,6 +4944,22 @@ function showStageSelectScreen() {
           enemy.y +
             enemy.height / 2
         );
+
+        /*
+          ダメージ直後は点滅させます。
+        */
+        if (
+          enemy.flashTimer > 0 &&
+          Math.floor(
+            enemy.flashTimer *
+            30
+          ) %
+            2 ===
+            0
+        ) {
+          context.globalAlpha =
+            0.35;
+        }
 
         context.scale(
           enemy.direction,
