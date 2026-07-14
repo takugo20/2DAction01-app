@@ -650,6 +650,9 @@
     const JUMP_BUFFER_TIME = 0.15;
     const COYOTE_TIME = 0.10;
 
+    const BLOCK_BUMP_DURATION = 0.18;
+
+    const BLOCK_BUMP_HEIGHT = 10;
     const PLAYER_WIDTH = 32;
     const PLAYER_HEIGHT = 42;
 
@@ -669,7 +672,7 @@
       BOSS: "boss"
     };
 
-        /*
+    /*
       敵の種類ごとの基本設定です。
     */
     const ENEMY_DEFINITIONS = {
@@ -992,6 +995,13 @@
     let enemies = [];
     let coins = [];
     let goal = null;
+
+    /*
+      ブロックごとのアニメーション状態を管理します。
+
+      キーは「列番号,行番号」の文字列です。
+    */
+    const blockStates = new Map();
 
     const particles = [];
 
@@ -1340,6 +1350,26 @@
       });
     }
 
+    function playBlockHitSound() {
+      playTone({
+        frequency: 170,
+        endFrequency: 240,
+        duration: 0.08,
+        type: "square",
+        volume: 0.06
+      });
+    }
+
+    function playBlockBreakSound() {
+      playTone({
+        frequency: 150,
+        endFrequency: 60,
+        duration: 0.16,
+        type: "sawtooth",
+        volume: 0.07
+      });
+    }
+
     function playMissSound() {
       playTone({
         frequency: 220,
@@ -1415,6 +1445,314 @@
     }
 
         /*
+      ブロックの列番号と行番号から、
+      blockStatesで使用するキーを作成します。
+    */
+    function getBlockStateKey(
+      column,
+      row
+    ) {
+      return (
+        column +
+        "," +
+        row
+      );
+    }
+
+    /*
+      指定した記号が、
+      下から叩いたときに反応するか判定します。
+    */
+    function isHittableBlockSymbol(
+      symbol
+    ) {
+      return (
+        symbol === "H" ||
+        symbol === "R" ||
+        symbol === "Q" ||
+        symbol === "I"
+      );
+    }
+
+    /*
+      指定位置のブロック状態を取得します。
+
+      状態が存在しない場合は、
+      新しい状態を作成します。
+    */
+    function getOrCreateBlockState(
+      column,
+      row
+    ) {
+      const key =
+        getBlockStateKey(
+          column,
+          row
+        );
+
+      if (!blockStates.has(key)) {
+        blockStates.set(
+          key,
+          {
+            column,
+            row,
+
+            bumpTimer:
+              0,
+
+            bumpDuration:
+              BLOCK_BUMP_DURATION,
+
+            /*
+              アニメーション終了後に
+              ブロックを消すかどうかです。
+            */
+            breakAfterBump:
+              false,
+
+            /*
+              アニメーション終了後に
+              変更する記号です。
+            */
+            nextSymbol:
+              null
+          }
+        );
+      }
+
+      return blockStates.get(key);
+    }
+
+    /*
+      プレイヤーがブロックを
+      下から叩いたときの処理です。
+    */
+    function hitBlock(
+      column,
+      row
+    ) {
+      if (
+        row < 0 ||
+        row >= stageRows.length ||
+        column < 0 ||
+        column >= stageRows[row].length
+      ) {
+        return;
+      }
+
+      const symbol =
+        stageRows[row][column];
+
+      if (
+        !isHittableBlockSymbol(
+          symbol
+        )
+      ) {
+        return;
+      }
+
+      const blockState =
+        getOrCreateBlockState(
+          column,
+          row
+        );
+
+      /*
+        ブロックがすでに跳ねている最中なら、
+        効果を重複して発生させません。
+      */
+      if (
+        blockState.bumpTimer > 0
+      ) {
+        return;
+      }
+
+      blockState.bumpTimer =
+        blockState.bumpDuration;
+
+      blockState.breakAfterBump =
+        false;
+
+      blockState.nextSymbol =
+        null;
+
+      playBlockHitSound();
+
+      switch (symbol) {
+        /*
+          Hは跳ねるだけです。
+        */
+        case "H":
+          break;
+
+        /*
+          Rはアニメーション終了後に壊れます。
+        */
+        case "R":
+          blockState.breakAfterBump =
+            true;
+          break;
+
+        /*
+          Qはコインを1枚獲得し、
+          アニメーション終了後にUへ変化します。
+        */
+        case "Q":
+          collectedCoins +=
+            1;
+
+          score +=
+            100;
+
+          blockState.nextSymbol =
+            "U";
+
+          playCoinSound();
+          updateHud();
+          break;
+
+        /*
+          Iは第3回でアイテムを出します。
+
+          今回はブロックが跳ねるだけにします。
+        */
+        case "I":
+          break;
+      }
+    }
+    
+    /*
+      ブロックのアニメーション状態を更新します。
+    */
+    function updateBlocks(
+      deltaTime
+    ) {
+      for (
+        const [
+          key,
+          blockState
+        ] of blockStates
+      ) {
+        if (
+          blockState.bumpTimer > 0
+        ) {
+          blockState.bumpTimer -=
+            deltaTime;
+        }
+
+        /*
+          まだアニメーション中なら、
+          次の状態へ移行しません。
+        */
+        if (
+          blockState.bumpTimer > 0
+        ) {
+          continue;
+        }
+
+        const {
+          column,
+          row
+        } = blockState;
+
+        /*
+          ステージ外になっていた場合は
+          状態だけ削除します。
+        */
+        if (
+          row < 0 ||
+          row >= stageRows.length ||
+          column < 0 ||
+          column >= stageRows[row].length
+        ) {
+          blockStates.delete(key);
+          continue;
+        }
+
+        const currentSymbol =
+          stageRows[row][column];
+
+        /*
+          壊せるブロックを削除します。
+        */
+        if (
+          blockState.breakAfterBump
+        ) {
+          stageRows[row][column] =
+            ".";
+
+          createBlockBreakParticles(
+            column,
+            row,
+            currentSymbol
+          );
+
+          playBlockBreakSound();
+
+          score +=
+            50;
+
+          updateHud();
+
+          blockStates.delete(key);
+          continue;
+        }
+
+        /*
+          コイン入りブロックなどを、
+          次の記号へ変更します。
+        */
+        if (
+          blockState.nextSymbol !==
+          null
+        ) {
+          stageRows[row][column] =
+            blockState.nextSymbol;
+        }
+
+        blockStates.delete(key);
+      }
+    }
+
+    /*
+      描画時に使用するブロックの上下移動量を取得します。
+    */
+    function getBlockDrawOffsetY(
+      column,
+      row
+    ) {
+      const key =
+        getBlockStateKey(
+          column,
+          row
+        );
+
+      const blockState =
+        blockStates.get(key);
+
+      if (!blockState) {
+        return 0;
+      }
+
+      const progress =
+        1 -
+        blockState.bumpTimer /
+        blockState.bumpDuration;
+
+      /*
+        0 → 上昇 → 元の位置、という動きを
+        sinカーブで作ります。
+      */
+      return (
+        -Math.sin(
+          progress *
+          Math.PI
+        ) *
+        BLOCK_BUMP_HEIGHT
+      );
+    }
+    
+    /*
       敵記号から内部の敵タイプを取得します。
     */
     function getEnemyTypeFromSymbol(
@@ -1829,6 +2167,12 @@
       enemies = [];
       coins = [];
       goal = null;
+
+      /*
+        前のステージやリスタート前の
+        ブロックアニメーションを消去します。
+      */
+      blockStates.clear();
 
       particles.length = 0;
 
@@ -2450,6 +2794,9 @@ function showStageSelectScreen() {
 
         column += 1
       ) {
+        /*
+          下方向へ移動して地面へ接触した場合です。
+        */
         if (
           deltaY > 0 &&
           isSolidTile(
@@ -2471,6 +2818,9 @@ function showStageSelectScreen() {
           return true;
         }
 
+        /*
+          上方向へ移動してブロックへ接触した場合です。
+        */
         if (
           deltaY < 0 &&
           isSolidTile(
@@ -2478,6 +2828,20 @@ function showStageSelectScreen() {
             topRow
           )
         ) {
+          /*
+            プレイヤーが下から衝突した場合だけ、
+            ブロックを叩いた処理を行います。
+
+            敵が天井へ衝突しても
+            ブロックは反応しません。
+          */
+          if (entity === player) {
+            hitBlock(
+              column,
+              topRow
+            );
+          }
+
           entity.y =
             (
               topRow +
@@ -3873,10 +4237,12 @@ function showStageSelectScreen() {
       x,
       y
     ) {
-      particles.push({
+            particles.push({
+        type: "dust",
+
         x,
         y,
-
+              
         velocityX:
           (
             Math.random() -
@@ -3899,9 +4265,103 @@ function showStageSelectScreen() {
           7 +
           Math.random() *
           5
+
+        color:
+          "#d2bea0"
       });
     }
 
+    function createBlockBreakParticles(
+      column,
+      row,
+      symbol
+    ) {
+      const colors =
+        getBlockColors(symbol);
+
+      const centerX =
+        column * TILE_SIZE +
+        TILE_SIZE / 2;
+
+      const centerY =
+        row * TILE_SIZE +
+        TILE_SIZE / 2;
+
+      /*
+        4個の破片を四方向へ飛ばします。
+      */
+      const velocities = [
+        {
+          x: -130,
+          y: -250
+        },
+        {
+          x: 130,
+          y: -250
+        },
+        {
+          x: -90,
+          y: -160
+        },
+        {
+          x: 90,
+          y: -160
+        }
+      ];
+
+      for (
+        const velocity of
+        velocities
+      ) {
+        particles.push({
+          type: "blockFragment",
+
+          x:
+            centerX +
+            (
+              Math.random() -
+              0.5
+            ) *
+            12,
+
+          y:
+            centerY +
+            (
+              Math.random() -
+              0.5
+            ) *
+            12,
+
+          velocityX:
+            velocity.x +
+            (
+              Math.random() -
+              0.5
+            ) *
+            50,
+
+          velocityY:
+            velocity.y -
+            Math.random() *
+            40,
+
+          life:
+            0.65,
+
+          maximumLife:
+            0.65,
+
+          size:
+            9 +
+            Math.random() *
+            4,
+
+          color:
+            colors.body
+        });
+      }
+    }
+    
     function updateParticles(
       deltaTime
     ) {
@@ -4274,14 +4734,24 @@ function showStageSelectScreen() {
             continue;
           }
 
-          const x =
-            column *
-            TILE_SIZE;
+      const x =
+        column *
+        TILE_SIZE;
 
-          const y =
-            row *
-            TILE_SIZE;
+      /*
+        叩かれているブロックだけ、
+        描画位置を一時的に上へ移動します。
 
+        当たり判定上の位置は変わらないため、
+        プレイヤーがブロックをすり抜けることはありません。
+      */
+      const y =
+        row *
+          TILE_SIZE +
+        getBlockDrawOffsetY(
+          column,
+          row
+        );
           const colors =
             getBlockColors(symbol);
 
@@ -5148,7 +5618,7 @@ function showStageSelectScreen() {
       );
     }
 
-    function drawParticles() {
+        function drawParticles() {
       for (
         const particle of
         particles
@@ -5156,6 +5626,43 @@ function showStageSelectScreen() {
         const alpha =
           particle.life /
           particle.maximumLife;
+
+        if (
+          particle.type ===
+          "blockFragment"
+        ) {
+          context.save();
+
+          context.globalAlpha =
+            alpha;
+
+          context.fillStyle =
+            particle.color;
+
+          context.translate(
+            particle.x,
+            particle.y
+          );
+
+          /*
+            破片が回転しているように見せます。
+          */
+          context.rotate(
+            particle.life *
+            12
+          );
+
+          context.fillRect(
+            -particle.size / 2,
+            -particle.size / 2,
+            particle.size,
+            particle.size
+          );
+
+          context.restore();
+
+          continue;
+        }
 
         context.fillStyle =
           "rgba(210, 190, 160, " +
@@ -5251,6 +5758,12 @@ function showStageSelectScreen() {
       updatePlayer(deltaTime);
       updateEnemies(deltaTime);
       updateObjectCollisions();
+
+      /*
+        ブロックの跳ねるアニメーションを更新します。
+      */
+      updateBlocks(deltaTime);
+
       updateParticles(deltaTime);
       updateCamera(deltaTime);
     }
