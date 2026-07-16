@@ -792,6 +792,56 @@
         faceColor: "#ffcc63"
       }
     };
+
+        // =========================================================
+    // アイテム設定
+    // =========================================================
+
+    /*
+      アイテムの種類です。
+    */
+    const ITEM_TYPES = {
+      SHIELD: "shield",
+      INVINCIBLE: "invincible",
+      JUMP_BOOST: "jumpBoost"
+    };
+
+    /*
+      アイテムの表示サイズです。
+    */
+    const ITEM_WIDTH = 30;
+    const ITEM_HEIGHT = 30;
+
+    /*
+      アイテムがブロックから飛び出す速度です。
+    */
+    const ITEM_APPEAR_SPEED = 300;
+
+    /*
+      アイテムが地面を移動する速度です。
+    */
+    const ITEM_MOVE_SPEED = 65;
+
+    /*
+      無敵アイテムの効果時間です。
+    */
+    const INVINCIBLE_ITEM_DURATION = 8;
+
+    /*
+      ジャンプ力上昇アイテムの効果時間です。
+    */
+    const JUMP_BOOST_DURATION = 10;
+
+    /*
+      ジャンプ力上昇中の倍率です。
+    */
+    const JUMP_BOOST_MULTIPLIER = 1.25;
+
+    /*
+      シールドで被弾を防いだ直後の
+      短い無敵時間です。
+    */
+    const SHIELD_DAMAGE_INVINCIBLE_TIME = 1.2;
     
     // =========================================================
     // ステージデータ
