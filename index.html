@@ -809,8 +809,8 @@
     /*
       アイテムの表示サイズです。
     */
-    const ITEM_WIDTH = 30;
-    const ITEM_HEIGHT = 30;
+    const ITEM_WIDTH = 34;
+    const ITEM_HEIGHT = 34;
 
     /*
       アイテムがブロックから飛び出す速度です。
@@ -842,6 +842,21 @@
       短い無敵時間です。
     */
     const SHIELD_DAMAGE_INVINCIBLE_TIME = 1.2;
+
+// =========================================================
+// 動く足場
+// =========================================================
+
+const MOVING_PLATFORM_WIDTH = TILE_SIZE * 2;
+const MOVING_PLATFORM_HEIGHT = 16;
+
+const MOVING_PLATFORM_SPEED = 70;
+
+const MOVING_PLATFORM_HORIZONTAL_DISTANCE =
+  TILE_SIZE * 5;
+
+const MOVING_PLATFORM_VERTICAL_DISTANCE =
+  TILE_SIZE * 4;
     
     // =========================================================
     // ステージデータ
@@ -1042,10 +1057,15 @@
 
     let player = null;
 
-    let enemies = [];
-    let coins = [];
-    let items = [];
-    let goal = null;
+let enemies = [];
+let coins = [];
+let items = [];
+let goal = null;
+
+/*
+  動く足場です。
+*/
+let movingPlatforms = [];
 
     /*
       ブロックごとのアニメーション状態を管理します。
@@ -1921,6 +1941,7 @@
         y:
           startY,
 
+        standingPlatform: null,
         startX,
         startY,
 
@@ -2259,6 +2280,43 @@
       };
     }
 
+/*
+  動く足場を生成します。
+*/
+function createMovingPlatform(
+  type,
+  tileX,
+  tileY
+) {
+  movingPlatforms.push({
+
+    type,
+
+    x: tileX,
+
+    y: tileY,
+
+    startX: tileX,
+
+    startY: tileY,
+
+    previousX: tileX,
+
+    previousY: tileY,
+
+    width:
+      MOVING_PLATFORM_WIDTH,
+
+    height:
+      MOVING_PLATFORM_HEIGHT,
+
+    direction: 1,
+
+    speed:
+      MOVING_PLATFORM_SPEED
+  });
+}
+    
     /*
       ステージ上の記号を読み取り、
       必要なオブジェクトを生成します。
@@ -2324,6 +2382,30 @@
         return;
       }
 
+if (symbol === "M") {
+
+  createMovingPlatform(
+    "horizontal",
+    tileX,
+    tileY + TILE_SIZE - MOVING_PLATFORM_HEIGHT
+  );
+
+  stageRows[row][column] = ".";
+  return;
+}
+
+if (symbol === "V") {
+
+  createMovingPlatform(
+    "vertical",
+    tileX,
+    tileY + TILE_SIZE - MOVING_PLATFORM_HEIGHT
+  );
+
+  stageRows[row][column] = ".";
+  return;
+}
+      
   const itemType =
     getItemTypeFromSymbol(
       symbol
@@ -2395,10 +2477,12 @@
         stageRows.length *
         TILE_SIZE;
 
-      enemies = [];
-      coins = [];
-      items = [];
-      goal = null;
+enemies = [];
+coins = [];
+items = [];
+goal = null;
+
+movingPlatforms = [];
 
       /*
         前のステージやリスタート前の
@@ -2481,6 +2565,7 @@
         animationTime: 0,
         dustTimer: 0,
 
+        standingPlatform: null,
         /*
           シールドを所持しているかどうかです。
         */
@@ -2841,6 +2926,43 @@ function showStageSelectScreen() {
       );
     }
 
+function getStandingPlatform(entity) {
+
+  const footY =
+    entity.y +
+    entity.height +
+    2;
+
+  const leftX =
+    entity.x + 4;
+
+  const rightX =
+    entity.x +
+    entity.width -
+    4;
+
+  for (const platform of movingPlatforms) {
+
+    if (
+
+      rightX >= platform.x &&
+      leftX <= platform.x + platform.width &&
+
+      footY >= platform.y &&
+      footY <= platform.y + platform.height + 4
+
+    ) {
+
+      return platform;
+
+    }
+
+  }
+
+  return null;
+
+}
+    
     function rectanglesOverlap(
       rectangleA,
       rectangleB
@@ -3527,7 +3649,33 @@ function showStageSelectScreen() {
         player.dustTimer =
           0;
       }
+      
+player.standingPlatform =
+  getStandingPlatform(player);
 
+if (player.standingPlatform) {
+
+  const platform =
+    player.standingPlatform;
+
+  player.grounded = true;
+
+  player.velocityY = 0;
+
+  player.y =
+    platform.y -
+    player.height;
+
+  player.x +=
+    platform.x -
+    platform.previousX;
+
+  player.y +=
+    platform.y -
+    platform.previousY;
+
+}
+      
       if (
         player.y +
         player.height >=
@@ -3535,7 +3683,80 @@ function showStageSelectScreen() {
       ) {
         triggerMiss();
       }
+
+for (const platform of movingPlatforms) {
+
+    if (
+
+        player.y + player.height >
+        platform.y + 2 &&
+
+        player.y <
+        platform.y +
+        platform.height - 2 &&
+
+        rectanglesOverlap(player, platform)
+
+    ) {
+
+        if (
+
+            player.x + player.width / 2 <
+            platform.x + platform.width / 2
+
+        ) {
+
+            player.x =
+                platform.x -
+                player.width;
+
+        }
+
+        else {
+
+            player.x =
+                platform.x +
+                platform.width;
+
+        }
+
     }
+
+}
+
+  for (const platform of movingPlatforms) {
+
+    if (
+
+        player.velocityY < 0 &&
+
+        player.x + player.width >
+        platform.x + 2 &&
+
+        player.x <
+        platform.x +
+        platform.width - 2 &&
+
+        player.y >
+        platform.y &&
+
+        player.y <
+        platform.y +
+        platform.height
+
+    ) {
+
+        player.y =
+            platform.y +
+            platform.height;
+
+        player.velocityY = 0;
+
+    }
+
+}
+
+}
 
     // =========================================================
     // 敵更新
@@ -4176,6 +4397,31 @@ function showStageSelectScreen() {
           deltaTime
         );
 
+enemy.standingPlatform =
+  getStandingPlatform(enemy);
+
+if (enemy.standingPlatform) {
+
+  const platform =
+    enemy.standingPlatform;
+
+  enemy.grounded = true;
+
+  enemy.velocityY = 0;
+
+  enemy.y =
+    platform.y -
+    enemy.height;
+
+  enemy.x +=
+    platform.x -
+    platform.previousX;
+
+  enemy.y +=
+    platform.y -
+    platform.previousY;
+
+}
         /*
           飛行型以外の敵が奈落へ落ちた場合は、
           消滅させます。
@@ -4201,6 +4447,91 @@ function showStageSelectScreen() {
       }
     }
 
+    function updateMovingPlatforms(
+  deltaTime
+) {
+  for (const platform of movingPlatforms) {
+
+    platform.previousX =
+      platform.x;
+
+    platform.previousY =
+      platform.y;
+
+    if (
+      platform.type ===
+      "horizontal"
+    ) {
+
+      platform.x +=
+        platform.direction *
+        platform.speed *
+        deltaTime;
+
+      if (
+        platform.x >
+        platform.startX +
+        MOVING_PLATFORM_HORIZONTAL_DISTANCE
+      ) {
+
+        platform.x =
+          platform.startX +
+          MOVING_PLATFORM_HORIZONTAL_DISTANCE;
+
+        platform.direction = -1;
+      }
+
+      if (
+        platform.x <
+        platform.startX -
+        MOVING_PLATFORM_HORIZONTAL_DISTANCE
+      ) {
+
+        platform.x =
+          platform.startX -
+          MOVING_PLATFORM_HORIZONTAL_DISTANCE;
+
+        platform.direction = 1;
+      }
+
+    } else {
+
+      platform.y +=
+        platform.direction *
+        platform.speed *
+        deltaTime;
+
+      if (
+        platform.y >
+        platform.startY +
+        MOVING_PLATFORM_VERTICAL_DISTANCE
+      ) {
+
+        platform.y =
+          platform.startY +
+          MOVING_PLATFORM_VERTICAL_DISTANCE;
+
+        platform.direction = -1;
+      }
+
+      if (
+        platform.y <
+        platform.startY -
+        MOVING_PLATFORM_VERTICAL_DISTANCE
+      ) {
+
+        platform.y =
+          platform.startY -
+          MOVING_PLATFORM_VERTICAL_DISTANCE;
+
+        platform.direction = 1;
+      }
+
+    }
+
+  }
+}
+    
     // =========================================================
     // アイテム更新
     // =========================================================
@@ -4847,7 +5178,7 @@ function showStageSelectScreen() {
         size:
           7 +
           Math.random() *
-          5
+          5,
 
         color:
           "#d2bea0"
@@ -5431,7 +5762,6 @@ function showStageSelectScreen() {
       }
 
       context.restore();
-    }
 
   /*
     他の描画処理へ影響を残さないように戻します。
@@ -6469,6 +6799,46 @@ function showStageSelectScreen() {
       context.closePath();
       context.fill();
     }
+
+function drawMovingPlatforms() {
+
+  for (const platform of movingPlatforms) {
+
+    context.fillStyle =
+      "#6f4e37";
+
+    context.fillRect(
+      platform.x,
+      platform.y,
+      platform.width,
+      platform.height
+    );
+
+    context.fillStyle =
+      "#b98b52";
+
+    context.fillRect(
+      platform.x,
+      platform.y,
+      platform.width,
+      4
+    );
+
+    context.strokeStyle =
+      "#2d2016";
+
+    context.lineWidth = 2;
+
+    context.strokeRect(
+      platform.x,
+      platform.y,
+      platform.width,
+      platform.height
+    );
+
+  }
+
+}
     
     function drawGoal() {
       if (!goal) {
@@ -6633,7 +7003,10 @@ function showStageSelectScreen() {
       );
 
       drawStage();
-      drawGoal();
+
+drawMovingPlatforms();
+
+drawGoal();
       drawCoins();
       drawItems();
       drawEnemies();
@@ -6665,9 +7038,13 @@ function showStageSelectScreen() {
         return;
       }
 
-      updatePlayer(deltaTime);
-      updateEnemies(deltaTime);
-      updateItems(deltaTime);
+updateMovingPlatforms(deltaTime);
+
+updatePlayer(deltaTime);
+
+updateEnemies(deltaTime);
+
+updateItems(deltaTime);
       updateObjectCollisions();
       updateBlocks(deltaTime);
       updateParticles(deltaTime);
