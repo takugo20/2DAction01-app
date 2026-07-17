@@ -857,7 +857,33 @@ const MOVING_PLATFORM_HORIZONTAL_DISTANCE =
 
 const MOVING_PLATFORM_VERTICAL_DISTANCE =
   TILE_SIZE * 4;
-    
+
+
+// =========================================================
+// 落ちる床
+// =========================================================
+
+/*
+  乗ってから落下を開始するまでの時間です。
+*/
+const FALLING_PLATFORM_WAIT_TIME = 0.65;
+
+/*
+  落下直前に床が揺れる幅です。
+*/
+const FALLING_PLATFORM_SHAKE_WIDTH = 3;
+
+/*
+  落ちる床に加える重力です。
+*/
+const FALLING_PLATFORM_GRAVITY = 1500;
+
+/*
+  落下速度の上限です。
+*/
+const FALLING_PLATFORM_MAX_SPEED = 800;    
+
+
     // =========================================================
     // ステージデータ
     // =========================================================
@@ -2281,7 +2307,7 @@ let movingPlatforms = [];
     }
 
 /*
-  動く足場を生成します。
+  動く足場・落ちる床を生成します。
 */
 function createMovingPlatform(
   type,
@@ -2289,19 +2315,15 @@ function createMovingPlatform(
   tileY
 ) {
   movingPlatforms.push({
-
     type,
 
     x: tileX,
-
     y: tileY,
 
     startX: tileX,
-
     startY: tileY,
 
     previousX: tileX,
-
     previousY: tileY,
 
     width:
@@ -2313,7 +2335,30 @@ function createMovingPlatform(
     direction: 1,
 
     speed:
-      MOVING_PLATFORM_SPEED
+      MOVING_PLATFORM_SPEED,
+
+    /*
+      落ちる床専用の状態です。
+
+      idle:
+        まだ誰も乗っていない状態
+
+      waiting:
+        乗られてから落下を待っている状態
+
+      falling:
+        落下中
+    */
+    fallingState: "idle",
+
+    fallingTimer:
+      FALLING_PLATFORM_WAIT_TIME,
+
+    velocityY: 0,
+
+    active: true,
+
+    shakeTime: 0
   });
 }
     
@@ -2394,6 +2439,19 @@ if (symbol === "M") {
   return;
 }
 
+if (symbol === "L") {
+  createMovingPlatform(
+    "falling",
+    tileX,
+    tileY +
+      TILE_SIZE -
+      MOVING_PLATFORM_HEIGHT
+  );
+
+  stageRows[row][column] = ".";
+  return;
+}
+      
 if (symbol === "V") {
 
   createMovingPlatform(
@@ -2926,41 +2984,92 @@ function showStageSelectScreen() {
       );
     }
 
-function getStandingPlatform(entity) {
-
-  const footY =
+function getStandingPlatform(
+  entity
+) {
+  const entityBottom =
     entity.y +
-    entity.height +
-    2;
+    entity.height;
 
   const leftX =
     entity.x + 4;
 
   const rightX =
     entity.x +
-    entity.width -
-    4;
+    entity.width - 4;
 
-  for (const platform of movingPlatforms) {
-
-    if (
-
-      rightX >= platform.x &&
-      leftX <= platform.x + platform.width &&
-
-      footY >= platform.y &&
-      footY <= platform.y + platform.height + 4
-
-    ) {
-
-      return platform;
-
+  for (
+    const platform of
+    movingPlatforms
+  ) {
+    if (!platform.active) {
+      continue;
     }
 
+    const horizontalOverlap =
+      rightX >
+        platform.x &&
+      leftX <
+        platform.x +
+        platform.width;
+
+    if (!horizontalOverlap) {
+      continue;
+    }
+
+    /*
+      足元が足場上面の近くにあり、
+      上から降りている場合だけ乗れます。
+    */
+    const maximumLandingDistance =
+      Math.max(
+        8,
+        Math.abs(
+          entity.velocityY
+        ) /
+          30
+      );
+
+    const closeToTop =
+      entityBottom >=
+        platform.y -
+          maximumLandingDistance &&
+      entityBottom <=
+        platform.y +
+          platform.height / 2;
+
+    if (
+      entity.velocityY >= 0 &&
+      closeToTop
+    ) {
+      return platform;
+    }
   }
 
   return null;
+}
 
+/*
+  落ちる床へ誰かが乗ったとき、
+  落下待機状態へ移行させます。
+*/
+function activateFallingPlatform(
+  platform
+) {
+  if (
+    platform.type !== "falling" ||
+    platform.fallingState !== "idle"
+  ) {
+    return;
+  }
+
+  platform.fallingState =
+    "waiting";
+
+  platform.fallingTimer =
+    FALLING_PLATFORM_WAIT_TIME;
+
+  platform.shakeTime = 0;
 }
     
     function rectanglesOverlap(
@@ -3651,16 +3760,41 @@ function getStandingPlatform(entity) {
       }
       
 player.standingPlatform =
-  getStandingPlatform(player);
+  getStandingPlatform(
+    player
+  );
 
-if (player.standingPlatform) {
-
+if (
+  player.standingPlatform
+) {
   const platform =
     player.standingPlatform;
 
-  player.grounded = true;
+  /*
+    横方向は足場の移動量だけ運びます。
+  */
+  player.x +=
+    platform.x -
+    platform.previousX;
 
+  /*
+    縦方向は現在の足場上面へ
+    直接位置を合わせます。
+
+    位置を合わせた後に移動量を足すと
+    二重移動になるため、追加しません。
+  */
+  player.y =
+    platform.y -
+    player.height;
+
+  player.grounded = true;
   player.velocityY = 0;
+
+  activateFallingPlatform(
+    platform
+  );
+}
 
   player.y =
     platform.y -
@@ -3669,10 +3803,6 @@ if (player.standingPlatform) {
   player.x +=
     platform.x -
     platform.previousX;
-
-  player.y +=
-    platform.y -
-    platform.previousY;
 
 }
       
@@ -3685,77 +3815,61 @@ if (player.standingPlatform) {
       }
 
 for (const platform of movingPlatforms) {
-
-    if (
-
-        player.y + player.height >
-        platform.y + 2 &&
-
-        player.y <
-        platform.y +
-        platform.height - 2 &&
-
-        rectanglesOverlap(player, platform)
-
-    ) {
-
-        if (
-
-            player.x + player.width / 2 <
-            platform.x + platform.width / 2
-
-        ) {
-
-            player.x =
-                platform.x -
-                player.width;
-
-        }
-
-        else {
-
-            player.x =
-                platform.x +
-                platform.width;
-
-        }
-
-    }
-
+  if (!platform.active) {
+  continue;
 }
-
-  for (const platform of movingPlatforms) {
-
+  if (
+    player.y + player.height >
+      platform.y + 2 &&
+    player.y <
+      platform.y +
+      platform.height - 2 &&
+    rectanglesOverlap(
+      player,
+      platform
+    )
+  ) {
     if (
-
-        player.velocityY < 0 &&
-
-        player.x + player.width >
-        platform.x + 2 &&
-
-        player.x <
+      player.x +
+        player.width / 2 <
+      platform.x +
+        platform.width / 2
+    ) {
+      player.x =
+        platform.x -
+        player.width;
+    } else {
+      player.x =
         platform.x +
-        platform.width - 2 &&
-
-        player.y >
-        platform.y &&
-
-        player.y <
-        platform.y +
-        platform.height
-
-    ) {
-
-        player.y =
-            platform.y +
-            platform.height;
-
-        player.velocityY = 0;
-
+        platform.width;
     }
-
+  }
 }
 
+for (const platform of movingPlatforms) {
+  if (!platform.active) {
+  continue;
+}
+  if (
+    player.velocityY < 0 &&
+    player.x + player.width >
+      platform.x + 2 &&
+    player.x <
+      platform.x +
+      platform.width - 2 &&
+    player.y >
+      platform.y &&
+    player.y <
+      platform.y +
+      platform.height
+  ) {
+    player.y =
+      platform.y +
+      platform.height;
+
+    player.velocityY = 0;
+  }
+}
 }
 
     // =========================================================
@@ -4398,16 +4512,35 @@ for (const platform of movingPlatforms) {
         );
 
 enemy.standingPlatform =
-  getStandingPlatform(enemy);
+  getStandingPlatform(
+    enemy
+  );
 
-if (enemy.standingPlatform) {
-
+if (
+  enemy.standingPlatform
+) {
   const platform =
     enemy.standingPlatform;
 
-  enemy.grounded = true;
+  enemy.x +=
+    platform.x -
+    platform.previousX;
 
+  enemy.y =
+    platform.y -
+    enemy.height;
+
+  enemy.grounded = true;
   enemy.velocityY = 0;
+
+  /*
+    敵が乗った場合も、
+    落ちる床を起動します。
+  */
+  activateFallingPlatform(
+    platform
+  );
+}
 
   enemy.y =
     platform.y -
@@ -4416,10 +4549,6 @@ if (enemy.standingPlatform) {
   enemy.x +=
     platform.x -
     platform.previousX;
-
-  enemy.y +=
-    platform.y -
-    platform.previousY;
 
 }
         /*
@@ -4450,85 +4579,166 @@ if (enemy.standingPlatform) {
     function updateMovingPlatforms(
   deltaTime
 ) {
-  for (const platform of movingPlatforms) {
-
+  for (
+    const platform of
+    movingPlatforms
+  ) {
     platform.previousX =
       platform.x;
 
     platform.previousY =
       platform.y;
 
+    if (!platform.active) {
+      continue;
+    }
+
+    /*
+      横移動足場です。
+    */
     if (
       platform.type ===
       "horizontal"
     ) {
-
       platform.x +=
         platform.direction *
         platform.speed *
         deltaTime;
 
-      if (
-        platform.x >
-        platform.startX +
-        MOVING_PLATFORM_HORIZONTAL_DISTANCE
-      ) {
+      const minimumX =
+        platform.startX -
+        MOVING_PLATFORM_HORIZONTAL_DISTANCE;
 
+      const maximumX =
+        platform.startX +
+        MOVING_PLATFORM_HORIZONTAL_DISTANCE;
+
+      if (
+        platform.x >= maximumX
+      ) {
         platform.x =
-          platform.startX +
-          MOVING_PLATFORM_HORIZONTAL_DISTANCE;
+          maximumX;
 
         platform.direction = -1;
-      }
-
-      if (
-        platform.x <
-        platform.startX -
-        MOVING_PLATFORM_HORIZONTAL_DISTANCE
+      } else if (
+        platform.x <= minimumX
       ) {
-
         platform.x =
-          platform.startX -
-          MOVING_PLATFORM_HORIZONTAL_DISTANCE;
+          minimumX;
 
         platform.direction = 1;
       }
 
-    } else {
+      continue;
+    }
 
+    /*
+      縦移動足場です。
+    */
+    if (
+      platform.type ===
+      "vertical"
+    ) {
       platform.y +=
         platform.direction *
         platform.speed *
         deltaTime;
 
-      if (
-        platform.y >
-        platform.startY +
-        MOVING_PLATFORM_VERTICAL_DISTANCE
-      ) {
+      const minimumY =
+        platform.startY -
+        MOVING_PLATFORM_VERTICAL_DISTANCE;
 
+      const maximumY =
+        platform.startY +
+        MOVING_PLATFORM_VERTICAL_DISTANCE;
+
+      if (
+        platform.y >= maximumY
+      ) {
         platform.y =
-          platform.startY +
-          MOVING_PLATFORM_VERTICAL_DISTANCE;
+          maximumY;
 
         platform.direction = -1;
-      }
-
-      if (
-        platform.y <
-        platform.startY -
-        MOVING_PLATFORM_VERTICAL_DISTANCE
+      } else if (
+        platform.y <= minimumY
       ) {
-
         platform.y =
-          platform.startY -
-          MOVING_PLATFORM_VERTICAL_DISTANCE;
+          minimumY;
 
         platform.direction = 1;
       }
 
+      continue;
     }
 
+    /*
+      落ちる床です。
+    */
+    if (
+      platform.type ===
+      "falling"
+    ) {
+      if (
+        platform.fallingState ===
+        "idle"
+      ) {
+        continue;
+      }
+
+      if (
+        platform.fallingState ===
+        "waiting"
+      ) {
+        platform.fallingTimer -=
+          deltaTime;
+
+        platform.shakeTime +=
+          deltaTime;
+
+        if (
+          platform.fallingTimer <= 0
+        ) {
+          platform.fallingState =
+            "falling";
+
+          platform.velocityY =
+            40;
+        }
+
+        continue;
+      }
+
+      if (
+        platform.fallingState ===
+        "falling"
+      ) {
+        platform.velocityY =
+          Math.min(
+            platform.velocityY +
+              FALLING_PLATFORM_GRAVITY *
+                deltaTime,
+
+            FALLING_PLATFORM_MAX_SPEED
+          );
+
+        platform.y +=
+          platform.velocityY *
+          deltaTime;
+
+        /*
+          ステージ下へ十分落ちたら、
+          当たり判定と描画を停止します。
+        */
+        if (
+          platform.y >
+          stageHeight +
+            TILE_SIZE * 2
+        ) {
+          platform.active =
+            false;
+        }
+      }
+    }
   }
 }
     
@@ -6801,25 +7011,64 @@ if (enemy.standingPlatform) {
     }
 
 function drawMovingPlatforms() {
+  for (
+    const platform of
+    movingPlatforms
+  ) {
+    if (!platform.active) {
+      continue;
+    }
 
-  for (const platform of movingPlatforms) {
+    let drawX =
+      platform.x;
 
-    context.fillStyle =
-      "#6f4e37";
+    const drawY =
+      platform.y;
+
+    /*
+      落下待機中は左右へ震えます。
+    */
+    if (
+      platform.type ===
+        "falling" &&
+      platform.fallingState ===
+        "waiting"
+    ) {
+      drawX +=
+        Math.sin(
+          platform.shakeTime *
+            45
+        ) *
+        FALLING_PLATFORM_SHAKE_WIDTH;
+    }
+
+    if (
+      platform.type ===
+      "falling"
+    ) {
+      context.fillStyle =
+        "#9b7045";
+    } else {
+      context.fillStyle =
+        "#6f4e37";
+    }
 
     context.fillRect(
-      platform.x,
-      platform.y,
+      drawX,
+      drawY,
       platform.width,
       platform.height
     );
 
     context.fillStyle =
-      "#b98b52";
+      platform.type ===
+      "falling"
+        ? "#dfb36f"
+        : "#b98b52";
 
     context.fillRect(
-      platform.x,
-      platform.y,
+      drawX,
+      drawY,
       platform.width,
       4
     );
@@ -6830,14 +7079,67 @@ function drawMovingPlatforms() {
     context.lineWidth = 2;
 
     context.strokeRect(
-      platform.x,
-      platform.y,
+      drawX,
+      drawY,
       platform.width,
       platform.height
     );
 
-  }
+    /*
+      落ちる床には亀裂を表示します。
+    */
+    if (
+      platform.type ===
+      "falling"
+    ) {
+      context.strokeStyle =
+        "rgba(70, 40, 20, 0.8)";
 
+      context.lineWidth = 2;
+
+      context.beginPath();
+
+      context.moveTo(
+        drawX +
+          platform.width * 0.32,
+        drawY + 3
+      );
+
+      context.lineTo(
+        drawX +
+          platform.width * 0.40,
+        drawY + 9
+      );
+
+      context.lineTo(
+        drawX +
+          platform.width * 0.36,
+        drawY +
+          platform.height
+      );
+
+      context.moveTo(
+        drawX +
+          platform.width * 0.68,
+        drawY + 2
+      );
+
+      context.lineTo(
+        drawX +
+          platform.width * 0.60,
+        drawY + 8
+      );
+
+      context.lineTo(
+        drawX +
+          platform.width * 0.65,
+        drawY +
+          platform.height
+      );
+
+      context.stroke();
+    }
+  }
 }
     
     function drawGoal() {
