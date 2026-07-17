@@ -793,7 +793,7 @@
       }
     };
 
-        // =========================================================
+    // =========================================================
     // アイテム設定
     // =========================================================
 
@@ -1044,6 +1044,7 @@
 
     let enemies = [];
     let coins = [];
+    let items = [];
     let goal = null;
 
     /*
@@ -1662,11 +1663,18 @@
           break;
 
         /*
-          Iは第3回でアイテムを出します。
-
-          今回はブロックが跳ねるだけにします。
+          アイテムを1個出現させ、
+          使用済みブロックへ変化させます。
         */
         case "I":
+          spawnItemFromBlock(
+            column,
+            row
+          );
+
+          blockState.nextSymbol =
+            "U";
+
           break;
       }
     }
@@ -2089,6 +2097,149 @@
     }
 
     /*
+      アイテムを作成します。
+    */
+    function createItem(
+      itemType,
+      x,
+      y,
+      options = {}
+    ) {
+      items.push({
+        type: itemType,
+
+        x:
+          x -
+          ITEM_WIDTH / 2,
+
+        y:
+          y -
+          ITEM_HEIGHT / 2,
+
+        width:
+          ITEM_WIDTH,
+
+        height:
+          ITEM_HEIGHT,
+
+        velocityX:
+          options.velocityX ?? 0,
+
+        velocityY:
+          options.velocityY ?? 0,
+
+        direction:
+          options.direction ?? 1,
+
+        grounded:
+          false,
+
+        collected:
+          false,
+
+        /*
+          ブロックから出現した直後かどうかです。
+        */
+        emerging:
+          options.emerging ?? false,
+
+        /*
+          ブロックから出現している時間です。
+        */
+        emergingTimer:
+          options.emerging
+            ? 0.28
+            : 0,
+
+        animationTime:
+          Math.random() *
+          Math.PI *
+          2
+      });
+    }
+
+    /*
+      ステージ記号からアイテムの種類を取得します。
+    */
+    function getItemTypeFromSymbol(
+      symbol
+    ) {
+      switch (symbol) {
+        case "1":
+          return ITEM_TYPES.SHIELD;
+
+        case "2":
+          return ITEM_TYPES.INVINCIBLE;
+
+        case "3":
+          return ITEM_TYPES.JUMP_BOOST;
+
+        default:
+          return null;
+      }
+    }
+
+    /*
+      3種類の中からランダムに
+      アイテムを選びます。
+    */
+    function getRandomItemType() {
+      const itemTypes = [
+        ITEM_TYPES.SHIELD,
+        ITEM_TYPES.INVINCIBLE,
+        ITEM_TYPES.JUMP_BOOST
+      ];
+
+      const randomIndex =
+        Math.floor(
+          Math.random() *
+          itemTypes.length
+        );
+
+      return itemTypes[randomIndex];
+    }
+
+    /*
+      アイテム入りブロックから
+      アイテムを出現させます。
+    */
+    function spawnItemFromBlock(
+      column,
+      row
+    ) {
+      const itemType =
+        getRandomItemType();
+
+      const blockCenterX =
+        column *
+        TILE_SIZE +
+        TILE_SIZE / 2;
+
+      const blockTopY =
+        row *
+        TILE_SIZE;
+
+      createItem(
+        itemType,
+        blockCenterX,
+        blockTopY -
+          ITEM_HEIGHT / 2,
+        {
+          velocityX: 0,
+          velocityY:
+            -ITEM_APPEAR_SPEED,
+
+          direction:
+            Math.random() < 0.5
+              ? -1
+              : 1,
+
+          emerging: true
+        }
+      );
+    }
+    
+    /*
       ゴールを作成します。
     */
     function createGoal(
@@ -2173,6 +2324,36 @@
         return;
       }
 
+  const itemType =
+    getItemTypeFromSymbol(
+      symbol
+    );
+
+  if (itemType) {
+    createItem(
+      itemType,
+
+      tileX +
+        TILE_SIZE / 2,
+
+      tileY +
+        TILE_SIZE -
+        ITEM_HEIGHT / 2,
+
+      {
+        direction:
+          Math.random() < 0.5
+            ? -1
+            : 1
+      }
+    );
+
+    stageRows[row][column] =
+      ".";
+
+    return;
+  }
+      
       if (
         createEnemyBySymbol(
           symbol,
@@ -2216,6 +2397,7 @@
 
       enemies = [];
       coins = [];
+      items = [];
       goal = null;
 
       /*
@@ -2297,7 +2479,28 @@
         dashing: false,
 
         animationTime: 0,
-        dustTimer: 0
+        dustTimer: 0,
+
+        /*
+          シールドを所持しているかどうかです。
+        */
+        hasShield: false,
+
+        /*
+          無敵アイテムの残り時間です。
+        */
+        invincibleTimer: 0,
+
+        /*
+          シールド使用直後などの、
+          短い無敵時間です。
+        */
+        damageInvincibleTimer: 0,
+
+        /*
+          ジャンプ力上昇の残り時間です。
+        */
+        jumpBoostTimer: 0
       };
 
       stageNameValue.textContent =
@@ -2943,9 +3146,26 @@ function showStageSelectScreen() {
     // ジャンプ
     // =========================================================
 
+    /*
+      現在のプレイヤーの
+      ジャンプ力を取得します。
+    */
+    function getCurrentJumpPower() {
+      if (
+        player.jumpBoostTimer > 0
+      ) {
+        return (
+          JUMP_POWER *
+          JUMP_BOOST_MULTIPLIER
+        );
+      }
+
+      return JUMP_POWER;
+    }
+    
     function startPlayerJump() {
       player.velocityY =
-        -JUMP_POWER;
+        -getCurrentJumpPower();
 
       player.grounded =
         false;
@@ -3014,6 +3234,48 @@ function showStageSelectScreen() {
         return;
       }
 
+      /*
+        無敵アイテムの残り時間を減らします。
+      */
+      if (
+        player.invincibleTimer > 0
+      ) {
+        player.invincibleTimer =
+          Math.max(
+            0,
+            player.invincibleTimer -
+              deltaTime
+          );
+      }
+
+      /*
+        被弾直後の短い無敵時間を減らします。
+      */
+      if (
+        player.damageInvincibleTimer > 0
+      ) {
+        player.damageInvincibleTimer =
+          Math.max(
+            0,
+            player.damageInvincibleTimer -
+              deltaTime
+          );
+      }
+
+      /*
+        ジャンプ力上昇の残り時間を減らします。
+      */
+      if (
+        player.jumpBoostTimer > 0
+      ) {
+        player.jumpBoostTimer =
+          Math.max(
+            0,
+            player.jumpBoostTimer -
+              deltaTime
+          );
+      }
+      
       if (playerDisabled) {
         player.velocityY =
           Math.min(
@@ -3939,7 +4201,111 @@ function showStageSelectScreen() {
       }
     }
 
+    // =========================================================
+    // アイテム更新
+    // =========================================================
+
+    function updateItems(
+      deltaTime
+    ) {
+      for (
+        const item of
+        items
+      ) {
+        if (item.collected) {
+          continue;
+        }
+
+        item.animationTime +=
+          deltaTime;
+
         /*
+          ブロックから出現している途中です。
+        */
+        if (item.emerging) {
+          item.emergingTimer -=
+            deltaTime;
+
+          item.velocityY =
+            Math.min(
+              item.velocityY +
+                GRAVITY *
+                0.45 *
+                deltaTime,
+
+              MAX_FALL_SPEED
+            );
+
+          item.y +=
+            item.velocityY *
+            deltaTime;
+
+          if (
+            item.emergingTimer <= 0
+          ) {
+            item.emerging =
+              false;
+
+            item.velocityX =
+              item.direction *
+              ITEM_MOVE_SPEED;
+
+            item.velocityY =
+              0;
+          }
+
+          continue;
+        }
+
+        item.velocityX =
+          item.direction *
+          ITEM_MOVE_SPEED;
+
+        const hitWall =
+          moveEntityHorizontally(
+            item,
+            item.velocityX *
+              deltaTime
+          );
+
+        if (hitWall) {
+          item.direction *=
+            -1;
+
+          item.velocityX =
+            item.direction *
+            ITEM_MOVE_SPEED;
+        }
+
+        item.velocityY =
+          Math.min(
+            item.velocityY +
+              GRAVITY *
+              deltaTime,
+
+            MAX_FALL_SPEED
+          );
+
+        moveEntityVertically(
+          item,
+          item.velocityY *
+            deltaTime
+        );
+
+        /*
+          アイテムが奈落へ落ちた場合は消滅します。
+        */
+        if (
+          item.y >=
+          stageHeight
+        ) {
+          item.collected =
+            true;
+        }
+      }
+    }
+    
+    /*
       敵を踏んだときの処理です。
     */
     function stompEnemy(
@@ -4039,6 +4405,61 @@ function showStageSelectScreen() {
     // オブジェクトとの接触
     // =========================================================
 
+    /*
+      プレイヤーがアイテムを取得したときの処理です。
+    */
+    function collectItem(
+      item
+    ) {
+      if (item.collected) {
+        return;
+      }
+
+      item.collected =
+        true;
+
+      switch (item.type) {
+        /*
+          次の被弾を1回防ぎます。
+        */
+        case ITEM_TYPES.SHIELD:
+          player.hasShield =
+            true;
+
+          score +=
+            300;
+
+          break;
+
+        /*
+          一定時間無敵になります。
+        */
+        case ITEM_TYPES.INVINCIBLE:
+          player.invincibleTimer =
+            INVINCIBLE_ITEM_DURATION;
+
+          score +=
+            300;
+
+          break;
+
+        /*
+          一定時間ジャンプ力が上昇します。
+        */
+        case ITEM_TYPES.JUMP_BOOST:
+          player.jumpBoostTimer =
+            JUMP_BOOST_DURATION;
+
+          score +=
+            300;
+
+          break;
+      }
+
+      playCoinSound();
+      updateHud();
+    }
+    
     function updateObjectCollisions() {
       if (
         playerDisabled ||
@@ -4075,6 +4496,30 @@ function showStageSelectScreen() {
         }
       }
 
+      /*
+        アイテムとの接触判定です。
+      */
+      for (
+        const item of
+        items
+      ) {
+        if (
+          item.collected ||
+          item.emerging
+        ) {
+          continue;
+        }
+
+        if (
+          rectanglesOverlap(
+            player,
+            item
+          )
+        ) {
+          collectItem(item);
+        }
+      }
+      
       for (
         const enemy of
         enemies
@@ -4092,6 +4537,38 @@ function showStageSelectScreen() {
           continue;
         }
 
+        /*
+          無敵アイテムの効果中に敵へ触れた場合は、
+          その敵を倒します。
+        */
+        if (
+          player.invincibleTimer > 0
+        ) {
+          enemy.alive =
+            false;
+
+          enemy.squashTimer =
+            0.2;
+
+          score +=
+            200;
+
+          playStompSound();
+          updateHud();
+
+          continue;
+        }
+
+        /*
+          シールド使用直後などの短い無敵中は、
+          敵との接触を無視します。
+        */
+        if (
+          player.damageInvincibleTimer > 0
+        ) {
+          continue;
+        }
+        
         const playerBottom =
           player.y +
           player.height;
@@ -4157,11 +4634,67 @@ function showStageSelectScreen() {
     // ミス・クリア
     // =========================================================
 
-    function triggerMiss() {
+    /*
+      プレイヤーが現在、
+      敵からダメージを受けない状態か判定します。
+    */
+    function isPlayerInvincible() {
+      return (
+        player.invincibleTimer > 0 ||
+        player.damageInvincibleTimer > 0
+      );
+    }
+    
+        function triggerMiss() {
       if (
         playerDisabled ||
         gameCleared
       ) {
+        return;
+      }
+
+      /*
+        無敵中はダメージを受けません。
+      */
+      if (
+        isPlayerInvincible()
+      ) {
+        return;
+      }
+
+      /*
+        シールドを持っている場合は、
+        シールドだけを消費します。
+      */
+      if (player.hasShield) {
+        player.hasShield =
+          false;
+
+        player.damageInvincibleTimer =
+          SHIELD_DAMAGE_INVINCIBLE_TIME;
+
+        /*
+          敵から少し離れるように
+          小さく跳ね返します。
+        */
+        player.velocityX =
+          -player.facing *
+          180;
+
+        player.velocityY =
+          -300;
+
+        player.grounded =
+          false;
+
+        variableJumpActive =
+          false;
+
+        jumpHoldTimer =
+          0;
+
+        playBlockBreakSound();
+
         return;
       }
 
@@ -4926,6 +5459,106 @@ function showStageSelectScreen() {
         1
       );
 
+      if (
+        player.damageInvincibleTimer > 0
+      ) {
+        const blink =
+          Math.floor(
+            player.damageInvincibleTimer *
+            14
+          ) %
+          2;
+
+        if (blink === 0) {
+          context.globalAlpha =
+            0.35;
+        }
+      }
+      
+      /*
+        シールドを所持している場合は、
+        プレイヤーの周囲へ輪を表示します。
+      */
+      if (player.hasShield) {
+        context.strokeStyle =
+          "rgba(80, 190, 255, 0.9)";
+
+        context.lineWidth =
+          4;
+
+        context.beginPath();
+
+        context.ellipse(
+          0,
+          0,
+          25,
+          30,
+          0,
+          0,
+          Math.PI * 2
+        );
+
+        context.stroke();
+      }
+
+      /*
+        無敵中は光る輪を表示します。
+      */
+      if (
+        player.invincibleTimer > 0
+      ) {
+        const auraRadius =
+          27 +
+          Math.sin(
+            player.animationTime *
+            12
+          ) *
+          3;
+
+        context.strokeStyle =
+          "rgba(255, 220, 40, 0.9)";
+
+        context.lineWidth =
+          5;
+
+        context.beginPath();
+
+        context.arc(
+          0,
+          0,
+          auraRadius,
+          0,
+          Math.PI * 2
+        );
+
+        context.stroke();
+      }
+
+      /*
+        ジャンプ力上昇中は、
+        足元に緑色の表示を出します。
+      */
+      if (
+        player.jumpBoostTimer > 0
+      ) {
+        context.fillStyle =
+          "rgba(80, 220, 110, 0.7)";
+
+        context.beginPath();
+
+        context.ellipse(
+          0,
+          20,
+          18,
+          6,
+          0,
+          0,
+          Math.PI * 2
+        );
+
+        context.fill();
+      }
+      
       if (playerDisabled) {
         context.rotate(
           player.animationTime *
@@ -5611,6 +6244,232 @@ function showStageSelectScreen() {
       }
     }
 
+    /*
+      アイテムを描画します。
+    */
+    function drawItems() {
+      for (
+        const item of
+        items
+      ) {
+        if (item.collected) {
+          continue;
+        }
+
+        const centerX =
+          item.x +
+          item.width / 2;
+
+        const centerY =
+          item.y +
+          item.height / 2;
+
+        const floatingOffset =
+          Math.sin(
+            item.animationTime *
+            5
+          ) *
+          2;
+
+        context.save();
+
+        context.translate(
+          centerX,
+          centerY +
+            floatingOffset
+        );
+
+        /*
+          白い外枠です。
+        */
+        context.fillStyle =
+          "rgba(255, 255, 255, 0.95)";
+
+        context.beginPath();
+
+        context.arc(
+          0,
+          0,
+          17,
+          0,
+          Math.PI * 2
+        );
+
+        context.fill();
+
+        switch (item.type) {
+          /*
+            シールドです。
+          */
+          case ITEM_TYPES.SHIELD:
+            context.fillStyle =
+              "#42a5f5";
+
+            context.beginPath();
+
+            context.moveTo(
+              0,
+              -12
+            );
+
+            context.lineTo(
+              11,
+              -7
+            );
+
+            context.lineTo(
+              9,
+              5
+            );
+
+            context.lineTo(
+              0,
+              13
+            );
+
+            context.lineTo(
+              -9,
+              5
+            );
+
+            context.lineTo(
+              -11,
+              -7
+            );
+
+            context.closePath();
+            context.fill();
+
+            break;
+
+          /*
+            無敵アイテムです。
+          */
+          case ITEM_TYPES.INVINCIBLE:
+            context.fillStyle =
+              "#ffd740";
+
+            drawStar(
+              0,
+              0,
+              5,
+              13,
+              6
+            );
+
+            break;
+
+          /*
+            ジャンプ力上昇アイテムです。
+          */
+          case ITEM_TYPES.JUMP_BOOST:
+            context.fillStyle =
+              "#66bb6a";
+
+            context.beginPath();
+
+            context.moveTo(
+              0,
+              -13
+            );
+
+            context.lineTo(
+              12,
+              2
+            );
+
+            context.lineTo(
+              5,
+              2
+            );
+
+            context.lineTo(
+              5,
+              12
+            );
+
+            context.lineTo(
+              -5,
+              12
+            );
+
+            context.lineTo(
+              -5,
+              2
+            );
+
+            context.lineTo(
+              -12,
+              2
+            );
+
+            context.closePath();
+            context.fill();
+
+            break;
+        }
+
+        context.restore();
+      }
+    }
+
+    /*
+      星形を描画します。
+    */
+    function drawStar(
+      x,
+      y,
+      pointCount,
+      outerRadius,
+      innerRadius
+    ) {
+      context.beginPath();
+
+      for (
+        let pointIndex = 0;
+        pointIndex <
+          pointCount *
+          2;
+        pointIndex += 1
+      ) {
+        const radius =
+          pointIndex % 2 === 0
+            ? outerRadius
+            : innerRadius;
+
+        const angle =
+          -Math.PI / 2 +
+          pointIndex *
+          Math.PI /
+          pointCount;
+
+        const pointX =
+          x +
+          Math.cos(angle) *
+          radius;
+
+        const pointY =
+          y +
+          Math.sin(angle) *
+          radius;
+
+        if (pointIndex === 0) {
+          context.moveTo(
+            pointX,
+            pointY
+          );
+        } else {
+          context.lineTo(
+            pointX,
+            pointY
+          );
+        }
+      }
+
+      context.closePath();
+      context.fill();
+    }
+    
     function drawGoal() {
       if (!goal) {
         return;
@@ -5776,6 +6635,7 @@ function showStageSelectScreen() {
       drawStage();
       drawGoal();
       drawCoins();
+      drawItems();
       drawEnemies();
       drawPlayer();
       drawParticles();
@@ -5807,13 +6667,9 @@ function showStageSelectScreen() {
 
       updatePlayer(deltaTime);
       updateEnemies(deltaTime);
+      updateItems(deltaTime);
       updateObjectCollisions();
-
-      /*
-        ブロックの跳ねるアニメーションを更新します。
-      */
       updateBlocks(deltaTime);
-
       updateParticles(deltaTime);
       updateCamera(deltaTime);
     }
