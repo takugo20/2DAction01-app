@@ -647,9 +647,9 @@
             "....................................................................................................",
             "....................................................................................................",
             "....................................................................................................",
-            "...............C...................C.........................C........................C.............",
-            "................Q......................I........................H......................R............",
-            "..P...C...W..............C.A......................CJ......K................AC...............C...G...",
+            "....................................................................................................",
+            "....................................................................................................",
+            "....................................................................................................",
             "###################..######################..#######################..##############################",
             "###################..######################..#######################..##############################",
           ],
@@ -3984,6 +3984,13 @@
       });
       window.addEventListener("keyup", handleKeyUp);
       const activePointerReleases = new Map();
+      function releaseActivePointer(pointerId) {
+        const releasePointer =
+          activePointerReleases.get(pointerId);
+        if (releasePointer) {
+          releasePointer();
+        }
+      }
       function bindHoldButton(element, onPress, onRelease) {
         const pointerIds = new Set();
         function releasePointerById(pointerId) {
@@ -4021,10 +4028,15 @@
             }
             ensureAudioContext();
             event.preventDefault();
-            if (pointerIds.has(event.pointerId)) {
-              return;
-            }
-            pointerIds.add(event.pointerId);
+            releaseActivePointer(
+              event.pointerId
+            );
+            releasePointerById(
+              event.pointerId
+            );
+            pointerIds.add(
+              event.pointerId
+            );
             activePointerReleases.set(event.pointerId, () => {
               releasePointerById(event.pointerId);
             });
@@ -4057,6 +4069,27 @@
           {
             passive: false,
           },
+        );
+        element.addEventListener(
+          "pointerleave",
+          (event) => {
+            let captured =
+              false;
+            try {
+              captured =
+                element.hasPointerCapture(
+                  event.pointerId
+                );
+            } catch (error) {
+              captured =
+                false;
+            }
+            if (!captured) {
+              releasePointerById(
+                event.pointerId  
+              );
+            }
+          }
         );
         element.addEventListener("lostpointercapture", (event) => {
           releasePointerById(event.pointerId);
@@ -4144,18 +4177,70 @@
           input.enter = false;
         },
       );
-      document.addEventListener("pointerup", (event) => {
-        const releasePointer = activePointerReleases.get(event.pointerId);
-        if (releasePointer) {
-          releasePointer();
+      function releaseAllTouchControls() {
+        const touchButtons = [
+          leftButton,
+          rightButton,
+          jumpButton,
+          enterButton
+        ];
+        for (
+          const button of
+          touchButtons
+        ) {
+          if (
+            typeof button.releaseAllPointers ===
+            "function"
+          ) {
+            button.releaseAllPointers();
+          } else {
+            button.classList.remove(
+              "active"
+            );
+          }
         }
-      });
-      document.addEventListener("pointercancel", (event) => {
-        const releasePointer = activePointerReleases.get(event.pointerId);
-        if (releasePointer) {
-          releasePointer();
+        activePointerReleases.clear();
+        updateDashInput();
+      }
+      function handleTouchReleaseFallback(event) {
+        if (event.touches.length > 0) {
+          return;
         }
-      });
+        releaseAllTouchControls();
+      }
+      document.addEventListener(
+        "touchend",
+        handleTouchReleaseFallback,
+        {
+          capture: true,
+          passive: true
+        }
+      );
+      document.addEventListener(
+        "touchcancel",
+        handleTouchReleaseFallback,
+        {
+          capture: true,
+          passive: true
+        }
+      );
+      function handleGlobalPointerRelease(
+        event
+      ) {
+        releaseActivePointer(
+          event.pointerId
+        );
+      }
+      window.addEventListener(
+        "pointerup",
+        handleGlobalPointerRelease,
+        true
+      );
+      window.addEventListener(
+        "pointercancel",
+        handleGlobalPointerRelease,
+        true
+      );
       function resetAllInputs() {
         input.left = false;
         input.right = false;
@@ -4184,6 +4269,7 @@
         updateDashInput();
       }
       window.addEventListener("blur", resetAllInputs);
+      window.addEventListener("pagehide", resetAllInputs);
       document.addEventListener("visibilitychange", () => {
         if (document.hidden) {
           resetAllInputs();
