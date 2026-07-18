@@ -926,7 +926,18 @@ const SPRING_JUMP_POWER =
 const SPRING_COMPRESSION_DURATION =
   0.18;
 
+// =========================================================
+// チェックポイント
+// =========================================================
 
+const CHECKPOINT_WIDTH = 16;
+
+const CHECKPOINT_HEIGHT = 58;
+
+const CHECKPOINT_FLAG_WIDTH = 24;
+
+const CHECKPOINT_FLAG_HEIGHT = 16;
+    
     // =========================================================
     // ステージデータ
     // =========================================================
@@ -1133,10 +1144,26 @@ let items = [];
 let spikes = [];
 let springs = [];
 
+let checkpoints = [];
+
+/*
+  現在有効になっているチェックポイントです。
+  まだ一つも取得していない場合はnullです。
+*/
+let activeCheckpoint = null;
+
+/*
+  ミス後に復帰する座標です。
+
+  第2回では記録だけ行い、
+  実際の復帰処理への利用は第3回で行います。
+*/
+let respawnPosition = null;
+
 let goal = null;
 
 let movingPlatforms = [];
-
+    
     /*
       ブロックごとのアニメーション状態を管理します。
 
@@ -1490,6 +1517,25 @@ let movingPlatforms = [];
         volume: 0.08
       });
     }
+
+    function playCheckpointSound() {
+  playTone({
+    frequency:
+      520,
+
+    endFrequency:
+      980,
+
+    duration:
+      0.2,
+
+    type:
+      "square",
+
+    volume:
+      0.065
+  });
+}
 
     function playBlockHitSound() {
       playTone({
@@ -2413,6 +2459,63 @@ function createSpring(
       0
   });
 }
+
+/*
+  チェックポイントを生成します。
+*/
+function createCheckpoint(
+  tileX,
+  tileY
+) {
+  checkpoints.push({
+    /*
+      配列へ追加される順番をIDとして使います。
+    */
+    id:
+      checkpoints.length,
+
+    x:
+      tileX +
+      TILE_SIZE / 2 -
+      CHECKPOINT_WIDTH / 2,
+
+    y:
+      tileY +
+      TILE_SIZE -
+      CHECKPOINT_HEIGHT,
+
+    width:
+      CHECKPOINT_WIDTH,
+
+    height:
+      CHECKPOINT_HEIGHT,
+
+    /*
+      取得済みかどうかです。
+
+      現在有効なチェックポイントだけtrueにします。
+    */
+    activated:
+      false,
+
+    /*
+      プレイヤーを復帰させる位置です。
+
+      旗の真上ではなく、
+      旗の少し右側へ復帰させます。
+    */
+    respawnX:
+      tileX +
+      TILE_SIZE +
+      6,
+
+    respawnY:
+      tileY +
+      TILE_SIZE -
+      40
+  });
+}
+}
     
 /*
   動く足場・落ちる床を生成します。
@@ -2595,6 +2698,19 @@ if (symbol === "S") {
 
   return;
 }
+
+if (symbol === "K") {
+
+  createCheckpoint(
+    tileX,
+    tileY
+  );
+
+  stageRows[row][column] = ".";
+
+  return;
+
+}
       
   const itemType =
     getItemTypeFromSymbol(
@@ -2674,6 +2790,11 @@ items = [];
 spikes = [];
 springs = [];
 
+checkpoints = [];
+
+activeCheckpoint = null;
+respawnPosition = null;
+
 goal = null;
 
 movingPlatforms = [];
@@ -2733,57 +2854,13 @@ movingPlatforms = [];
           );
         }
       }
-
-player = {
-  x:
-    startPosition.x,
-
-  y:
-    startPosition.y,
-
-  previousY:
-    startPosition.y,
-
-        width:
-          PLAYER_WIDTH,
-
-        height:
-          PLAYER_HEIGHT,
-
-        velocityX: 0,
-        velocityY: 0,
-
-        grounded: false,
-
-        facing: 1,
-        running: false,
-        dashing: false,
-
-        animationTime: 0,
-        dustTimer: 0,
-
-        standingPlatform: null,
-        /*
-          シールドを所持しているかどうかです。
-        */
-        hasShield: false,
-
-        /*
-          無敵アイテムの残り時間です。
-        */
-        invincibleTimer: 0,
-
-        /*
-          シールド使用直後などの、
-          短い無敵時間です。
-        */
-        damageInvincibleTimer: 0,
-
-        /*
-          ジャンプ力上昇の残り時間です。
-        */
-        jumpBoostTimer: 0
-      };
+/*
+  初回開始位置です。
+*/
+respawnPosition =
+  null;
+      
+spawnPlayer();
 
       stageNameValue.textContent =
         currentStage.name;
@@ -2792,6 +2869,194 @@ player = {
       updateHud();
     }
 
+/*
+  キーボード・タッチ操作の入力状態を
+  すべて解除します。
+*/
+function resetInputState() {
+  input.left =
+    false;
+
+  input.right =
+    false;
+
+  input.jump =
+    false;
+
+  input.dash =
+    false;
+
+  /*
+    入力オブジェクトに次の項目がある場合は、
+    それらもfalseにします。
+  */
+  if (
+    "jumpPressed" in input
+  ) {
+    input.jumpPressed =
+      false;
+  }
+
+  if (
+    "jumpReleased" in input
+  ) {
+    input.jumpReleased =
+      false;
+  }
+
+  /*
+    ジャンプ関連の一時状態も解除します。
+  */
+  jumpBufferTimer =
+    0;
+
+  coyoteTimer =
+    0;
+
+  jumpHoldTimer =
+    0;
+
+  variableJumpActive =
+    false;
+}    
+    
+/*
+  プレイヤーを生成します。
+
+  respawnPositionがある場合は
+  そこから開始します。
+*/
+function spawnPlayer() {
+
+  const position =
+    respawnPosition ??
+    startPosition;
+
+  player = {
+
+    x:
+      position.x,
+
+    y:
+      position.y,
+
+    previousY:
+      position.y,
+
+    velocityX: 0,
+
+    velocityY: 0,
+
+    width:
+      PLAYER_WIDTH,
+
+    height:
+      PLAYER_HEIGHT,
+
+    grounded: false,
+
+    facing: 1,
+
+    standingPlatform: null,
+
+    /*
+      以下は今までplayerへ
+      入れていた項目です。
+
+      initializeGame()にある
+      player = { ... }
+
+      の中身をそのまま
+      全部コピーしてください。
+    */
+
+  };
+playerDisabled =
+  false;
+
+gameOver =
+  false;
+
+  invincibleTimer =
+  0;
+
+damageInvincibleTimer =
+  0;
+  
+  layer.standingPlatform =
+  null;
+}
+
+/*
+  ミス後にプレイヤーを復帰させます。
+
+  チェックポイント取得済みなら、
+  respawnPositionからプレイヤーだけを再生成します。
+
+  未取得なら、従来どおりステージ全体を初期化します。
+*/
+function respawnAfterMiss() {
+  /*
+    チェックポイントをまだ取得していない場合です。
+  */
+  if (!respawnPosition) {
+    initializeGame();
+    return;
+  }
+
+  /*
+    入力状態を解除します。
+
+    ミス直前に押していたボタンが、
+    復帰後も押しっぱなしになるのを防ぎます。
+  */
+  resetInputState();
+
+  /*
+    プレイヤーだけを復帰させます。
+  */
+  spawnPlayer();
+
+  /*
+    復帰直後に敵などへ重なって
+    即座に再ミスすることを防ぐため、
+    短い無敵時間を与えます。
+  */
+  damageInvincibleTimer =
+    1.5;
+
+  /*
+    カメラを復帰位置へ合わせます。
+  */
+  resetCameraToPlayer();
+}
+
+
+/*
+  カメラをプレイヤーの位置へ合わせます。
+*/
+function resetCameraToPlayer() {
+  cameraX =
+    Math.max(
+      0,
+      player.x -
+        canvas.width * 0.35
+    );
+
+  const maximumCameraX =
+    Math.max(
+      0,
+      stageWidth -
+        canvas.width
+    );
+
+  cameraX =
+    Math.min(
+      cameraX,
+      maximumCameraX
+    );
+}
+    
     function restartAfterMiss() {
       const currentMissCount =
         missCount;
@@ -5327,8 +5592,39 @@ function updateSprings(
       playCoinSound();
       updateHud();
     }
-    
-   function updateObjectCollisions() {
+
+    /*
+  プレイヤーとチェックポイントの接触を処理します。
+*/
+function updateCheckpointCollisions() {
+  for (
+    const checkpoint of
+    checkpoints
+  ) {
+    const collisionRectangle =
+      getCheckpointCollisionRectangle(
+        checkpoint
+      );
+
+    if (
+      rectanglesOverlap(
+        player,
+        collisionRectangle
+      )
+    ) {
+      activateCheckpoint(
+        checkpoint
+      );
+
+      /*
+        同じフレームで複数の旗を
+        処理する必要はありません。
+      */
+      return;
+    }
+  }
+}
+    function updateObjectCollisions() {
   if (
     playerDisabled ||
     gameCleared
@@ -5344,9 +5640,13 @@ function updateSprings(
     return;
   }
 
+  /*
+    チェックポイントとの接触を判定します。
+  */
+  updateCheckpointCollisions();
+
   for (
-    const coin of
-    coins
+    const coin of coins
   ) {
         if (coin.collected) {
           continue;
@@ -5861,6 +6161,65 @@ function updateSprings(
         }
       }
     }
+
+    /*
+  指定したチェックポイントを有効にします。
+*/
+function activateCheckpoint(
+  checkpoint
+) {
+  /*
+    すでに現在のチェックポイントとして
+    有効になっている場合は何もしません。
+  */
+  if (
+    activeCheckpoint ===
+    checkpoint
+  ) {
+    return;
+  }
+
+  /*
+    すべての旗を一度未取得状態へ戻します。
+
+    これにより、常に最新の旗だけが
+    緑色になります。
+  */
+  for (
+    const otherCheckpoint of
+    checkpoints
+  ) {
+    otherCheckpoint.activated =
+      false;
+  }
+
+  checkpoint.activated =
+    true;
+
+  activeCheckpoint =
+    checkpoint;
+
+  /*
+    復帰座標を記録します。
+  */
+respawnPosition = {
+
+    x:
+      checkpoint.respawnX,
+
+    y:
+      checkpoint.respawnY
+
+};
+
+/*
+  足場情報をリセットします。
+*/
+player.standingPlatform =
+  null;
+
+  playCheckpointSound();
+}
 
     // =========================================================
     // カメラ
@@ -7285,6 +7644,173 @@ function drawSprings() {
       7
     );
   }
+} 
+
+/*
+  チェックポイントの接触判定用の長方形を返します。
+
+  旗そのものだけでは細すぎるため、
+  少し横幅を広げています。
+*/
+    
+function getCheckpointCollisionRectangle(
+  checkpoint
+) {
+  return {
+    x:
+      checkpoint.x - 8,
+
+    y:
+      checkpoint.y,
+
+    width:
+      checkpoint.width + 16,
+
+    height:
+      checkpoint.height
+  };
+}
+    
+/*
+  チェックポイントを描画します。
+*/
+function drawCheckpoints() {
+  for (
+    const checkpoint of
+    checkpoints
+  ) {
+    /*
+      支柱です。
+    */
+    context.fillStyle =
+      "#888";
+
+    context.fillRect(
+      checkpoint.x,
+      checkpoint.y,
+      4,
+      checkpoint.height
+    );
+
+    /*
+      支柱の明るい部分です。
+    */
+    context.fillStyle =
+      "#c5c5c5";
+
+    context.fillRect(
+      checkpoint.x + 1,
+      checkpoint.y,
+      1,
+      checkpoint.height
+    );
+
+    /*
+      土台です。
+    */
+    context.fillStyle =
+      "#555";
+
+    context.fillRect(
+      checkpoint.x - 6,
+      checkpoint.y +
+        checkpoint.height - 4,
+      16,
+      4
+    );
+
+    /*
+      旗です。
+    */
+    context.fillStyle =
+      checkpoint.activated
+        ? "#3fd15b"
+        : "#d64545";
+
+    context.beginPath();
+
+    context.moveTo(
+      checkpoint.x + 4,
+      checkpoint.y + 4
+    );
+
+    context.lineTo(
+      checkpoint.x +
+        4 +
+        CHECKPOINT_FLAG_WIDTH,
+      checkpoint.y + 10
+    );
+
+    context.lineTo(
+      checkpoint.x + 4,
+      checkpoint.y +
+        CHECKPOINT_FLAG_HEIGHT
+    );
+
+    context.closePath();
+
+    context.fill();
+
+    context.strokeStyle =
+      "#333";
+
+    context.lineWidth =
+      2;
+
+    context.stroke();
+
+    /*
+      支柱上部のランプです。
+    */
+    context.fillStyle =
+      checkpoint.activated
+        ? "#9cffad"
+        : "#f08c8c";
+
+    context.beginPath();
+
+    context.arc(
+      checkpoint.x + 2,
+      checkpoint.y + 2,
+      checkpoint.activated
+        ? 5
+        : 4,
+      0,
+      Math.PI * 2
+    );
+
+    context.fill();
+
+    context.strokeStyle =
+      "#333";
+
+    context.lineWidth =
+      2;
+
+    context.stroke();
+
+    /*
+      取得済みの場合は、小さな光を表示します。
+    */
+    if (
+      checkpoint.activated
+    ) {
+      context.fillStyle =
+        "rgba(255, 255, 255, 0.85)";
+
+      context.beginPath();
+
+      context.arc(
+        checkpoint.x,
+        checkpoint.y,
+        1.5,
+        0,
+        Math.PI * 2
+      );
+
+      context.fill();
+    }
+  }
 }
     
     function drawCoins() {
@@ -7880,7 +8406,11 @@ function drawMovingPlatforms() {
 drawStage();
 
 drawSpikes();
+
 drawSprings();
+
+drawCheckpoints();
+
 drawMovingPlatforms();
 
 drawGoal();
