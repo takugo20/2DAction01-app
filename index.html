@@ -883,6 +883,49 @@ const FALLING_PLATFORM_GRAVITY = 1500;
 */
 const FALLING_PLATFORM_MAX_SPEED = 800;    
 
+    // =========================================================
+// トゲ
+// =========================================================
+
+const SPIKE_WIDTH =
+  TILE_SIZE;
+
+const SPIKE_HEIGHT =
+  26;
+
+/*
+  見た目より少し小さい当たり判定にします。
+*/
+const SPIKE_COLLISION_MARGIN_X =
+  6;
+
+const SPIKE_COLLISION_MARGIN_TOP =
+  7;
+
+
+// =========================================================
+// バネ
+// =========================================================
+
+const SPRING_WIDTH =
+  TILE_SIZE;
+
+const SPRING_HEIGHT =
+  20;
+
+/*
+  バネによる上向き速度です。
+  通常ジャンプより強く設定しています。
+*/
+const SPRING_JUMP_POWER =
+  1050;
+
+/*
+  バネが縮んでいる時間です。
+*/
+const SPRING_COMPRESSION_DURATION =
+  0.18;
+
 
     // =========================================================
     // ステージデータ
@@ -1086,11 +1129,12 @@ const FALLING_PLATFORM_MAX_SPEED = 800;
 let enemies = [];
 let coins = [];
 let items = [];
+
+let spikes = [];
+let springs = [];
+
 let goal = null;
 
-/*
-  動く足場です。
-*/
 let movingPlatforms = [];
 
     /*
@@ -1466,6 +1510,16 @@ let movingPlatforms = [];
         volume: 0.07
       });
     }
+
+    function playSpringSound() {
+  playTone({
+    frequency: 220,
+    endFrequency: 880,
+    duration: 0.22,
+    type: "square",
+    volume: 0.075
+  });
+}
 
     function playMissSound() {
       playTone({
@@ -2307,6 +2361,60 @@ let movingPlatforms = [];
     }
 
 /*
+  トゲを生成します。
+*/
+function createSpike(
+  tileX,
+  tileY
+) {
+  spikes.push({
+    x:
+      tileX,
+
+    y:
+      tileY +
+      TILE_SIZE -
+      SPIKE_HEIGHT,
+
+    width:
+      SPIKE_WIDTH,
+
+    height:
+      SPIKE_HEIGHT
+  });
+}
+
+    /*
+  バネを生成します。
+*/
+function createSpring(
+  tileX,
+  tileY
+) {
+  springs.push({
+    x:
+      tileX,
+
+    y:
+      tileY +
+      TILE_SIZE -
+      SPRING_HEIGHT,
+
+    width:
+      SPRING_WIDTH,
+
+    height:
+      SPRING_HEIGHT,
+
+    /*
+      バネが縮んでいる残り時間です。
+    */
+    compressionTimer:
+      0
+  });
+}
+    
+/*
   動く足場・落ちる床を生成します。
 */
 function createMovingPlatform(
@@ -2463,6 +2571,30 @@ if (symbol === "V") {
   stageRows[row][column] = ".";
   return;
 }
+
+if (symbol === "T") {
+  createSpike(
+    tileX,
+    tileY
+  );
+
+  stageRows[row][column] =
+    ".";
+
+  return;
+}
+
+if (symbol === "S") {
+  createSpring(
+    tileX,
+    tileY
+  );
+
+  stageRows[row][column] =
+    ".";
+
+  return;
+}
       
   const itemType =
     getItemTypeFromSymbol(
@@ -2538,6 +2670,10 @@ if (symbol === "V") {
 enemies = [];
 coins = [];
 items = [];
+
+spikes = [];
+springs = [];
+
 goal = null;
 
 movingPlatforms = [];
@@ -2598,12 +2734,15 @@ movingPlatforms = [];
         }
       }
 
-      player = {
-        x:
-          startPosition.x,
+player = {
+  x:
+    startPosition.x,
 
-        y:
-          startPosition.y,
+  y:
+    startPosition.y,
+
+  previousY:
+    startPosition.y,
 
         width:
           PLAYER_WIDTH,
@@ -3465,6 +3604,9 @@ function activateFallingPlatform(
         return;
       }
 
+      player.previousY =
+  player.y;
+      
       /*
         無敵アイテムの残り時間を減らします。
       */
@@ -3674,6 +3816,8 @@ function activateFallingPlatform(
           deltaTime
       );
 
+      updatePlayerSpringCollision();
+
       if (player.grounded) {
         coyoteTimer =
           COYOTE_TIME;
@@ -3870,6 +4014,106 @@ for (const platform of movingPlatforms) {
     player.velocityY = 0;
   }
 }
+}
+
+    /*
+  プレイヤーとバネの接触を処理します。
+*/
+function updatePlayerSpringCollision() {
+  /*
+    上昇中はバネへ着地しません。
+  */
+  if (
+    player.velocityY < 0
+  ) {
+    return false;
+  }
+
+  const previousBottom =
+    player.previousY +
+    player.height;
+
+  const currentBottom =
+    player.y +
+    player.height;
+
+  const playerLeft =
+    player.x + 3;
+
+  const playerRight =
+    player.x +
+    player.width - 3;
+
+  for (
+    const spring of
+    springs
+  ) {
+    const horizontalOverlap =
+      playerRight >
+        spring.x &&
+      playerLeft <
+        spring.x +
+        spring.width;
+
+    if (!horizontalOverlap) {
+      continue;
+    }
+
+    /*
+      前フレームではバネの上にいて、
+      今フレームでバネの上面を通過した場合です。
+    */
+    const crossedSpringTop =
+      previousBottom <=
+        spring.y + 6 &&
+      currentBottom >=
+        spring.y;
+
+    if (!crossedSpringTop) {
+      continue;
+    }
+
+    /*
+      プレイヤーをバネの上面へ戻します。
+    */
+    player.y =
+      spring.y -
+      player.height;
+
+    player.velocityY =
+      -SPRING_JUMP_POWER;
+
+    player.grounded =
+      false;
+
+    player.standingPlatform =
+      null;
+
+    /*
+      バネによるジャンプは、
+      通常の可変ジャンプとは別扱いにします。
+    */
+    variableJumpActive =
+      false;
+
+    jumpHoldTimer =
+      0;
+
+    jumpBufferTimer =
+      0;
+
+    coyoteTimer =
+      0;
+
+    spring.compressionTimer =
+      SPRING_COMPRESSION_DURATION;
+
+    playSpringSound();
+
+    return true;
+  }
+
+  return false;
 }
 
     // =========================================================
@@ -4741,6 +4985,89 @@ if (
     }
   }
 }
+
+/*
+  トゲの実際の当たり判定を取得します。
+
+  見た目全体を判定すると厳しすぎるため、
+  左右と上側を少し狭くしています。
+*/
+function getSpikeCollisionRectangle(
+  spike
+) {
+  return {
+    x:
+      spike.x +
+      SPIKE_COLLISION_MARGIN_X,
+
+    y:
+      spike.y +
+      SPIKE_COLLISION_MARGIN_TOP,
+
+    width:
+      spike.width -
+      SPIKE_COLLISION_MARGIN_X *
+        2,
+
+    height:
+      spike.height -
+      SPIKE_COLLISION_MARGIN_TOP
+  };
+}
+
+/*
+  プレイヤーとトゲの接触を処理します。
+*/
+function updateSpikeCollisions() {
+  for (
+    const spike of
+    spikes
+  ) {
+    const collisionRectangle =
+      getSpikeCollisionRectangle(
+        spike
+      );
+
+    if (
+      rectanglesOverlap(
+        player,
+        collisionRectangle
+      )
+    ) {
+      triggerMiss();
+
+      /*
+        1フレームに複数のトゲから
+        ダメージ処理されることを防ぎます。
+      */
+      return;
+    }
+  }
+}    
+    
+
+/*
+  バネの縮みアニメーションを更新します。
+*/
+function updateSprings(
+  deltaTime
+) {
+  for (
+    const spring of
+    springs
+  ) {
+    if (
+      spring.compressionTimer > 0
+    ) {
+      spring.compressionTimer =
+        Math.max(
+          0,
+          spring.compressionTimer -
+            deltaTime
+        );
+    }
+  }
+}
     
     // =========================================================
     // アイテム更新
@@ -5001,18 +5328,26 @@ if (
       updateHud();
     }
     
-    function updateObjectCollisions() {
-      if (
-        playerDisabled ||
-        gameCleared
-      ) {
-        return;
-      }
+   function updateObjectCollisions() {
+  if (
+    playerDisabled ||
+    gameCleared
+  ) {
+    return;
+  }
 
-      for (
-        const coin of
-        coins
-      ) {
+  updateSpikeCollisions();
+
+  if (
+    playerDisabled
+  ) {
+    return;
+  }
+
+  for (
+    const coin of
+    coins
+  ) {
         if (coin.collected) {
           continue;
         }
@@ -5752,9 +6087,6 @@ if (
       context.fill();
     }
 
-    /*
-  ブロック記号ごとの色を取得します。
-*/
     /*
       ブロック記号ごとの色を取得します。
     */
@@ -6714,6 +7046,247 @@ if (
       }
     }
 
+/*
+  すべてのトゲを描画します。
+*/
+function drawSpikes() {
+  for (
+    const spike of
+    spikes
+  ) {
+    const spikeCount =
+      4;
+
+    const singleWidth =
+      spike.width /
+      spikeCount;
+
+    /*
+      トゲの根元です。
+    */
+    context.fillStyle =
+      "#72777d";
+
+    context.fillRect(
+      spike.x,
+      spike.y +
+        spike.height -
+        6,
+      spike.width,
+      6
+    );
+
+    /*
+      三角形のトゲを4本描きます。
+    */
+    context.fillStyle =
+      "#c9d0d6";
+
+    context.strokeStyle =
+      "#555b60";
+
+    context.lineWidth =
+      2;
+
+    for (
+      let index = 0;
+      index < spikeCount;
+      index += 1
+    ) {
+      const leftX =
+        spike.x +
+        singleWidth *
+          index;
+
+      const rightX =
+        leftX +
+        singleWidth;
+
+      const centerX =
+        (
+          leftX +
+          rightX
+        ) /
+        2;
+
+      context.beginPath();
+
+      context.moveTo(
+        leftX,
+        spike.y +
+          spike.height -
+          4
+      );
+
+      context.lineTo(
+        centerX,
+        spike.y
+      );
+
+      context.lineTo(
+        rightX,
+        spike.y +
+          spike.height -
+          4
+      );
+
+      context.closePath();
+
+      context.fill();
+      context.stroke();
+    }
+  }
+}
+
+    /*
+  すべてのバネを描画します。
+*/
+function drawSprings() {
+  for (
+    const spring of
+    springs
+  ) {
+    const compressionProgress =
+      spring.compressionTimer > 0
+        ? spring.compressionTimer /
+          SPRING_COMPRESSION_DURATION
+        : 0;
+
+    /*
+      発動直後に最も縮み、
+      徐々に元の高さへ戻ります。
+    */
+    const compressedAmount =
+      Math.sin(
+        compressionProgress *
+        Math.PI
+      ) *
+      9;
+
+    const drawHeight =
+      spring.height -
+      compressedAmount;
+
+    const drawY =
+      spring.y +
+      compressedAmount;
+
+    /*
+      下側の土台です。
+    */
+    context.fillStyle =
+      "#3d566e";
+
+    context.fillRect(
+      spring.x + 3,
+      spring.y +
+        spring.height -
+        7,
+      spring.width - 6,
+      7
+    );
+
+    /*
+      バネの本体です。
+    */
+    context.strokeStyle =
+      "#e5e5e5";
+
+    context.lineWidth =
+      4;
+
+    context.beginPath();
+
+    const coilLeft =
+      spring.x + 12;
+
+    const coilRight =
+      spring.x +
+      spring.width - 12;
+
+    const coilTop =
+      drawY + 5;
+
+    const coilBottom =
+      spring.y +
+      spring.height - 6;
+
+    const coilSections =
+      5;
+
+    context.moveTo(
+      coilLeft,
+      coilBottom
+    );
+
+    for (
+      let index = 1;
+      index <= coilSections;
+      index += 1
+    ) {
+      const progress =
+        index /
+        coilSections;
+
+      const pointX =
+        index % 2 === 0
+          ? coilLeft
+          : coilRight;
+
+      const pointY =
+        coilBottom +
+        (
+          coilTop -
+          coilBottom
+        ) *
+        progress;
+
+      context.lineTo(
+        pointX,
+        pointY
+      );
+    }
+
+    context.stroke();
+
+    /*
+      上側の踏み板です。
+    */
+    context.fillStyle =
+      "#e74c3c";
+
+    context.fillRect(
+      spring.x + 2,
+      drawY,
+      spring.width - 4,
+      7
+    );
+
+    context.fillStyle =
+      "#ff887c";
+
+    context.fillRect(
+      spring.x + 5,
+      drawY + 1,
+      spring.width - 10,
+      2
+    );
+
+    context.strokeStyle =
+      "#7b2620";
+
+    context.lineWidth =
+      2;
+
+    context.strokeRect(
+      spring.x + 2,
+      drawY,
+      spring.width - 4,
+      7
+    );
+  }
+}
+    
     function drawCoins() {
       for (
         const coin of
@@ -7304,12 +7877,14 @@ function drawMovingPlatforms() {
         verticalOffset
       );
 
-      drawStage();
+drawStage();
 
+drawSpikes();
+drawSprings();
 drawMovingPlatforms();
 
 drawGoal();
-      drawCoins();
+drawCoins();
       drawItems();
       drawEnemies();
       drawPlayer();
@@ -7340,14 +7915,27 @@ drawGoal();
         return;
       }
 
-updateMovingPlatforms(deltaTime);
+updateMovingPlatforms(
+  deltaTime
+);
 
-updatePlayer(deltaTime);
+updateSprings(
+  deltaTime
+);
 
-updateEnemies(deltaTime);
+updatePlayer(
+  deltaTime
+);
 
-updateItems(deltaTime);
-      updateObjectCollisions();
+updateEnemies(
+  deltaTime
+);
+
+updateItems(
+  deltaTime
+);
+
+updateObjectCollisions();
       updateBlocks(deltaTime);
       updateParticles(deltaTime);
       updateCamera(deltaTime);
