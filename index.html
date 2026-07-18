@@ -448,7 +448,7 @@
       const COYOTE_TIME = 0.1;
       const BLOCK_BUMP_DURATION = 0.18;
       const BLOCK_BUMP_HEIGHT = 10;
-      const BLOCK_ENEMY_STANDING_TOLERANCE = 8;
+      const BLOCK_ENEMY_STANDING_TOLERANCE = 12;
       const BLOCK_ENEMY_BOUNCE_POWER = 430;
       const BLOCK_ENEMY_KNOCKBACK_SPEED = 110;
       const BLOCK_ENEMY_DEFEAT_DURATION = 0.45;
@@ -1169,21 +1169,31 @@
         }
         return blockStates.get(key);
       }
-      function isEnemyStandingOnBlock(enemy, column, row) {
+       function isEnemyStandingOnBlock(enemy, column, row) {
         if (!enemy.alive || enemy.type === ENEMY_TYPES.FLYER) {
           return false;
         }
-        if (!enemy.grounded) {
-          return false;
-        }
+
         const blockLeft = column * TILE_SIZE;
         const blockRight = blockLeft + TILE_SIZE;
         const blockTop = row * TILE_SIZE;
-        const enemyLeft = enemy.x + 3;
-        const enemyRight = enemy.x + enemy.width - 3;
+
+        const enemyLeft = enemy.x;
+        const enemyRight = enemy.x + enemy.width;
         const enemyBottom = enemy.y + enemy.height;
-        const horizontalOverlap = enemyRight > blockLeft && enemyLeft < blockRight;
-        const closeToBlockTop = Math.abs(enemyBottom - blockTop) <= BLOCK_ENEMY_STANDING_TOLERANCE;
+
+        const horizontalOverlap =
+          enemyRight > blockLeft &&
+          enemyLeft < blockRight;
+
+        const closeToBlockTop =
+          enemyBottom >=
+            blockTop -
+              BLOCK_ENEMY_STANDING_TOLERANCE &&
+          enemyBottom <=
+            blockTop +
+              BLOCK_ENEMY_STANDING_TOLERANCE;
+
         return horizontalOverlap && closeToBlockTop;
       }
       function damageEnemyFromBlock(enemy, blockCenterX) {
