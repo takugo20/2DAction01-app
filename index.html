@@ -459,6 +459,11 @@
       </span>
 
       <span>
+  残機:
+  <span id="life-value">5</span>
+</span>
+      
+      <span>
         ミス:
         <span id="miss-value">0</span>
       </span>
@@ -564,6 +569,9 @@
     const coinValue =
       document.getElementById("coin-value");
 
+    const lifeValue =
+      document.getElementById("life-value");
+    
     const missValue =
       document.getElementById("miss-value");
 
@@ -623,6 +631,14 @@
     // 基本設定
     // =========================================================
 
+    // =========================================================
+// 残機
+// =========================================================
+
+    const INITIAL_LIVES = 5;
+    
+    const COINS_PER_EXTRA_LIFE = 100;
+    
     const TILE_SIZE = 48;
 
     const GRAVITY = 1900;
@@ -801,10 +817,18 @@
       アイテムの種類です。
     */
     const ITEM_TYPES = {
-      SHIELD: "shield",
-      INVINCIBLE: "invincible",
-      JUMP_BOOST: "jumpBoost"
-    };
+  SHIELD:
+    "shield",
+
+  INVINCIBLE:
+    "invincible",
+
+  JUMP_BOOST:
+    "jumpBoost",
+
+  EXTRA_LIFE:
+    "extraLife"
+};
 
     /*
       アイテムの表示サイズです。
@@ -1176,9 +1200,39 @@ let movingPlatforms = [];
 
     let cameraX = 0;
 
-    let score = 0;
-    let collectedCoins = 0;
-    let missCount = 0;
+    let score =
+  0;
+
+/*
+  ステージ内で取得したコインの総数です。
+  クリア結果の表示に使用します。
+*/
+let collectedCoins =
+  0;
+
+/*
+  次の残機アップまでに集めた
+  コインの枚数です。
+
+  0～99の範囲で管理します。
+*/
+let coinLifeProgress =
+  0;
+
+/*
+  現在の残機数です。
+*/
+let lives =
+  INITIAL_LIVES;
+
+let missCount =
+  0;
+
+/*
+  ゲームオーバー状態です。
+*/
+let gameOver =
+  false;
 
     let gameCleared = false;
     let playerDisabled = false;
@@ -1542,6 +1596,47 @@ let movingPlatforms = [];
     volume:
       0.065
   });
+}
+
+    function playExtraLifeSound() {
+  playTone({
+    frequency:
+      520,
+
+    endFrequency:
+      1040,
+
+    duration:
+      0.18,
+
+    type:
+      "square",
+
+    volume:
+      0.07
+  });
+
+  window.setTimeout(
+    () => {
+      playTone({
+        frequency:
+          780,
+
+        endFrequency:
+          1560,
+
+        duration:
+          0.22,
+
+        type:
+          "square",
+
+        volume:
+          0.07
+      });
+    },
+    130
+  );
 }
 
     function playBlockHitSound() {
@@ -2251,6 +2346,19 @@ let movingPlatforms = [];
     }
 
     /*
+  残機を指定数だけ増やします。
+*/
+function addLives(
+  amount = 1
+) {
+  lives +=
+    amount;
+
+  playExtraLifeSound();
+  updateHud();
+}
+
+    /*
       アイテムを作成します。
     */
     function createItem(
@@ -2768,6 +2876,35 @@ if (symbol === "K") {
         オブジェクトを生成しません。
       */
     }
+
+/*
+  コインを取得したときの共通処理です。
+*/
+function collectCoins(
+  amount = 1
+) {
+  collectedCoins +=
+    amount;
+
+  coinLifeProgress +=
+    amount;
+
+  /*
+    一度に複数枚追加された場合にも対応するため、
+    whileで処理します。
+  */
+  while (
+    coinLifeProgress >=
+    COINS_PER_EXTRA_LIFE
+  ) {
+    coinLifeProgress -=
+      COINS_PER_EXTRA_LIFE;
+
+    addLives(1);
+  }
+
+  updateHud();
+}
     
 function initializeGame(
   resetMissCount = true,
