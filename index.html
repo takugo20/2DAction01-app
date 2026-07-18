@@ -735,7 +735,7 @@
         height: 30,
 
         speed: 60,
-        avoidsHoles: false,
+        avoidsHoles: true,
 
         maximumHealth: 1,
 
@@ -773,7 +773,7 @@
         detectionRange: 320,
         detectionHeight: 100,
 
-        avoidsHoles: false,
+        avoidsHoles: true,
 
         maximumHealth: 1,
 
@@ -1004,29 +1004,34 @@ const CHECKPOINT_FLAG_HEIGHT = 16;
       固体ブロックとしてのみ動作します。
       個別の反応は次回以降に実装します。
 
-      【敵】
+【敵】
 
-      W 通常歩行型
-        壁では反転しますが、
-        穴の手前では止まらず、そのまま落下します。
+W 通常歩行型
+  壁では反転しますが、
+  穴は回避せず、そのまま落下します。
 
-      A 穴回避型
-        壁と穴の手前で反転します。
+A 穴回避型
+  壁と穴の手前で反転します。
 
-      J ジャンプ型
-        地上を歩きながら、
-        一定間隔でジャンプします。
+J ジャンプ型
+  一定間隔でジャンプし、
+  地上では穴の手前で反転します。
 
-      E 旧敵記号
-        旧ステージとの互換用です。
-        Aと同じ穴回避型として読み込みます。
+F 飛行型
+  空中を左右へ往復します。
 
-      F 飛行型・予約
-      D 突進型・予約
-      N 中ボス・予約
-      X ボス・予約
+D 突進型
+  プレイヤーを検知すると突進しますが、
+  穴の手前では突進を中断して反転します。
 
-      【ステージギミック・予約】
+N 中ボス
+  穴を回避します。
+
+X ボス
+  プレイヤーを追跡しますが、
+  穴の手前では反転します。
+
+      【ステージギミック】
 
       M 横に動く足場
       V 縦に動く足場
@@ -1035,7 +1040,7 @@ const CHECKPOINT_FLAG_HEIGHT = 16;
       S バネ
       K チェックポイント
 
-      【アイテム・予約】
+      【アイテム】
 
       1 シールド
       2 一定時間無敵
@@ -5049,36 +5054,101 @@ function updatePlayerSpringCollision() {
       );
     }
 
+/*
+  穴を回避する敵が地上で穴へ近づいた場合、
+  進行方向を反転させます。
+
+  反転した場合はtrueを返します。
+*/
+function turnEnemyAwayFromHole(
+  enemy
+) {
+  /*
+    Wなど、穴を回避しない敵は
+    何もしません。
+  */
+  if (!enemy.avoidsHoles) {
+    return false;
+  }
+
+  /*
+    ジャンプ中や落下中は、
+    空中で方向を反転させません。
+  */
+  if (!enemy.grounded) {
+    return false;
+  }
+
+  /*
+    前方に地面がある場合は、
+    そのまま進みます。
+  */
+  if (
+    hasGroundInFront(
+      enemy
+    )
+  ) {
+    return false;
+  }
+
+  /*
+    穴の手前なので反転します。
+  */
+  enemy.direction *=
+    -1;
+
+  enemy.velocityX =
+    enemy.direction *
+    enemy.speed;
+
+  /*
+    突進中だった場合は、
+    突進状態も解除します。
+  */
+  enemy.charging =
+    false;
+
+  return true;
+}
+    
     /*
-      敵の横移動を行います。
-    */
-    function updateEnemyHorizontalMovement(
+  敵の横移動を行います。
+*/
+function updateEnemyHorizontalMovement(
+  enemy,
+  deltaTime
+) {
+  /*
+    W以外の地上敵は、
+    移動する前に穴を確認します。
+  */
+  turnEnemyAwayFromHole(
+    enemy
+  );
+
+  enemy.velocityX =
+    enemy.direction *
+    enemy.speed;
+
+  const hitWall =
+    moveEntityHorizontally(
       enemy,
-      deltaTime
-    ) {
-      enemy.velocityX =
-        enemy.direction *
-        enemy.speed;
+      enemy.velocityX *
+        deltaTime
+    );
 
-      const hitWall =
-        moveEntityHorizontally(
-          enemy,
-          enemy.velocityX *
-            deltaTime
-        );
+  /*
+    壁へ衝突した場合は反転します。
+  */
+  if (hitWall) {
+    enemy.direction *=
+      -1;
 
-      /*
-        壁へ衝突した場合は反転します。
-      */
-      if (hitWall) {
-        enemy.direction *=
-          -1;
-
-        enemy.velocityX =
-          enemy.direction *
-          enemy.speed;
-      }
-    }
+    enemy.velocityX =
+      enemy.direction *
+      enemy.speed;
+  }
+}
 
     /*
       敵へ重力を加え、
@@ -5126,34 +5196,22 @@ function updatePlayerSpringCollision() {
     }
 
     /*
-      穴回避型を更新します。
-    */
-    function updateCautiousEnemy(
-      enemy,
-      deltaTime
-    ) {
-      updateEnemyHorizontalMovement(
-        enemy,
-        deltaTime
-      );
+  穴回避型を更新します。
+*/
+function updateCautiousEnemy(
+  enemy,
+  deltaTime
+) {
+  updateEnemyHorizontalMovement(
+    enemy,
+    deltaTime
+  );
 
-      updateEnemyGravity(
-        enemy,
-        deltaTime
-      );
-
-      if (
-        enemy.grounded &&
-        !hasGroundInFront(enemy)
-      ) {
-        enemy.direction *=
-          -1;
-
-        enemy.velocityX =
-          enemy.direction *
-          enemy.speed;
-      }
-    }
+  updateEnemyGravity(
+    enemy,
+    deltaTime
+  );
+}
 
     /*
       ジャンプ型を更新します。
@@ -5376,6 +5434,14 @@ function updatePlayerSpringCollision() {
           );
       }
 
+/*
+  プレイヤーが穴の向こう側にいても、
+  穴へ突進しないようにします。
+*/
+turnEnemyAwayFromHole(
+  enemy
+);
+      
       const hitWall =
         moveEntityHorizontally(
           enemy,
@@ -5398,54 +5464,46 @@ function updatePlayerSpringCollision() {
     }
 
     /*
-      中ボスを更新します。
+  中ボスを更新します。
 
-      穴を回避しながら歩き、
-      一定間隔でジャンプします。
-    */
-    function updateMidBossEnemy(
-      enemy,
-      deltaTime
+  穴を回避しながら歩き、
+  一定間隔でジャンプします。
+*/
+function updateMidBossEnemy(
+  enemy,
+  deltaTime
+) {
+  updateEnemyHorizontalMovement(
+    enemy,
+    deltaTime
+  );
+
+  updateEnemyGravity(
+    enemy,
+    deltaTime
+  );
+
+  if (enemy.grounded) {
+    enemy.jumpTimer -=
+      deltaTime;
+
+    if (
+      enemy.jumpTimer <= 0
     ) {
-      updateEnemyHorizontalMovement(
-        enemy,
-        deltaTime
-      );
+      enemy.velocityY =
+        -enemy.jumpPower;
 
-      updateEnemyGravity(
-        enemy,
-        deltaTime
-      );
+      enemy.grounded =
+        false;
 
-      if (
-        enemy.grounded &&
-        !hasGroundInFront(enemy)
-      ) {
-        enemy.direction *=
-          -1;
-      }
-
-      if (enemy.grounded) {
-        enemy.jumpTimer -=
-          deltaTime;
-
-        if (
-          enemy.jumpTimer <= 0
-        ) {
-          enemy.velocityY =
-            -enemy.jumpPower;
-
-          enemy.grounded =
-            false;
-
-          enemy.jumpTimer =
-            randomRange(
-              enemy.minimumJumpInterval,
-              enemy.maximumJumpInterval
-            );
-        }
-      }
+      enemy.jumpTimer =
+        randomRange(
+          enemy.minimumJumpInterval,
+          enemy.maximumJumpInterval
+        );
     }
+  }
+}
 
     /*
       ボスを更新します。
@@ -5490,20 +5548,13 @@ function updatePlayerSpringCollision() {
           );
       }
 
-      /*
-        ボスは穴の手前で反転します。
-      */
-      if (
-        enemy.grounded &&
-        !hasGroundInFront(enemy)
-      ) {
-        enemy.direction *=
-          -1;
-
-        enemy.velocityX =
-          enemy.direction *
-          enemy.speed;
-      }
+     /*
+  プレイヤーが穴の向こう側にいても、
+  穴へ追跡しないようにします。
+*/
+turnEnemyAwayFromHole(
+  enemy
+);
 
       const hitWall =
         moveEntityHorizontally(
