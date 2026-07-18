@@ -669,6 +669,17 @@
     const BLOCK_BUMP_DURATION = 0.18;
 
     const BLOCK_BUMP_HEIGHT = 10;
+
+    const BLOCK_ENEMY_STANDING_TOLERANCE = 8;
+    
+    const BLOCK_ENEMY_BOUNCE_POWER = 430;
+
+    const BLOCK_ENEMY_KNOCKBACK_SPEED = 110;
+
+    const BLOCK_ENEMY_DEFEAT_DURATION = 0.45;
+    const BLOCK_COIN_POP_DURATION = 0.55;
+    const BLOCK_COIN_POP_HEIGHT = 52;
+    
     const PLAYER_WIDTH = 32;
     const PLAYER_HEIGHT = 42;
 
@@ -2183,6 +2194,242 @@ let gameOver =
       return blockStates.get(key);
     }
 
+/*
+  敵が指定したブロックの上に
+  乗っているか判定します。
+*/
+function isEnemyStandingOnBlock(
+  enemy,
+  column,
+  row
+) {
+  /*
+    倒れている敵と飛行敵は対象外です。
+  */
+  if (
+    !enemy.alive ||
+    enemy.type ===
+      ENEMY_TYPES.FLYER
+  ) {
+    return false;
+  }
+
+  /*
+    地面やブロックへ着地していない敵は、
+    「上に乗っている」とは扱いません。
+  */
+  if (!enemy.grounded) {
+    return false;
+  }
+
+  const blockLeft =
+    column *
+    TILE_SIZE;
+
+  const blockRight =
+    blockLeft +
+    TILE_SIZE;
+
+  const blockTop =
+    row *
+    TILE_SIZE;
+
+  /*
+    判定が厳しくなりすぎないように、
+    敵の左右を少し狭めます。
+  */
+  const enemyLeft =
+    enemy.x +
+    3;
+
+  const enemyRight =
+    enemy.x +
+    enemy.width -
+    3;
+
+  const enemyBottom =
+    enemy.y +
+    enemy.height;
+
+  const horizontalOverlap =
+    enemyRight >
+      blockLeft &&
+    enemyLeft <
+      blockRight;
+
+  const closeToBlockTop =
+    Math.abs(
+      enemyBottom -
+      blockTop
+    ) <=
+    BLOCK_ENEMY_STANDING_TOLERANCE;
+
+  return (
+    horizontalOverlap &&
+    closeToBlockTop
+  );
+}
+
+/*
+  ブロックを下から叩いた攻撃で、
+  敵へ1ダメージを与えます。
+*/
+function damageEnemyFromBlock(
+  enemy,
+  blockCenterX
+) {
+  /*
+    倒れている敵や、
+    被弾直後の敵には重ねてダメージを与えません。
+  */
+  if (
+    !enemy.alive ||
+    enemy.hitInvincibleTimer > 0
+  ) {
+    return false;
+  }
+
+  enemy.health -=
+    1;
+
+  /*
+    短時間の連続ダメージを防止します。
+  */
+  enemy.hitInvincibleTimer =
+    0.35;
+
+  enemy.flashTimer =
+    0.25;
+
+  /*
+    敵をブロックの上から
+    少し浮かせます。
+  */
+  enemy.y -=
+    2;
+
+  enemy.velocityY =
+    -BLOCK_ENEMY_BOUNCE_POWER;
+
+  enemy.grounded =
+    false;
+
+  enemy.standingPlatform =
+    null;
+
+  /*
+    ブロック中央から外側へ
+    少し押し出します。
+  */
+  const enemyCenterX =
+    enemy.x +
+    enemy.width / 2;
+
+  enemy.direction =
+    enemyCenterX <
+      blockCenterX
+      ? -1
+      : 1;
+
+  enemy.velocityX =
+    enemy.direction *
+    BLOCK_ENEMY_KNOCKBACK_SPEED;
+
+  /*
+    HPがなくなった場合です。
+  */
+  if (
+    enemy.health <= 0
+  ) {
+    enemy.alive =
+      false;
+
+    enemy.squashTimer =
+      BLOCK_ENEMY_DEFEAT_DURATION;
+
+    enemy.defeatAnimation =
+      "blockBump";
+
+    if (
+      enemy.type ===
+      ENEMY_TYPES.MID_BOSS
+    ) {
+      score +=
+        1000;
+    } else if (
+      enemy.type ===
+      ENEMY_TYPES.BOSS
+    ) {
+      score +=
+        3000;
+    } else {
+      score +=
+        200;
+    }
+  } else {
+    /*
+      中ボス・ボスがまだ生きている場合です。
+    */
+    score +=
+      300;
+  }
+
+  return true;
+}
+
+/*
+  指定したブロック上にいる敵へ
+  一斉にダメージを与えます。
+*/
+function damageEnemiesAboveBlock(
+  column,
+  row
+) {
+  const blockCenterX =
+    column *
+      TILE_SIZE +
+    TILE_SIZE / 2;
+
+  let damagedAnyEnemy =
+    false;
+
+  for (
+    const enemy of
+    enemies
+  ) {
+    if (
+      !isEnemyStandingOnBlock(
+        enemy,
+        column,
+        row
+      )
+    ) {
+      continue;
+    }
+
+    if (
+      damageEnemyFromBlock(
+        enemy,
+        blockCenterX
+      )
+    ) {
+      damagedAnyEnemy =
+        true;
+    }
+  }
+
+  /*
+    1体以上へ命中したときだけ、
+    攻撃音とHUD更新を行います。
+  */
+  if (
+    damagedAnyEnemy
+  ) {
+    playStompSound();
+    updateHud();
+  }
+}
+     
     /*
       プレイヤーがブロックを
       下から叩いたときの処理です。
@@ -2235,8 +2482,21 @@ let gameOver =
 
       blockState.nextSymbol =
         null;
+      
+playBlockHitSound();
 
-      playBlockHitSound();
+/*
+  H・R・Q・Iブロックの上にいる敵へ
+  ダメージを与えます。
+
+  hitBlock()の冒頭ですでに
+  isHittableBlockSymbol()を通過しているため、
+  対象はこの4種類だけです。
+*/
+damageEnemiesAboveBlock(
+  column,
+  row
+);
 
       switch (symbol) {
         /*
@@ -2258,6 +2518,19 @@ let gameOver =
           アニメーション終了後にUへ変化します。
         */
         case "Q":
+  /*
+    ブロックからコインが飛び出す
+    見た目の演出を発生させます。
+  */
+  createBlockCoinPopEffect(
+    column,
+    row
+  );
+
+  /*
+    コイン枚数自体は、
+    ブロックを叩いた時点で加算します。
+  */
   collectCoins(1);
 
   score +=
@@ -2561,6 +2834,9 @@ let gameOver =
 
         squashTimer:
           0,
+
+        defeatAnimation:
+          null,
 
         maximumHealth:
           definition.maximumHealth ||
@@ -5599,12 +5875,49 @@ function updatePlayerSpringCollision() {
             deltaTime;
         }
 
-        if (!enemy.alive) {
-          enemy.squashTimer -=
-            deltaTime;
+       if (!enemy.alive) {
+  enemy.squashTimer -=
+    deltaTime;
 
-          continue;
-        }
+  /*
+    ブロック攻撃で倒れた敵だけ、
+    上へ跳ねて落下する物理演出を続けます。
+  */
+  if (
+    enemy.defeatAnimation ===
+    "blockBump"
+  ) {
+    enemy.velocityY =
+      Math.min(
+        enemy.velocityY +
+          GRAVITY *
+          deltaTime,
+
+        MAX_FALL_SPEED
+      );
+
+    enemy.x +=
+      enemy.velocityX *
+      deltaTime;
+
+    enemy.y +=
+      enemy.velocityY *
+      deltaTime;
+
+    /*
+      横方向の勢いを徐々に弱めます。
+    */
+    enemy.velocityX =
+      approach(
+        enemy.velocityX,
+        0,
+        260 *
+          deltaTime
+      );
+  }
+
+  continue;
+}
 
         updateEnemy(
           enemy,
@@ -6061,15 +6374,18 @@ function updateSprings(
         0;
 
       if (
-        enemy.health <= 0
-      ) {
-        enemy.alive =
-          false;
+  enemy.health <= 0
+) {
+  enemy.alive =
+    false;
 
-        enemy.squashTimer =
-          enemy.maximumHealth > 1
-            ? 0.55
-            : 0.35;
+  enemy.defeatAnimation =
+    "squash";
+
+  enemy.squashTimer =
+    enemy.maximumHealth > 1
+      ? 0.55
+      : 0.35;
 
         enemy.velocityX =
           0;
@@ -6318,14 +6634,16 @@ updateHud();
           その敵を倒します。
         */
         if (
-          player.invincibleTimer > 0
-        ) {
-          enemy.alive =
-            false;
+  player.invincibleTimer > 0
+) {
+  enemy.alive =
+    false;
 
-          enemy.squashTimer =
-            0.2;
+  enemy.defeatAnimation =
+    "squash";
 
+  enemy.squashTimer =
+    0.2;
           score +=
             200;
 
@@ -6771,46 +7089,92 @@ function showGameOverMessage() {
       }
     }
     
-    function updateParticles(
-      deltaTime
+   function updateParticles(
+  deltaTime
+) {
+  for (
+    let index =
+      particles.length - 1;
+
+    index >= 0;
+
+    index -= 1
+  ) {
+    const particle =
+      particles[index];
+
+    particle.life -=
+      deltaTime;
+
+    /*
+      コインブロックから飛び出す
+      コインの演出です。
+    */
+    if (
+      particle.type ===
+      "coinPop"
     ) {
-      for (
-        let index =
-          particles.length -
-          1;
+      const remainingRatio =
+        Math.max(
+          0,
+          particle.life /
+            particle.maximumLife
+        );
 
-        index >= 0;
+      const progress =
+        1 -
+        remainingRatio;
 
-        index -= 1
+      /*
+        最初は速く上昇し、
+        徐々に速度が落ちる動きです。
+      */
+      particle.y =
+        particle.startY -
+        Math.sin(
+          progress *
+          Math.PI /
+          2
+        ) *
+        BLOCK_COIN_POP_HEIGHT;
+
+      if (
+        particle.life <= 0
       ) {
-        const particle =
-          particles[index];
-
-        particle.life -=
-          deltaTime;
-
-        particle.x +=
-          particle.velocityX *
-          deltaTime;
-
-        particle.y +=
-          particle.velocityY *
-          deltaTime;
-
-        particle.velocityY +=
-          240 *
-          deltaTime;
-
-        if (
-          particle.life <= 0
-        ) {
-          particles.splice(
-            index,
-            1
-          );
-        }
+        particles.splice(
+          index,
+          1
+        );
       }
+
+      continue;
     }
+
+    /*
+      通常のパーティクル処理です。
+    */
+    particle.x +=
+      particle.velocityX *
+      deltaTime;
+
+    particle.y +=
+      particle.velocityY *
+      deltaTime;
+
+    particle.velocityY +=
+      240 *
+      deltaTime;
+
+    if (
+      particle.life <= 0
+    ) {
+      particles.splice(
+        index,
+        1
+      );
+    }
+  }
+}
 
     /*
   指定したチェックポイントを有効にします。
@@ -6869,6 +7233,56 @@ player.standingPlatform =
   null;
 
   playCheckpointSound();
+}
+
+    /*
+  コインブロックから飛び出す
+  コインの演出を作成します。
+
+  実際に取得できるコインではなく、
+  見た目だけのパーティクルです。
+*/
+function createBlockCoinPopEffect(
+  column,
+  row
+) {
+  const centerX =
+    column *
+      TILE_SIZE +
+    TILE_SIZE / 2;
+
+  const blockTopY =
+    row *
+    TILE_SIZE;
+
+  particles.push({
+    type:
+      "coinPop",
+
+    x:
+      centerX,
+
+    /*
+      ブロック上面付近から
+      表示を開始します。
+    */
+    y:
+      blockTopY +
+      5,
+
+    startY:
+      blockTopY +
+      5,
+
+    life:
+      BLOCK_COIN_POP_DURATION,
+
+    maximumLife:
+      BLOCK_COIN_POP_DURATION,
+
+    size:
+      12
+  });
 }
 
     // =========================================================
@@ -7995,13 +8409,23 @@ player.standingPlatform =
             0.35;
         }
 
-        context.scale(
-          enemy.direction,
+ /*
+  踏まれた敵は縦につぶします。
 
-          enemy.alive
-            ? 1
-            : 0.35
-        );
+  ブロック攻撃で跳ねた敵は、
+  通常の大きさのまま描画します。
+*/
+const enemyScaleY =
+  !enemy.alive &&
+  enemy.defeatAnimation !==
+    "blockBump"
+    ? 0.35
+    : 1;
+
+context.scale(
+  enemy.direction,
+  enemyScaleY
+);
 
         context.fillStyle =
           definition.color;
@@ -8999,72 +9423,173 @@ function drawMovingPlatforms() {
     }
 
         function drawParticles() {
-      for (
-        const particle of
-        particles
-      ) {
-        const alpha =
-          particle.life /
-          particle.maximumLife;
+  for (
+    const particle of
+    particles
+  ) {
+    const alpha =
+      Math.max(
+        0,
+        particle.life /
+          particle.maximumLife
+      );
 
-        if (
-          particle.type ===
-          "blockFragment"
-        ) {
-          context.save();
+    /*
+      コインブロックから飛び出す
+      コインを描画します。
+    */
+    if (
+      particle.type ===
+      "coinPop"
+    ) {
+      const progress =
+        1 -
+        alpha;
 
-          context.globalAlpha =
-            alpha;
+      /*
+        横幅を周期的に変化させて、
+        コインが回転しているように見せます。
+      */
+      const scaleX =
+        0.25 +
+        Math.abs(
+          Math.cos(
+            progress *
+            Math.PI *
+            5
+          )
+        ) *
+        0.75;
 
-          context.fillStyle =
-            particle.color;
+      context.save();
 
-          context.translate(
-            particle.x,
-            particle.y
-          );
-
-          /*
-            破片が回転しているように見せます。
-          */
-          context.rotate(
-            particle.life *
-            12
-          );
-
-          context.fillRect(
-            -particle.size / 2,
-            -particle.size / 2,
-            particle.size,
-            particle.size
-          );
-
-          context.restore();
-
-          continue;
-        }
-
-        context.fillStyle =
-          "rgba(210, 190, 160, " +
-          alpha +
-          ")";
-
-        context.beginPath();
-
-        context.arc(
-          particle.x,
-          particle.y,
-
-          particle.size *
-            alpha,
-
-          0,
-          Math.PI * 2
+      /*
+        消える直前に徐々に透明にします。
+      */
+      context.globalAlpha =
+        Math.min(
+          1,
+          alpha * 1.5
         );
 
-        context.fill();
-      }
+      context.translate(
+        particle.x,
+        particle.y
+      );
+
+      context.scale(
+        scaleX,
+        1
+      );
+
+      /*
+        コイン本体です。
+      */
+      context.fillStyle =
+        "#ffd11a";
+
+      context.beginPath();
+
+      context.arc(
+        0,
+        0,
+        particle.size,
+        0,
+        Math.PI * 2
+      );
+
+      context.fill();
+
+      /*
+        コインの縁です。
+      */
+      context.strokeStyle =
+        "#db8d00";
+
+      context.lineWidth =
+        3;
+
+      context.stroke();
+
+      /*
+        コインの光沢です。
+      */
+      context.fillStyle =
+        "rgba(255, 255, 255, 0.75)";
+
+      context.fillRect(
+        -4,
+        -7,
+        3,
+        8
+      );
+
+      context.restore();
+
+      continue;
     }
+
+    /*
+      ブロックの破片です。
+    */
+    if (
+      particle.type ===
+      "blockFragment"
+    ) {
+      context.save();
+
+      context.globalAlpha =
+        alpha;
+
+      context.fillStyle =
+        particle.color;
+
+      context.translate(
+        particle.x,
+        particle.y
+      );
+
+      context.rotate(
+        particle.life *
+        12
+      );
+
+      context.fillRect(
+        -particle.size / 2,
+        -particle.size / 2,
+        particle.size,
+        particle.size
+      );
+
+      context.restore();
+
+      continue;
+    }
+
+    /*
+      ダッシュ時の土煙です。
+    */
+    context.fillStyle =
+      "rgba(210, 190, 160, " +
+      alpha +
+      ")";
+
+    context.beginPath();
+
+    context.arc(
+      particle.x,
+      particle.y,
+
+      particle.size *
+        alpha,
+
+      0,
+      Math.PI * 2
+    );
+
+    context.fill();
+  }
+}
 
     function drawGame() {
       const ratio =
