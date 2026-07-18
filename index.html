@@ -997,6 +997,7 @@ const CHECKPOINT_FLAG_HEIGHT = 16;
       L 落ちる床
       T トゲ
       S バネ
+      K チェックポイント
 
       【アイテム・予約】
 
@@ -2768,9 +2769,11 @@ if (symbol === "K") {
       */
     }
     
-    function initializeGame(
-      resetMissCount = true
-    ) {
+function initializeGame(
+  resetMissCount = true,
+  preservedCheckpointId = null,
+  preservedRespawnPosition = null
+) {
       resetAllInputs();
 
       const currentStage =
@@ -2863,9 +2866,38 @@ startPosition = {
 /*
   初回開始位置です。
 */
-respawnPosition =
-  null;
-      
+/*
+  ミス後の再開でチェックポイント情報を
+  引き継ぐ場合です。
+*/
+if (
+  preservedCheckpointId !== null &&
+  preservedRespawnPosition
+) {
+  const restoredCheckpoint =
+    checkpoints.find(
+      checkpoint =>
+        checkpoint.id ===
+        preservedCheckpointId
+    );
+
+  if (restoredCheckpoint) {
+    restoredCheckpoint.activated =
+      true;
+
+    activeCheckpoint =
+      restoredCheckpoint;
+
+    respawnPosition = {
+      x:
+        preservedRespawnPosition.x,
+
+      y:
+        preservedRespawnPosition.y
+    };
+  }
+}
+
 spawnPlayer();
 
       stageNameValue.textContent =
@@ -2964,43 +2996,51 @@ function spawnPlayer() {
 }
 
 /*
-  ミス後にプレイヤーを復帰させます。
+  ミス後にステージ全体を初期化し、
+  最後に取得したチェックポイントから再開します。
 */
 function respawnAfterMiss() {
-  /*
-    チェックポイントを取得していない場合は、
-    ステージを最初から作り直します。
+  const currentMissCount =
+    missCount;
 
-    falseを渡すことで、
-    ミス回数は維持します。
+  const preservedCheckpointId =
+    activeCheckpoint
+      ? activeCheckpoint.id
+      : null;
+
+  const preservedRespawnPosition =
+    respawnPosition
+      ? {
+          x:
+            respawnPosition.x,
+
+          y:
+            respawnPosition.y
+        }
+      : null;
+
+  /*
+    ステージ全体を初期状態へ戻します。
+
+    ミス数は後から戻すため、
+    falseを指定します。
   */
-  if (!respawnPosition) {
-    initializeGame(false);
-    return;
-  }
+  initializeGame(
+    false,
+    preservedCheckpointId,
+    preservedRespawnPosition
+  );
+
+  missCount =
+    currentMissCount;
 
   /*
-    タッチ入力を含めて完全に解除します。
-  */
-  resetAllInputs();
-
-  /*
-    プレイヤーだけを再生成します。
-  */
-  spawnPlayer();
-
-  /*
-    復帰直後の事故を防ぐため、
-    1.5秒間の無敵を付与します。
+    復帰直後の事故防止です。
   */
   player.damageInvincibleTimer =
     1.5;
 
-  /*
-    カメラを復帰地点へ合わせます。
-  */
   resetCameraToPlayer();
-
   updateHud();
 }
 
@@ -4170,13 +4210,13 @@ if (
   );
 }
       
-      if (
-        player.y +
-        player.height >=
-        stageHeight
-      ) {
-        triggerMiss();
-      }
+    if (
+  player.y +
+  player.height >=
+  stageHeight
+) {
+  triggerMiss(true);
+}
 
 for (const platform of movingPlatforms) {
   if (!platform.active) {
@@ -5767,7 +5807,9 @@ function updateCheckpointCollisions() {
       );
     }
     
-        function triggerMiss() {
+ function triggerMiss(
+  ignoreInvincibility = false
+) {
       if (
         playerDisabled ||
         gameCleared
@@ -5778,17 +5820,21 @@ function updateCheckpointCollisions() {
       /*
         無敵中はダメージを受けません。
       */
-      if (
-        isPlayerInvincible()
-      ) {
-        return;
-      }
+if (
+  !ignoreInvincibility &&
+  isPlayerInvincible()
+) {
+  return;
+}
 
       /*
         シールドを持っている場合は、
         シールドだけを消費します。
       */
-      if (player.hasShield) {
+    if (
+  !ignoreInvincibility &&
+  player.hasShield
+) {
         player.hasShield =
           false;
 
