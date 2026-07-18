@@ -1028,6 +1028,7 @@ const CHECKPOINT_FLAG_HEIGHT = 16;
       1 シールド
       2 一定時間無敵
       3 一定時間ジャンプ力上昇
+      4 残機アップ
     */
 
     const STAGES = [
@@ -1897,18 +1898,17 @@ let gameOver =
           アニメーション終了後にUへ変化します。
         */
         case "Q":
-          collectedCoins +=
-            1;
+  collectCoins(1);
 
-          score +=
-            100;
+  score +=
+    100;
 
-          blockState.nextSymbol =
-            "U";
+  blockState.nextSymbol =
+    "U";
 
-          playCoinSound();
-          updateHud();
-          break;
+  playCoinSound();
+  updateHud();
+  break;
 
         /*
           アイテムを1個出現させ、
@@ -2434,10 +2434,13 @@ function addLives(
           return ITEM_TYPES.INVINCIBLE;
 
         case "3":
-          return ITEM_TYPES.JUMP_BOOST;
+  return ITEM_TYPES.JUMP_BOOST;
 
-        default:
-          return null;
+case "4":
+  return ITEM_TYPES.EXTRA_LIFE;
+
+default:
+  return null;
       }
     }
 
@@ -2446,20 +2449,29 @@ function addLives(
       アイテムを選びます。
     */
     function getRandomItemType() {
-      const itemTypes = [
-        ITEM_TYPES.SHIELD,
-        ITEM_TYPES.INVINCIBLE,
-        ITEM_TYPES.JUMP_BOOST
-      ];
+  const itemTypes = [
+    ITEM_TYPES.SHIELD,
+    ITEM_TYPES.SHIELD,
 
-      const randomIndex =
-        Math.floor(
-          Math.random() *
-          itemTypes.length
-        );
+    ITEM_TYPES.INVINCIBLE,
+    ITEM_TYPES.INVINCIBLE,
 
-      return itemTypes[randomIndex];
-    }
+    ITEM_TYPES.JUMP_BOOST,
+    ITEM_TYPES.JUMP_BOOST,
+
+    ITEM_TYPES.EXTRA_LIFE
+  ];
+
+  const randomIndex =
+    Math.floor(
+      Math.random() *
+      itemTypes.length
+    );
+
+  return itemTypes[
+    randomIndex
+  ];
+}
 
     /*
       アイテム入りブロックから
@@ -2956,9 +2968,16 @@ movingPlatforms = [];
       score = 0;
       collectedCoins = 0;
 
-      if (resetMissCount) {
-        missCount = 0;
-      }
+if (resetMissCount) {
+  missCount =
+    0;
+
+  lives =
+    INITIAL_LIVES;
+
+  coinLifeProgress =
+    0;
+}
 
       gameCleared = false;
       playerDisabled = false;
@@ -3208,9 +3227,48 @@ function resetCameraToPlayer() {
 }
     
 function restartAfterMiss() {
+  /*
+    残機がなくなった場合は、
+    復帰せずゲームオーバーにします。
+  */
+  if (
+    lives <= 0
+  ) {
+    triggerGameOver();
+    return;
+  }
+
   respawnAfterMiss();
 }
 
+/*
+  ゲームオーバー状態へ移行します。
+*/
+function triggerGameOver() {
+  if (gameOver) {
+    return;
+  }
+
+  resetAllInputs();
+
+  gameOver =
+    true;
+
+  gamePaused =
+    true;
+
+  playerDisabled =
+    true;
+
+  player.velocityX =
+    0;
+
+  player.velocityY =
+    0;
+
+  showGameOverMessage();
+}
+    
     // =========================================================
     // ステージ選択
     // =========================================================
@@ -4007,9 +4065,12 @@ function activateFallingPlatform(
     function updatePlayer(
       deltaTime
     ) {
-      if (gameCleared) {
-        return;
-      }
+if (
+  gameCleared ||
+  gameOver
+) {
+  return;
+}
 
       player.previousY =
   player.y;
@@ -5710,6 +5771,18 @@ function updateSprings(
             300;
 
           break;
+          
+/*
+  残機を1増やします。
+*/
+case ITEM_TYPES.EXTRA_LIFE:
+  addLives(1);
+
+  score +=
+    500;
+
+  break;
+
       }
 
       playCoinSound();
@@ -5748,12 +5821,13 @@ function updateCheckpointCollisions() {
   }
 }
     function updateObjectCollisions() {
-  if (
-    playerDisabled ||
-    gameCleared
-  ) {
-    return;
-  }
+if (
+  playerDisabled ||
+  gameCleared ||
+  gameOver
+) {
+  return;
+}
 
   updateSpikeCollisions();
 
@@ -5781,17 +5855,12 @@ function updateCheckpointCollisions() {
             player
           )
         ) {
-          coin.collected =
-            true;
+          coin.collected = true;
+          collectCoins(1);
+          score +=  100;
 
-          collectedCoins +=
-            1;
-
-          score +=
-            100;
-
-          playCoinSound();
-          updateHud();
+playCoinSound();
+updateHud();
         }
       }
 
@@ -5947,13 +6016,13 @@ function updateCheckpointCollisions() {
  function triggerMiss(
   ignoreInvincibility = false
 ) {
-      if (
-        playerDisabled ||
-        gameCleared
-      ) {
-        return;
-      }
-
+if (
+  playerDisabled ||
+  gameCleared ||
+  gameOver
+) {
+  return;
+}
       /*
         無敵中はダメージを受けません。
       */
@@ -6005,11 +6074,17 @@ if (
 
       resetAllInputs();
 
-      missCount +=
-        1;
+missCount +=
+  1;
 
-      playerDisabled =
-        true;
+lives =
+  Math.max(
+    0,
+    lives - 1
+  );
+
+playerDisabled =
+  true;
 
       missTimer =
         1.15;
@@ -6041,9 +6116,12 @@ if (
     }
 
     function triggerClear() {
-      if (gameCleared) {
-        return;
-      }
+if (
+  gameCleared ||
+  gameOver
+) {
+  return;
+}
 
       resetAllInputs();
 
@@ -6087,6 +6165,11 @@ if (
       messageTitle.textContent =
         "CLEAR";
 
+      
+      messageRestartButton.textContent =
+        "もう一度遊ぶ";
+
+
       messageResult.innerHTML =
         currentStage.name +
         " クリア！" +
@@ -6112,6 +6195,36 @@ if (
         "flex";
     }
 
+function showGameOverMessage() {
+  messageTitle.textContent =
+    "GAME OVER";
+
+  messageResult.innerHTML =
+    "残機がなくなりました。" +
+    "<br><br>" +
+    "スコア: " +
+    score +
+    "<br>" +
+    "コイン: " +
+    collectedCoins +
+    "<br>" +
+    "ミス: " +
+    missCount;
+
+  /*
+    ゲームオーバー時は
+    次のステージボタンを表示しません。
+  */
+  nextStageButton.style.display =
+    "none";
+
+  messageRestartButton.textContent =
+    "最初からやり直す";
+
+  messageOverlay.style.display =
+    "flex";
+}
+    
     function hideMessage() {
       messageOverlay.style.display =
         "none";
@@ -8175,9 +8288,59 @@ function drawCheckpoints() {
             context.fill();
 
             break;
+
+            /*
+  残機アップアイテムです。
+*/
+case ITEM_TYPES.EXTRA_LIFE:
+  /*
+    緑色の円です。
+  */
+  context.fillStyle =
+    "#35b85a";
+
+  context.beginPath();
+
+  context.arc(
+    0,
+    0,
+    14,
+    0,
+    Math.PI * 2
+  );
+
+  context.fill();
+
+  /*
+    中央へ「1UP」を表示します。
+  */
+  context.fillStyle =
+    "white";
+
+  context.font =
+    "bold 10px sans-serif";
+
+  context.textAlign =
+    "center";
+
+  context.textBaseline =
+    "middle";
+
+  context.fillText(
+    "1UP",
+    0,
+    1
+  );
+
+  break;
         }
 
         context.restore();
+        context.textAlign =
+  "start";
+
+context.textBaseline =
+  "alphabetic";
       }
     }
 
@@ -8556,16 +8719,24 @@ drawCoins();
     // HUD・ゲームループ
     // =========================================================
 
-    function updateHud() {
-      scoreValue.textContent =
-        score;
+   function updateHud() {
+  scoreValue.textContent =
+    score;
 
-      coinValue.textContent =
-        collectedCoins;
+  /*
+    100枚までの進捗を表示します。
+  */
+  coinValue.textContent =
+    coinLifeProgress +
+    "/" +
+    COINS_PER_EXTRA_LIFE;
 
-      missValue.textContent =
-        missCount;
-    }
+  lifeValue.textContent =
+    lives;
+
+  missValue.textContent =
+    missCount;
+}
 
     function updateGame(
       deltaTime
