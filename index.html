@@ -1185,7 +1185,13 @@ let movingPlatforms = [];
 
     let missTimer = 0;
     let lastTime = 0;
+    let startPosition = {
+  x:
+    TILE_SIZE * 2,
 
+  y:
+    TILE_SIZE * 10
+};
     let currentStageIndex = 0;
 
     let viewportWidth =
@@ -2505,16 +2511,16 @@ function createCheckpoint(
       旗の少し右側へ復帰させます。
     */
     respawnX:
-      tileX +
-      TILE_SIZE +
-      6,
+  tileX +
+  TILE_SIZE / 2 -
+  PLAYER_WIDTH / 2,
 
-    respawnY:
-      tileY +
-      TILE_SIZE -
-      40
+respawnY:
+  tileY +
+  TILE_SIZE -
+  PLAYER_HEIGHT -
+  2
   });
-}
 }
     
 /*
@@ -2825,13 +2831,13 @@ movingPlatforms = [];
       variableJumpActive = false;
       jumpHoldTimer = 0;
 
-            const startPosition = {
-        x:
-          TILE_SIZE * 2,
+startPosition = {
+  x:
+    TILE_SIZE * 2,
 
-        y:
-          TILE_SIZE * 10
-      };
+  y:
+    TILE_SIZE * 10
+};
 
       /*
         ステージ内の全記号を解析します。
@@ -2868,72 +2874,21 @@ spawnPlayer();
       hideMessage();
       updateHud();
     }
-
-/*
-  キーボード・タッチ操作の入力状態を
-  すべて解除します。
-*/
-function resetInputState() {
-  input.left =
-    false;
-
-  input.right =
-    false;
-
-  input.jump =
-    false;
-
-  input.dash =
-    false;
-
-  /*
-    入力オブジェクトに次の項目がある場合は、
-    それらもfalseにします。
-  */
-  if (
-    "jumpPressed" in input
-  ) {
-    input.jumpPressed =
-      false;
-  }
-
-  if (
-    "jumpReleased" in input
-  ) {
-    input.jumpReleased =
-      false;
-  }
-
-  /*
-    ジャンプ関連の一時状態も解除します。
-  */
-  jumpBufferTimer =
-    0;
-
-  coyoteTimer =
-    0;
-
-  jumpHoldTimer =
-    0;
-
-  variableJumpActive =
-    false;
-}    
     
 /*
   プレイヤーを生成します。
 
   respawnPositionがある場合は
-  そこから開始します。
+  チェックポイントから開始します。
+
+  ない場合はステージ開始位置から開始します。
 */
 function spawnPlayer() {
-
   const position =
     respawnPosition ??
     startPosition;
 
   player = {
-
     x:
       position.x,
 
@@ -2943,9 +2898,11 @@ function spawnPlayer() {
     previousY:
       position.y,
 
-    velocityX: 0,
+    velocityX:
+      0,
 
-    velocityY: 0,
+    velocityY:
+      0,
 
     width:
       PLAYER_WIDTH,
@@ -2953,82 +2910,98 @@ function spawnPlayer() {
     height:
       PLAYER_HEIGHT,
 
-    grounded: false,
+    grounded:
+      false,
 
-    facing: 1,
+    facing:
+      1,
 
-    standingPlatform: null,
+    standingPlatform:
+      null,
 
-    /*
-      以下は今までplayerへ
-      入れていた項目です。
+    running:
+      false,
 
-      initializeGame()にある
-      player = { ... }
+    dashing:
+      false,
 
-      の中身をそのまま
-      全部コピーしてください。
-    */
+    animationTime:
+      0,
 
+    dustTimer:
+      0,
+
+    hasShield:
+      false,
+
+    invincibleTimer:
+      0,
+
+    damageInvincibleTimer:
+      0,
+
+    jumpBoostTimer:
+      0
   };
-playerDisabled =
-  false;
 
-gameOver =
-  false;
+  playerDisabled =
+    false;
 
-  invincibleTimer =
-  0;
+  missTimer =
+    0;
 
-damageInvincibleTimer =
-  0;
-  
-  layer.standingPlatform =
-  null;
+  jumpBufferTimer =
+    0;
+
+  coyoteTimer =
+    0;
+
+  variableJumpActive =
+    false;
+
+  jumpHoldTimer =
+    0;
 }
 
 /*
   ミス後にプレイヤーを復帰させます。
-
-  チェックポイント取得済みなら、
-  respawnPositionからプレイヤーだけを再生成します。
-
-  未取得なら、従来どおりステージ全体を初期化します。
 */
 function respawnAfterMiss() {
   /*
-    チェックポイントをまだ取得していない場合です。
+    チェックポイントを取得していない場合は、
+    ステージを最初から作り直します。
+
+    falseを渡すことで、
+    ミス回数は維持します。
   */
   if (!respawnPosition) {
-    initializeGame();
+    initializeGame(false);
     return;
   }
 
   /*
-    入力状態を解除します。
-
-    ミス直前に押していたボタンが、
-    復帰後も押しっぱなしになるのを防ぎます。
+    タッチ入力を含めて完全に解除します。
   */
-  resetInputState();
+  resetAllInputs();
 
   /*
-    プレイヤーだけを復帰させます。
+    プレイヤーだけを再生成します。
   */
   spawnPlayer();
 
   /*
-    復帰直後に敵などへ重なって
-    即座に再ミスすることを防ぐため、
-    短い無敵時間を与えます。
+    復帰直後の事故を防ぐため、
+    1.5秒間の無敵を付与します。
   */
-  damageInvincibleTimer =
+  player.damageInvincibleTimer =
     1.5;
 
   /*
-    カメラを復帰位置へ合わせます。
+    カメラを復帰地点へ合わせます。
   */
   resetCameraToPlayer();
+
+  updateHud();
 }
 
 
@@ -3040,14 +3013,14 @@ function resetCameraToPlayer() {
     Math.max(
       0,
       player.x -
-        canvas.width * 0.35
+  viewportWidth * 0.35
     );
 
   const maximumCameraX =
     Math.max(
       0,
       stageWidth -
-        canvas.width
+        viewportwidth
     );
 
   cameraX =
@@ -3057,17 +3030,9 @@ function resetCameraToPlayer() {
     );
 }
     
-    function restartAfterMiss() {
-      const currentMissCount =
-        missCount;
-
-      initializeGame(false);
-
-      missCount =
-        currentMissCount;
-
-      updateHud();
-    }
+function restartAfterMiss() {
+  respawnAfterMiss();
+}
 
     // =========================================================
     // ステージ選択
@@ -4204,16 +4169,6 @@ if (
     platform
   );
 }
-
-  player.y =
-    platform.y -
-    player.height;
-
-  player.x +=
-    platform.x -
-    platform.previousX;
-
-}
       
       if (
         player.y +
@@ -5051,15 +5006,6 @@ if (
   );
 }
 
-  enemy.y =
-    platform.y -
-    enemy.height;
-
-  enemy.x +=
-    platform.x -
-    platform.previousX;
-
-}
         /*
           飛行型以外の敵が奈落へ落ちた場合は、
           消滅させます。
