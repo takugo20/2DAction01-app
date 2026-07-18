@@ -686,6 +686,30 @@
     const ENEMY_WIDTH = 34;
     const ENEMY_HEIGHT = 30;
     
+
+/*
+  カメラのデッドゾーンです。
+
+  プレイヤーがこの範囲内にいる間は、
+  カメラを動かしません。
+*/
+const CAMERA_DEAD_ZONE_LEFT =
+  0.30;
+
+const CAMERA_DEAD_ZONE_RIGHT =
+  0.62;
+
+const CAMERA_DEAD_ZONE_TOP =
+  0.28;
+
+const CAMERA_DEAD_ZONE_BOTTOM =
+  0.68;
+
+/*
+  カメラが目標位置へ近づく速さです。
+*/
+const CAMERA_FOLLOW_SPEED =
+  8;
     
     /*
       敵の種類を表す内部名称です。
@@ -1332,7 +1356,11 @@ let movingPlatforms = [];
 
     const particles = [];
 
-    let cameraX = 0;
+    let cameraX =
+  0;
+
+let cameraY =
+  0;
 
     let score =
   0;
@@ -3633,25 +3661,53 @@ function respawnAfterMiss() {
 /*
   カメラをプレイヤーの位置へ合わせます。
 */
+/*
+  カメラをプレイヤー位置へ
+  即座に合わせます。
+
+  ステージ開始時や復帰時に使います。
+*/
 function resetCameraToPlayer() {
+  if (!player) {
+    cameraX =
+      0;
+
+    cameraY =
+      getMinimumCameraY();
+
+    return;
+  }
+
+  /*
+    プレイヤーを横約42％、
+    縦約58％の位置へ置きます。
+
+    上や右側を少し広く見せる設定です。
+  */
+  const desiredCameraX =
+    player.x +
+    player.width / 2 -
+    viewportWidth *
+    0.42;
+
+  const desiredCameraY =
+    player.y +
+    player.height / 2 -
+    viewportHeight *
+    0.58;
+
   cameraX =
-    Math.max(
+    clamp(
+      desiredCameraX,
       0,
-      player.x -
-        viewportWidth * 0.35
+      getMaximumCameraX()
     );
 
-  const maximumCameraX =
-    Math.max(
-      0,
-      stageWidth -
-        viewportWidth
-    );
-
-  cameraX =
-    Math.min(
-      cameraX,
-      maximumCameraX
+  cameraY =
+    clamp(
+      desiredCameraY,
+      getMinimumCameraY(),
+      getMaximumCameraY()
     );
 }
     
@@ -4931,12 +4987,16 @@ if (
   );
 }
       
-    if (
-  player.y +
-  player.height >=
-  stageHeight
+/*
+  ステージ全体の下端より
+  2マス以上落ちたらミスにします。
+*/
+if (
+  player.y >
+  stageHeight +
+    TILE_SIZE * 2
 ) {
-  triggerMiss(true);
+  triggerMiss();
 }
 
 for (const platform of movingPlatforms) {
@@ -5854,14 +5914,13 @@ if (
           飛行型以外の敵が奈落へ落ちた場合は、
           消滅させます。
         */
-        if (
-          enemy.type !==
-            ENEMY_TYPES.FLYER &&
-          enemy.y >=
-            stageHeight
-        ) {
-          enemy.alive =
-            false;
+       if (
+  enemy.y >
+  stageHeight +
+    TILE_SIZE * 3
+) {
+  enemy.alive =
+    false;
 
           enemy.squashTimer =
             0;
@@ -7184,42 +7243,205 @@ function createBlockCoinPopEffect(
     // カメラ
     // =========================================================
 
-    function updateCamera(
+   /*
+  valueをminimum～maximumの範囲に収めます。
+*/
+function clamp(
+  value,
+  minimum,
+  maximum
+) {
+  return Math.max(
+    minimum,
+    Math.min(
+      value,
+      maximum
+    )
+  );
+}
+
+    /*
+  横方向のカメラ最大位置です。
+*/
+function getMaximumCameraX() {
+  return Math.max(
+    0,
+    stageWidth -
+      viewportWidth
+  );
+}
+
+/*
+  縦方向のカメラ最小位置です。
+
+  ステージが画面より低い場合は、
+  負の値にすることでステージを
+  画面下へ揃えます。
+*/
+function getMinimumCameraY() {
+  return Math.min(
+    0,
+    stageHeight -
+      viewportHeight
+  );
+}
+
+/*
+  縦方向のカメラ最大位置です。
+
+  ステージが画面より高い場合のみ、
+  下方向へスクロールできます。
+*/
+function getMaximumCameraY() {
+  return Math.max(
+    0,
+    stageHeight -
+      viewportHeight
+  );
+}
+    
+    /*
+  デッドゾーン方式で、
+  プレイヤーをX・Y両方向へ追従します。
+*/
+function updateCamera(
+  deltaTime
+) {
+  if (!player) {
+    return;
+  }
+
+  const leftBoundary =
+    viewportWidth *
+    CAMERA_DEAD_ZONE_LEFT;
+
+  const rightBoundary =
+    viewportWidth *
+    CAMERA_DEAD_ZONE_RIGHT;
+
+  const topBoundary =
+    viewportHeight *
+    CAMERA_DEAD_ZONE_TOP;
+
+  const bottomBoundary =
+    viewportHeight *
+    CAMERA_DEAD_ZONE_BOTTOM;
+
+  /*
+    現在のカメラ位置を、
+    次の目標位置の初期値にします。
+  */
+  let targetCameraX =
+    cameraX;
+
+  let targetCameraY =
+    cameraY;
+
+  /*
+    プレイヤーの画面上での位置です。
+  */
+  const playerLeftOnScreen =
+    player.x -
+    cameraX;
+
+  const playerRightOnScreen =
+    player.x +
+    player.width -
+    cameraX;
+
+  const playerTopOnScreen =
+    player.y -
+    cameraY;
+
+  const playerBottomOnScreen =
+    player.y +
+    player.height -
+    cameraY;
+
+  /*
+    横方向のデッドゾーン判定です。
+  */
+  if (
+    playerLeftOnScreen <
+    leftBoundary
+  ) {
+    targetCameraX =
+      player.x -
+      leftBoundary;
+  } else if (
+    playerRightOnScreen >
+    rightBoundary
+  ) {
+    targetCameraX =
+      player.x +
+      player.width -
+      rightBoundary;
+  }
+
+  /*
+    縦方向のデッドゾーン判定です。
+
+    上へ登った場合も、
+    下へ落ちた場合も追従します。
+  */
+  if (
+    playerTopOnScreen <
+    topBoundary
+  ) {
+    targetCameraY =
+      player.y -
+      topBoundary;
+  } else if (
+    playerBottomOnScreen >
+    bottomBoundary
+  ) {
+    targetCameraY =
+      player.y +
+      player.height -
+      bottomBoundary;
+  }
+
+  /*
+    ステージ外を映さないようにします。
+  */
+  targetCameraX =
+    clamp(
+      targetCameraX,
+      0,
+      getMaximumCameraX()
+    );
+
+  targetCameraY =
+    clamp(
+      targetCameraY,
+      getMinimumCameraY(),
+      getMaximumCameraY()
+    );
+
+  /*
+    目標位置へ滑らかに近づきます。
+  */
+  const followAmount =
+    Math.min(
+      1,
+      CAMERA_FOLLOW_SPEED *
       deltaTime
-    ) {
-      const desiredX =
-        player.x +
-        player.width / 2 -
-        viewportWidth *
-        0.42;
+    );
 
-      const maximumCameraX =
-        Math.max(
-          0,
-          stageWidth -
-            viewportWidth
-        );
+  cameraX +=
+    (
+      targetCameraX -
+      cameraX
+    ) *
+    followAmount;
 
-      const targetCameraX =
-        Math.max(
-          0,
-          Math.min(
-            desiredX,
-            maximumCameraX
-          )
-        );
-
-      cameraX +=
-        (
-          targetCameraX -
-          cameraX
-        ) *
-        Math.min(
-          1,
-          8 *
-          deltaTime
-        );
-    }
+  cameraY +=
+    (
+      targetCameraY -
+      cameraY
+    ) *
+    followAmount;
+}
 
     // =========================================================
     // 描画
@@ -7254,40 +7476,54 @@ function createBlockCoinPopEffect(
         viewportHeight
       );
 
-      drawCloud(
-        120 -
-          cameraX *
-          0.12,
-        90,
-        1
-      );
+drawCloud(
+  120 -
+    cameraX *
+    0.12,
 
-      drawCloud(
-        480 -
-          cameraX *
-          0.12,
-        150,
-        0.8
-      );
+  90 -
+    cameraY *
+    0.08,
 
-      drawCloud(
-        850 -
-          cameraX *
-          0.12,
-        80,
-        1.2
-      );
+  1
+);
 
-      drawMountain(
-        -120 -
-          cameraX *
-          0.18,
+drawCloud(
+  480 -
+    cameraX *
+    0.12,
 
-        viewportHeight -
-          150,
+  150 -
+    cameraY *
+    0.08,
 
-        330
-      );
+  0.8
+);
+
+drawCloud(
+  850 -
+    cameraX *
+    0.12,
+
+  80 -
+    cameraY *
+    0.08,
+
+  1.2
+);
+
+drawMountain(
+  -120 -
+    cameraX *
+    0.18,
+
+  viewportHeight -
+    150 -
+    cameraY *
+    0.04,
+
+  330
+);
 
       drawMountain(
         230 -
@@ -7295,7 +7531,9 @@ function createBlockCoinPopEffect(
           0.18,
 
         viewportHeight -
-          130,
+          130 -
+    cameraY *
+    0.04,
 
         270
       );
@@ -7306,7 +7544,9 @@ function createBlockCoinPopEffect(
           0.18,
 
         viewportHeight -
-          145,
+          145 -
+    cameraY *
+    0.04,
 
         310
       );
@@ -9729,15 +9969,11 @@ function drawMovingPlatforms() {
       drawBackground();
 
       context.save();
-
-      const verticalOffset =
-        viewportHeight -
-        stageHeight;
-
+      
       context.translate(
-        -cameraX,
-        verticalOffset
-      );
+  -cameraX,
+  -cameraY
+);
 
 drawStage();
 
@@ -10598,6 +10834,24 @@ updateObjectCollisions();
       viewportHeight =
         window.innerHeight;
 
+/*
+  画面回転やリサイズ後に、
+  カメラがステージ外へ出ないよう補正します。
+*/
+cameraX =
+  clamp(
+    cameraX,
+    0,
+    getMaximumCameraX()
+  );
+
+cameraY =
+  clamp(
+    cameraY,
+    getMinimumCameraY(),
+    getMaximumCameraY()
+  );
+      
       canvas.width =
         Math.floor(
           viewportWidth *
