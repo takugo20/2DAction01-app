@@ -600,12 +600,21 @@
       const CHECKPOINT_HEIGHT = 58;
       const CHECKPOINT_FLAG_WIDTH = 24;
       const CHECKPOINT_FLAG_HEIGHT = 16;
+      const FIRE_BAR_FLAME_COUNT = 4;
+      const FIRE_BAR_FIRST_FLAME_DISTANCE = 40;
+      const FIRE_BAR_FLAME_SPACING = 24;
+      const FIRE_BAR_FLAME_RADIUS = 10;
+      const FIRE_BAR_CENTER_RADIUS = 10;
+      const FIRE_BAR_ROTATION_SPEED = 1.45;
+      const FIRE_BAR_ENEMY_KNOCKBACK_SPEED = 150;
+      const FIRE_BAR_ENEMY_BOUNCE_POWER = 320;
       /*
       ステージ記号:
         . 空間 / P 開始 / C コイン / G ゴール
         # 地面 / B 通常 / H 叩ける / R 壊せる / Q コイン / I アイテム / U 使用済み / Z トゲブロック
         W 通常敵 / A 穴回避 / J ジャンプ / F 飛行 / D 突進 / N 中ボス / X ボス
         M 横足場 / V 縦足場 / L 落ちる床 / T トゲ / S バネ / K チェックポイント
+        Y 時計回りに回転するファイヤーバー
         a～z 同じ文字同士を結ぶドア
         1 シールド / 2 無敵 / 3 ジャンプ強化 / 4 残機アップ
       */
@@ -758,6 +767,7 @@
       let respawnPosition = null;
       let goal = null;
       let movingPlatforms = [];
+      let fireBars = [];
       let doors = [];
       let nearbyDoor = null;
       let doorCooldown = 0;
@@ -1426,6 +1436,37 @@
           respawnY: tileY + TILE_SIZE - PLAYER_HEIGHT - 2,
         });
       }
+      function createFireBar(tileX, tileY) {
+        const maximumDistance =
+          FIRE_BAR_FIRST_FLAME_DISTANCE +
+          (FIRE_BAR_FLAME_COUNT - 1) * FIRE_BAR_FLAME_SPACING +
+          FIRE_BAR_FLAME_RADIUS;
+        fireBars.push({
+          id: fireBars.length,
+          centerX: tileX + TILE_SIZE / 2,
+          centerY: tileY + TILE_SIZE / 2,
+          angle: 0,
+          animationTime: Math.random() * Math.PI * 2,
+          x: tileX + TILE_SIZE / 2 - maximumDistance,
+          y: tileY + TILE_SIZE / 2 - maximumDistance,
+          width: maximumDistance * 2,
+          height: maximumDistance * 2,
+        });
+      }
+      function getFireBarFlames(fireBar) {
+        const flames = [];
+        for (let index = 0; index < FIRE_BAR_FLAME_COUNT; index += 1) {
+          const distance =
+            FIRE_BAR_FIRST_FLAME_DISTANCE + index * FIRE_BAR_FLAME_SPACING;
+          const pulse = Math.sin(fireBar.animationTime * 7 + index * 1.8) * 1.4;
+          flames.push({
+            x: fireBar.centerX + Math.cos(fireBar.angle) * distance,
+            y: fireBar.centerY + Math.sin(fireBar.angle) * distance,
+            radius: FIRE_BAR_FLAME_RADIUS + pulse,
+          });
+        }
+        return flames;
+      }
       function isDoorSymbol(symbol) {
         return /^[a-z]$/.test(symbol);
       }
@@ -1530,6 +1571,11 @@
           stageRows[row][column] = ".";
           return;
         }
+        if (symbol === "Y") {
+          createFireBar(tileX, tileY);
+          stageRows[row][column] = ".";
+          return;
+        }
         if (isDoorSymbol(symbol)) {
           createDoor(symbol, tileX, tileY);
           stageRows[row][column] = ".";
@@ -1580,6 +1626,7 @@
         springs = [];
         checkpoints = [];
         movingPlatforms = [];
+        fireBars = [];
         doors = [];
         nearbyDoor = null;
         doorCooldown = 0;
@@ -2659,6 +2706,74 @@
           }
         }
       }
+      function updateFireBars(deltaTime) {
+        for (const fireBar of fireBars) {
+          if (!isEntityNearCamera(fireBar)) {
+            continue;
+          }
+          fireBar.angle =
+            (fireBar.angle + FIRE_BAR_ROTATION_SPEED * deltaTime) % (Math.PI * 2);
+          fireBar.animationTime += deltaTime;
+        }
+      }
+      function damageEnemyFromFireBar(enemy, fireBar) {
+        if (!enemy.alive || enemy.hitInvincibleTimer > 0) {
+          return false;
+        }
+        enemy.health -= 1;
+        enemy.hitInvincibleTimer = 0.45;
+        enemy.flashTimer = 0.25;
+        const enemyCenterX = enemy.x + enemy.width / 2;
+        enemy.direction = enemyCenterX < fireBar.centerX ? -1 : 1;
+        enemy.velocityX = enemy.direction * FIRE_BAR_ENEMY_KNOCKBACK_SPEED;
+        enemy.velocityY = -FIRE_BAR_ENEMY_BOUNCE_POWER;
+        enemy.grounded = false;
+        enemy.standingPlatform = null;
+        if (enemy.health <= 0) {
+          enemy.alive = false;
+          enemy.squashTimer = BLOCK_ENEMY_DEFEAT_DURATION;
+          enemy.defeatAnimation = "blockBump";
+          if (enemy.type === ENEMY_TYPES.MID_BOSS) {
+            score += 1000;
+          } else if (enemy.type === ENEMY_TYPES.BOSS) {
+            score += 3000;
+          } else {
+            score += 200;
+          }
+        } else {
+          score += 300;
+        }
+        return true;
+      }
+      function updateFireBarCollisions() {
+        let damagedEnemy = false;
+        for (const fireBar of fireBars) {
+          if (!isEntityNearCamera(fireBar)) {
+            continue;
+          }
+          const flames = getFireBarFlames(fireBar);
+          for (const flame of flames) {
+            if (circleRectangleOverlap(flame, player)) {
+              triggerMiss();
+              if (playerDisabled) {
+                return;
+              }
+            }
+            for (const enemy of enemies) {
+              if (!enemy.alive || !circleRectangleOverlap(flame, enemy)) {
+                continue;
+              }
+              if (damageEnemyFromFireBar(enemy, fireBar)) {
+                damagedEnemy = true;
+              }
+            }
+          }
+        }
+        if (damagedEnemy) {
+          playStompSound();
+          updateHud();
+        }
+      }
       function updateItems(deltaTime) {
         for (const item of items) {
           if (item.collected) {
@@ -2767,6 +2882,10 @@
           return;
         }
         updateSpikeCollisions();
+        if (playerDisabled) {
+          return;
+        }
+        updateFireBarCollisions();
         if (playerDisabled) {
           return;
         }
@@ -3228,18 +3347,33 @@
             context.fillStyle = "rgba(255, 255, 255, 0.10)";
             context.fillRect(x + 6, y + 16, 12, 5);
             context.fillRect(x + 28, y + 31, 11, 5);
-            if (symbol !== "#") {
-              context.fillStyle = "rgba(255, 255, 255, 0.8)";
-              context.font = "bold 21px sans-serif";
-              context.textAlign = "center";
-              context.textBaseline = "middle";
-              let displaySymbol = symbol;
-              if (symbol === "Q") {
-                displaySymbol = "?";
-              } else if (symbol === "I") {
-                displaySymbol = "!";
-              }
-              context.fillText(displaySymbol, x + TILE_SIZE / 2, y + TILE_SIZE / 2 + 2);
+            if (symbol === "R") {
+              context.strokeStyle = "rgba(80, 24, 18, 0.75)";
+              context.lineWidth = 2;
+              context.beginPath();
+              context.moveTo(x + 9, y + 14);
+              context.lineTo(x + 20, y + 24);
+              context.lineTo(x + 14, y + 37);
+              context.moveTo(x + 31, y + 11);
+              context.lineTo(x + 25, y + 23);
+              context.lineTo(x + 35, y + 34);
+              context.stroke();
+            } else if (symbol === "Q") {
+              context.fillStyle = "rgba(255, 245, 170, 0.88)";
+              context.beginPath();
+              context.arc(x + TILE_SIZE / 2, y + TILE_SIZE / 2 + 2, 7, 0, Math.PI * 2);
+              context.fill();
+              context.strokeStyle = "rgba(170, 105, 0, 0.8)";
+              context.lineWidth = 2;
+              context.stroke();
+            } else if (symbol === "I") {
+              context.fillStyle = "rgba(230, 220, 255, 0.9)";
+              drawStar(x + TILE_SIZE / 2, y + TILE_SIZE / 2 + 2, 5, 10, 5);
+            } else if (symbol === "U") {
+              context.fillStyle = "rgba(45, 45, 45, 0.35)";
+              context.beginPath();
+              context.arc(x + TILE_SIZE / 2, y + TILE_SIZE / 2 + 2, 7, 0, Math.PI * 2);
+              context.fill();
             }
           }
         }
@@ -3265,11 +3399,12 @@
           context.beginPath();
           context.arc(door.x + door.width - 8, door.y + door.height / 2, 3, 0, Math.PI * 2);
           context.fill();
-          context.fillStyle = "rgba(255, 255, 255, 0.85)";
-          context.font = "bold 14px sans-serif";
-          context.textAlign = "center";
-          context.textBaseline = "middle";
-          context.fillText(door.symbol, door.x + door.width / 2, door.y + 16);
+          context.fillStyle = door.enabled
+            ? "rgba(255, 226, 160, 0.36)"
+            : "rgba(220, 220, 220, 0.18)";
+          context.beginPath();
+          context.arc(door.x + door.width / 2, door.y + 16, 6, 0, Math.PI * 2);
+          context.fill();
           if (door === nearbyDoor && !doorTransition.active) {
             const bounce = Math.sin(performance.now() * 0.008) * 3;
             context.fillStyle = "rgba(255, 255, 255, 0.95)";
@@ -3284,6 +3419,75 @@
         }
         context.textAlign = "start";
         context.textBaseline = "alphabetic";
+      }
+      function drawFireBars() {
+        for (const fireBar of fireBars) {
+          if (!isEntityNearCamera(fireBar)) {
+            continue;
+          }
+          context.save();
+          context.strokeStyle = "rgba(120, 60, 20, 0.7)";
+          context.lineWidth = 5;
+          context.lineCap = "round";
+          context.beginPath();
+          context.moveTo(fireBar.centerX, fireBar.centerY);
+          const lastDistance =
+            FIRE_BAR_FIRST_FLAME_DISTANCE +
+            (FIRE_BAR_FLAME_COUNT - 1) * FIRE_BAR_FLAME_SPACING;
+          context.lineTo(
+            fireBar.centerX + Math.cos(fireBar.angle) * lastDistance,
+            fireBar.centerY + Math.sin(fireBar.angle) * lastDistance,
+          );
+          context.stroke();
+          const flames = getFireBarFlames(fireBar);
+          for (let index = 0; index < flames.length; index += 1) {
+            const flame = flames[index];
+            const flickerAngle = fireBar.animationTime * 9 + index * 1.7;
+            context.fillStyle = "rgba(238, 72, 18, 0.95)";
+            context.beginPath();
+            context.arc(flame.x, flame.y, flame.radius + 3, 0, Math.PI * 2);
+            context.fill();
+            context.fillStyle = "#ffad1f";
+            context.beginPath();
+            context.arc(flame.x, flame.y, flame.radius, 0, Math.PI * 2);
+            context.fill();
+            context.fillStyle = "#fff06a";
+            context.beginPath();
+            context.arc(
+              flame.x - Math.cos(flickerAngle) * 2,
+              flame.y - Math.sin(flickerAngle) * 2,
+              Math.max(3, flame.radius * 0.48),
+              0,
+              Math.PI * 2,
+            );
+            context.fill();
+          }
+          context.fillStyle = "#555b60";
+          context.beginPath();
+          context.arc(
+            fireBar.centerX,
+            fireBar.centerY,
+            FIRE_BAR_CENTER_RADIUS + 3,
+            0,
+            Math.PI * 2,
+          );
+          context.fill();
+          context.fillStyle = "#b8c0c7";
+          context.beginPath();
+          context.arc(
+            fireBar.centerX,
+            fireBar.centerY,
+            FIRE_BAR_CENTER_RADIUS,
+            0,
+            Math.PI * 2,
+          );
+          context.fill();
+          context.fillStyle = "#4a5055";
+          context.beginPath();
+          context.arc(fireBar.centerX, fireBar.centerY, 3, 0, Math.PI * 2);
+          context.fill();
+          context.restore();
+        }
       }
       function drawPlayer() {
         context.save();
@@ -3789,6 +3993,7 @@
         drawCoins();
         drawItems();
         drawEnemies();
+        drawFireBars();
         drawPlayer();
         drawParticles();
         context.restore();
@@ -3809,6 +4014,7 @@
         }
         updateMovingPlatforms(deltaTime);
         updateSprings(deltaTime);
+        updateFireBars(deltaTime);
         updatePlayer(deltaTime);
         updateEnemies(deltaTime);
         updateItems(deltaTime);
