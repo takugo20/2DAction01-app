@@ -380,9 +380,13 @@
           <div id="message-buttons">
             <button id="next-stage-button" type="button">次のステージ</button>
 
-            <button id="message-restart-button" type="button">もう一度遊ぶ</button>
+            <button id="message-restart-button" type="button">
+              もう一度遊ぶ
+            </button>
 
-            <button id="message-stage-select-button" type="button">ステージ選択</button>
+            <button id="message-stage-select-button" type="button">
+              ステージ選択
+            </button>
           </div>
         </div>
       </div>
@@ -417,8 +421,12 @@
       const messageOverlay = document.getElementById("message-overlay");
       const messageTitle = document.getElementById("message-title");
       const messageResult = document.getElementById("message-result");
-      const messageRestartButton = document.getElementById("message-restart-button");
-      const messageStageSelectButton = document.getElementById("message-stage-select-button");
+      const messageRestartButton = document.getElementById(
+        "message-restart-button",
+      );
+      const messageStageSelectButton = document.getElementById(
+        "message-stage-select-button",
+      );
       const nextStageButton = document.getElementById("next-stage-button");
       const stageSelectScreen = document.getElementById("stage-select-screen");
       const stageButtonList = document.getElementById("stage-button-list");
@@ -426,7 +434,9 @@
       const rightButton = document.getElementById("right-button");
       const jumpButton = document.getElementById("jump-button");
       const enterButton = document.getElementById("enter-button");
-      const doorTransitionOverlay = document.getElementById("door-transition-overlay");
+      const doorTransitionOverlay = document.getElementById(
+        "door-transition-overlay",
+      );
       const INITIAL_LIVES = 5;
       const COINS_PER_EXTRA_LIFE = 100;
       const TILE_SIZE = 48;
@@ -477,6 +487,7 @@
         CAUTIOUS: "cautious",
         JUMPER: "jumper",
         FLYER: "flyer",
+        VERTICAL_FLYER: "verticalFlyer",
         CHARGER: "charger",
         MID_BOSS: "midBoss",
         BOSS: "boss",
@@ -522,6 +533,15 @@
           verticalSpeed: 2.4,
           color: "#3d87d8",
           faceColor: "#cce8ff",
+        },
+        [ENEMY_TYPES.VERTICAL_FLYER]: {
+          width: 38,
+          height: 28,
+          speed: 82,
+          maximumHealth: 1,
+          verticalRange: 170,
+          color: "#8d55cf",
+          faceColor: "#eadcff",
         },
         [ENEMY_TYPES.CHARGER]: {
           width: 38,
@@ -600,7 +620,8 @@
       const CHECKPOINT_HEIGHT = 58;
       const CHECKPOINT_FLAG_WIDTH = 24;
       const CHECKPOINT_FLAG_HEIGHT = 16;
-      const FIRE_BAR_FLAME_COUNT = 4;
+      const FIRE_BAR_SHORT_FLAME_COUNT = 4;
+      const FIRE_BAR_LONG_FLAME_COUNT = 7;
       const FIRE_BAR_FIRST_FLAME_DISTANCE = 40;
       const FIRE_BAR_FLAME_SPACING = 24;
       const FIRE_BAR_FLAME_RADIUS = 10;
@@ -616,19 +637,19 @@
       ステージ記号:
         . 空間 / P 開始 / C コイン / G ゴール
         # 地面 / B 通常 / H 叩ける / R 壊せる / Q コイン / I アイテム / U 使用済み / Z トゲブロック
-        W 通常敵 / A 穴回避 / J ジャンプ / F 飛行 / D 突進 / N 中ボス / X ボス
+        W 通常敵 / A 穴回避 / J ジャンプ / F 水平飛行 / ^ 垂直飛行 / D 突進 / N 中ボス / X ボス
         M 横足場 / V 縦足場 / L 落ちる床 / T トゲ / S バネ / K チェックポイント
-        Y 時計回りに回転するファイヤーバー / ~ マグマ
-        a～z 同じ文字同士を結ぶドア
+        Y 短い時計回り / < 短い反時計回り / ] 長い時計回り / [ 長い反時計回りのファイヤーバー
+        ~ マグマ / a～z 同じ文字同士を結ぶドア
         1 シールド / 2 無敵 / 3 ジャンプ強化 / 4 残機アップ
       */
       const STAGES = [
         {
-         id: 1,
-         name: "ステージ1",
-         description: "難易度：★⭐︎⭐︎⭐︎⭐︎",
-         background: "grassland",
-         map: [
+          id: 1,
+          name: "ステージ1",
+          description: "難易度：★⭐︎⭐︎⭐︎⭐︎",
+          background: "grassland",
+          map: [
             "............................................................................................................................",
             "............................................................................................................................",
             "............................................................................................................................",
@@ -880,7 +901,10 @@
           saveData.bestScores[stageKey] = score;
         }
         const previousBestMisses = saveData.bestMisses[stageKey];
-        if (previousBestMisses === undefined || missCount < previousBestMisses) {
+        if (
+          previousBestMisses === undefined ||
+          missCount < previousBestMisses
+        ) {
           saveData.bestMisses[stageKey] = missCount;
         }
         const nextStage = STAGES[currentStageIndex + 1];
@@ -912,7 +936,8 @@
       let audioContext = null;
       function ensureAudioContext() {
         if (!audioContext) {
-          const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+          const AudioContextClass =
+            window.AudioContext || window.webkitAudioContext;
           if (AudioContextClass) {
             audioContext = new AudioContextClass();
           }
@@ -1087,7 +1112,9 @@
         return column + "," + row;
       }
       function isHittableBlockSymbol(symbol) {
-        return symbol === "H" || symbol === "R" || symbol === "Q" || symbol === "I";
+        return (
+          symbol === "H" || symbol === "R" || symbol === "Q" || symbol === "I"
+        );
       }
       function getOrCreateBlockState(column, row) {
         const key = getBlockStateKey(column, row);
@@ -1103,8 +1130,12 @@
         }
         return blockStates.get(key);
       }
-       function isEnemyStandingOnBlock(enemy, column, row) {
-        if (!enemy.alive || enemy.type === ENEMY_TYPES.FLYER) {
+      function isEnemyStandingOnBlock(enemy, column, row) {
+        if (
+          !enemy.alive ||
+          enemy.type === ENEMY_TYPES.FLYER ||
+          enemy.type === ENEMY_TYPES.VERTICAL_FLYER
+        ) {
           return false;
         }
 
@@ -1117,16 +1148,11 @@
         const enemyBottom = enemy.y + enemy.height;
 
         const horizontalOverlap =
-          enemyRight > blockLeft &&
-          enemyLeft < blockRight;
+          enemyRight > blockLeft && enemyLeft < blockRight;
 
         const closeToBlockTop =
-          enemyBottom >=
-            blockTop -
-              BLOCK_ENEMY_STANDING_TOLERANCE &&
-          enemyBottom <=
-            blockTop +
-              BLOCK_ENEMY_STANDING_TOLERANCE;
+          enemyBottom >= blockTop - BLOCK_ENEMY_STANDING_TOLERANCE &&
+          enemyBottom <= blockTop + BLOCK_ENEMY_STANDING_TOLERANCE;
 
         return horizontalOverlap && closeToBlockTop;
       }
@@ -1177,7 +1203,12 @@
         }
       }
       function hitBlock(column, row) {
-        if (row < 0 || row >= stageRows.length || column < 0 || column >= stageRows[row].length) {
+        if (
+          row < 0 ||
+          row >= stageRows.length ||
+          column < 0 ||
+          column >= stageRows[row].length
+        ) {
           return;
         }
         const symbol = stageRows[row][column];
@@ -1222,7 +1253,12 @@
             continue;
           }
           const { column, row } = blockState;
-          if (row < 0 || row >= stageRows.length || column < 0 || column >= stageRows[row].length) {
+          if (
+            row < 0 ||
+            row >= stageRows.length ||
+            column < 0 ||
+            column >= stageRows[row].length
+          ) {
             blockStates.delete(key);
             continue;
           }
@@ -1261,6 +1297,8 @@
             return ENEMY_TYPES.JUMPER;
           case "F":
             return ENEMY_TYPES.FLYER;
+          case "^":
+            return ENEMY_TYPES.VERTICAL_FLYER;
           case "D":
             return ENEMY_TYPES.CHARGER;
           case "N":
@@ -1284,10 +1322,12 @@
         const width = definition.width || ENEMY_WIDTH;
         const height = definition.height || ENEMY_HEIGHT;
         const startX = tileX + (TILE_SIZE - width) / 2;
-        const startY =
-          enemyType === ENEMY_TYPES.FLYER
-            ? tileY + (TILE_SIZE - height) / 2
-            : tileY + TILE_SIZE - height;
+        const isFlyingEnemy =
+          enemyType === ENEMY_TYPES.FLYER ||
+          enemyType === ENEMY_TYPES.VERTICAL_FLYER;
+        const startY = isFlyingEnemy
+          ? tileY + (TILE_SIZE - height) / 2
+          : tileY + TILE_SIZE - height;
         const enemy = {
           type: enemyType,
           x: startX,
@@ -1320,12 +1360,17 @@
           detectionHeight: definition.detectionHeight || 0,
           charging: false,
           horizontalRange: definition.horizontalRange || 0,
+          horizontalSpeed: definition.horizontalSpeed || 0,
           verticalRange: definition.verticalRange || 0,
           verticalSpeed: definition.verticalSpeed || 0,
+          verticalDirection: Math.random() < 0.5 ? -1 : 1,
           flightTime: Math.random() * Math.PI * 2,
         };
         if (enemy.jumpPower > 0) {
-          enemy.jumpTimer = randomRange(enemy.minimumJumpInterval, enemy.maximumJumpInterval);
+          enemy.jumpTimer = randomRange(
+            enemy.minimumJumpInterval,
+            enemy.maximumJumpInterval,
+          );
         }
         return enemy;
       }
@@ -1427,52 +1472,40 @@
         });
       }
       function getMagmaTileKey(column, row) {
-  return column + "," + row;
-}
+        return column + "," + row;
+      }
 
-function createMagma(column, row) {
-  const x = column * TILE_SIZE;
-  const y = row * TILE_SIZE;
+      function createMagma(column, row) {
+        const x = column * TILE_SIZE;
+        const y = row * TILE_SIZE;
 
-  magmaTiles.push({
-    column,
-    row,
-    x,
-    y,
-    width: TILE_SIZE,
-    height: TILE_SIZE,
-  });
+        magmaTiles.push({
+          column,
+          row,
+          x,
+          y,
+          width: TILE_SIZE,
+          height: TILE_SIZE,
+        });
 
-  magmaTileKeys.add(
-    getMagmaTileKey(column, row),
-  );
-}
+        magmaTileKeys.add(getMagmaTileKey(column, row));
+      }
 
-function hasMagmaAt(column, row) {
-  return magmaTileKeys.has(
-    getMagmaTileKey(column, row),
-  );
-}
+      function hasMagmaAt(column, row) {
+        return magmaTileKeys.has(getMagmaTileKey(column, row));
+      }
 
-function getMagmaCollisionRectangle(magma) {
-  return {
-    x:
-      magma.x +
-      MAGMA_COLLISION_MARGIN_X,
+      function getMagmaCollisionRectangle(magma) {
+        return {
+          x: magma.x + MAGMA_COLLISION_MARGIN_X,
 
-    y:
-      magma.y +
-      MAGMA_COLLISION_MARGIN_TOP,
+          y: magma.y + MAGMA_COLLISION_MARGIN_TOP,
 
-    width:
-      magma.width -
-      MAGMA_COLLISION_MARGIN_X * 2,
+          width: magma.width - MAGMA_COLLISION_MARGIN_X * 2,
 
-    height:
-      magma.height -
-      MAGMA_COLLISION_MARGIN_TOP,
-  };
-}
+          height: magma.height - MAGMA_COLLISION_MARGIN_TOP,
+        };
+      }
       function createSpring(tileX, tileY) {
         springs.push({
           x: tileX,
@@ -1494,26 +1527,63 @@ function getMagmaCollisionRectangle(magma) {
           respawnY: tileY + TILE_SIZE - PLAYER_HEIGHT - 2,
         });
       }
-      function createFireBar(tileX, tileY) {
+      function getFireBarDefinition(symbol) {
+        switch (symbol) {
+          case "Y":
+            return {
+              flameCount: FIRE_BAR_SHORT_FLAME_COUNT,
+              rotationDirection: 1,
+            };
+          case "<":
+            return {
+              flameCount: FIRE_BAR_SHORT_FLAME_COUNT,
+              rotationDirection: -1,
+            };
+          case "]":
+            return {
+              flameCount: FIRE_BAR_LONG_FLAME_COUNT,
+              rotationDirection: 1,
+            };
+          case "[":
+            return {
+              flameCount: FIRE_BAR_LONG_FLAME_COUNT,
+              rotationDirection: -1,
+            };
+          default:
+            return null;
+        }
+      }
+      function isFireBarSymbol(symbol) {
+        return getFireBarDefinition(symbol) !== null;
+      }
+      function createFireBar(symbol, tileX, tileY) {
+        const definition = getFireBarDefinition(symbol);
+        if (!definition) {
+          return false;
+        }
         const maximumDistance =
           FIRE_BAR_FIRST_FLAME_DISTANCE +
-          (FIRE_BAR_FLAME_COUNT - 1) * FIRE_BAR_FLAME_SPACING +
+          (definition.flameCount - 1) * FIRE_BAR_FLAME_SPACING +
           FIRE_BAR_FLAME_RADIUS;
         fireBars.push({
           id: fireBars.length,
+          symbol,
           centerX: tileX + TILE_SIZE / 2,
           centerY: tileY + TILE_SIZE / 2,
           angle: 0,
+          rotationDirection: definition.rotationDirection,
+          flameCount: definition.flameCount,
           animationTime: Math.random() * Math.PI * 2,
           x: tileX + TILE_SIZE / 2 - maximumDistance,
           y: tileY + TILE_SIZE / 2 - maximumDistance,
           width: maximumDistance * 2,
           height: maximumDistance * 2,
         });
+        return true;
       }
       function getFireBarFlames(fireBar) {
         const flames = [];
-        for (let index = 0; index < FIRE_BAR_FLAME_COUNT; index += 1) {
+        for (let index = 0; index < fireBar.flameCount; index += 1) {
           const distance =
             FIRE_BAR_FIRST_FLAME_DISTANCE + index * FIRE_BAR_FLAME_SPACING;
           const pulse = Math.sin(fireBar.animationTime * 7 + index * 1.8) * 1.4;
@@ -1551,7 +1621,9 @@ function getMagmaCollisionRectangle(magma) {
         const stageName = STAGES[currentStageIndex]?.name ?? "現在のステージ";
         for (const [symbol, group] of doorGroups) {
           if (group.length !== 2) {
-            console.warn(`${stageName}: ドア「${symbol}」は2個配置してください。現在${group.length}個です。`);
+            console.warn(
+              `${stageName}: ドア「${symbol}」は2個配置してください。現在${group.length}個です。`,
+            );
             continue;
           }
           group[0].enabled = true;
@@ -1600,24 +1672,36 @@ function getMagmaCollisionRectangle(magma) {
           return;
         }
         if (symbol === "M") {
-          createMovingPlatform("horizontal", tileX, tileY + TILE_SIZE - MOVING_PLATFORM_HEIGHT);
+          createMovingPlatform(
+            "horizontal",
+            tileX,
+            tileY + TILE_SIZE - MOVING_PLATFORM_HEIGHT,
+          );
           stageRows[row][column] = ".";
           return;
         }
         if (symbol === "L") {
-          createMovingPlatform("falling", tileX, tileY + TILE_SIZE - MOVING_PLATFORM_HEIGHT);
+          createMovingPlatform(
+            "falling",
+            tileX,
+            tileY + TILE_SIZE - MOVING_PLATFORM_HEIGHT,
+          );
           stageRows[row][column] = ".";
           return;
         }
         if (symbol === "V") {
-          createMovingPlatform("vertical", tileX, tileY + TILE_SIZE - MOVING_PLATFORM_HEIGHT);
+          createMovingPlatform(
+            "vertical",
+            tileX,
+            tileY + TILE_SIZE - MOVING_PLATFORM_HEIGHT,
+          );
           stageRows[row][column] = ".";
           return;
         }
         if (symbol === "~") {
-        createMagma(column, row);
-        stageRows[row][column] = ".";
-        return;
+          createMagma(column, row);
+          stageRows[row][column] = ".";
+          return;
         }
         if (symbol === "T") {
           createSpike(tileX, tileY);
@@ -1634,8 +1718,8 @@ function getMagmaCollisionRectangle(magma) {
           stageRows[row][column] = ".";
           return;
         }
-        if (symbol === "Y") {
-          createFireBar(tileX, tileY);
+        if (isFireBarSymbol(symbol)) {
+          createFireBar(symbol, tileX, tileY);
           stageRows[row][column] = ".";
           return;
         }
@@ -1646,9 +1730,14 @@ function getMagmaCollisionRectangle(magma) {
         }
         const itemType = getItemTypeFromSymbol(symbol);
         if (itemType) {
-          createItem(itemType, tileX + TILE_SIZE / 2, tileY + TILE_SIZE - ITEM_HEIGHT / 2, {
-            direction: Math.random() < 0.5 ? -1 : 1,
-          });
+          createItem(
+            itemType,
+            tileX + TILE_SIZE / 2,
+            tileY + TILE_SIZE - ITEM_HEIGHT / 2,
+            {
+              direction: Math.random() < 0.5 ? -1 : 1,
+            },
+          );
           stageRows[row][column] = ".";
           return;
         }
@@ -1730,7 +1819,12 @@ function getMagmaCollisionRectangle(magma) {
         };
         for (let row = 0; row < stageRows.length; row += 1) {
           for (let column = 0; column < stageRows[row].length; column += 1) {
-            parseStageSymbol(stageRows[row][column], column, row, startPosition);
+            parseStageSymbol(
+              stageRows[row][column],
+              column,
+              row,
+              startPosition,
+            );
           }
         }
         prepareDoorPairs();
@@ -1785,7 +1879,9 @@ function getMagmaCollisionRectangle(magma) {
         jumpHoldTimer = 0;
       }
       function respawnAfterMiss() {
-        const preservedCheckpointId = activeCheckpoint ? activeCheckpoint.id : null;
+        const preservedCheckpointId = activeCheckpoint
+          ? activeCheckpoint.id
+          : null;
         const preservedRespawnPosition = respawnPosition
           ? {
               x: respawnPosition.x,
@@ -1802,10 +1898,16 @@ function getMagmaCollisionRectangle(magma) {
           cameraY = getMinimumCameraY();
           return;
         }
-        const desiredCameraX = player.x + player.width / 2 - viewportWidth * 0.42;
-        const desiredCameraY = player.y + player.height / 2 - viewportHeight * 0.58;
+        const desiredCameraX =
+          player.x + player.width / 2 - viewportWidth * 0.42;
+        const desiredCameraY =
+          player.y + player.height / 2 - viewportHeight * 0.58;
         cameraX = clamp(desiredCameraX, 0, getMaximumCameraX());
-        cameraY = clamp(desiredCameraY, getMinimumCameraY(), getMaximumCameraY());
+        cameraY = clamp(
+          desiredCameraY,
+          getMinimumCameraY(),
+          getMaximumCameraY(),
+        );
       }
       function getDoorInteractionDistance(door) {
         const playerCenterX = player.x + player.width / 2;
@@ -1930,11 +2032,8 @@ function getMagmaCollisionRectangle(magma) {
             doorTransition.alpha = 1;
           }
         } else {
-          doorTransition.alpha = 1 - clamp(
-            doorTransition.timer / DOOR_FADE_IN_DURATION,
-            0,
-            1,
-          );
+          doorTransition.alpha =
+            1 - clamp(doorTransition.timer / DOOR_FADE_IN_DURATION, 0, 1);
           if (doorTransition.timer >= DOOR_FADE_IN_DURATION) {
             doorTransition.active = false;
             doorTransition.phase = "idle";
@@ -2086,7 +2185,12 @@ function getMagmaCollisionRectangle(magma) {
         lastTime = performance.now();
       }
       function getTileSymbol(column, row) {
-        if (row < 0 || row >= stageRows.length || column < 0 || column >= stageRows[row].length) {
+        if (
+          row < 0 ||
+          row >= stageRows.length ||
+          column < 0 ||
+          column >= stageRows[row].length
+        ) {
           return null;
         }
         return stageRows[row][column];
@@ -2111,11 +2215,15 @@ function getMagmaCollisionRectangle(magma) {
           if (!platform.active) {
             continue;
           }
-          const horizontalOverlap = rightX > platform.x && leftX < platform.x + platform.width;
+          const horizontalOverlap =
+            rightX > platform.x && leftX < platform.x + platform.width;
           if (!horizontalOverlap) {
             continue;
           }
-          const maximumLandingDistance = Math.max(8, Math.abs(entity.velocityY) / 30);
+          const maximumLandingDistance = Math.max(
+            8,
+            Math.abs(entity.velocityY) / 30,
+          );
           const closeToTop =
             entityBottom >= platform.y - maximumLandingDistance &&
             entityBottom <= platform.y + platform.height / 2;
@@ -2142,12 +2250,19 @@ function getMagmaCollisionRectangle(magma) {
         );
       }
       function circleRectangleOverlap(circle, rectangle) {
-        const nearestX = Math.max(rectangle.x, Math.min(circle.x, rectangle.x + rectangle.width));
-        const nearestY = Math.max(rectangle.y, Math.min(circle.y, rectangle.y + rectangle.height));
+        const nearestX = Math.max(
+          rectangle.x,
+          Math.min(circle.x, rectangle.x + rectangle.width),
+        );
+        const nearestY = Math.max(
+          rectangle.y,
+          Math.min(circle.y, rectangle.y + rectangle.height),
+        );
         const differenceX = circle.x - nearestX;
         const differenceY = circle.y - nearestY;
         return (
-          differenceX * differenceX + differenceY * differenceY < circle.radius * circle.radius
+          differenceX * differenceX + differenceY * differenceY <
+          circle.radius * circle.radius
         );
       }
       function moveEntityHorizontally(entity, deltaX) {
@@ -2156,9 +2271,13 @@ function getMagmaCollisionRectangle(magma) {
         }
         entity.x += deltaX;
         const leftColumn = Math.floor(entity.x / TILE_SIZE);
-        const rightColumn = Math.floor((entity.x + entity.width - 1) / TILE_SIZE);
+        const rightColumn = Math.floor(
+          (entity.x + entity.width - 1) / TILE_SIZE,
+        );
         const topRow = Math.floor(entity.y / TILE_SIZE);
-        const bottomRow = Math.floor((entity.y + entity.height - 1) / TILE_SIZE);
+        const bottomRow = Math.floor(
+          (entity.y + entity.height - 1) / TILE_SIZE,
+        );
         const collisionColumn = deltaX > 0 ? rightColumn : leftColumn;
         let hitSolid = false;
         let hitSpikeBlock = false;
@@ -2189,9 +2308,13 @@ function getMagmaCollisionRectangle(magma) {
         entity.y += deltaY;
         entity.grounded = false;
         const leftColumn = Math.floor(entity.x / TILE_SIZE);
-        const rightColumn = Math.floor((entity.x + entity.width - 1) / TILE_SIZE);
+        const rightColumn = Math.floor(
+          (entity.x + entity.width - 1) / TILE_SIZE,
+        );
         const topRow = Math.floor(entity.y / TILE_SIZE);
-        const bottomRow = Math.floor((entity.y + entity.height - 1) / TILE_SIZE);
+        const bottomRow = Math.floor(
+          (entity.y + entity.height - 1) / TILE_SIZE,
+        );
         const collisionRow = deltaY > 0 ? bottomRow : topRow;
         const collidingColumns = [];
         for (let column = leftColumn; column <= rightColumn; column += 1) {
@@ -2208,7 +2331,9 @@ function getMagmaCollisionRectangle(magma) {
           entity.grounded = true;
           if (
             entity === player &&
-            collidingColumns.some((column) => isSpikeBlockTile(column, collisionRow))
+            collidingColumns.some((column) =>
+              isSpikeBlockTile(column, collisionRow),
+            )
           ) {
             triggerMiss();
           }
@@ -2223,7 +2348,9 @@ function getMagmaCollisionRectangle(magma) {
           if (hitSpikeBlock) {
             triggerMiss();
           } else {
-            const centerColumn = Math.floor((entity.x + entity.width / 2) / TILE_SIZE);
+            const centerColumn = Math.floor(
+              (entity.x + entity.width / 2) / TILE_SIZE,
+            );
             const hitColumn = collidingColumns.includes(centerColumn)
               ? centerColumn
               : collidingColumns[0];
@@ -2265,9 +2392,15 @@ function getMagmaCollisionRectangle(magma) {
           return;
         }
         if (jumpHoldTimer < SMALL_JUMP_RELEASE_TIME) {
-          player.velocityY = Math.max(player.velocityY, -SMALL_JUMP_RELEASE_SPEED);
+          player.velocityY = Math.max(
+            player.velocityY,
+            -SMALL_JUMP_RELEASE_SPEED,
+          );
         } else if (jumpHoldTimer < LARGE_JUMP_HOLD_TIME) {
-          player.velocityY = Math.max(player.velocityY, -MEDIUM_JUMP_RELEASE_SPEED);
+          player.velocityY = Math.max(
+            player.velocityY,
+            -MEDIUM_JUMP_RELEASE_SPEED,
+          );
         }
         variableJumpActive = false;
       }
@@ -2277,52 +2410,50 @@ function getMagmaCollisionRectangle(magma) {
         }
         player.previousY = player.y;
         if (player.invincibleTimer > 0) {
-          player.invincibleTimer = Math.max(0, player.invincibleTimer - deltaTime);
+          player.invincibleTimer = Math.max(
+            0,
+            player.invincibleTimer - deltaTime,
+          );
         }
         if (player.damageInvincibleTimer > 0) {
-          player.damageInvincibleTimer = Math.max(0, player.damageInvincibleTimer - deltaTime);
+          player.damageInvincibleTimer = Math.max(
+            0,
+            player.damageInvincibleTimer - deltaTime,
+          );
         }
         if (player.jumpBoostTimer > 0) {
-          player.jumpBoostTimer = Math.max(0, player.jumpBoostTimer - deltaTime);
+          player.jumpBoostTimer = Math.max(
+            0,
+            player.jumpBoostTimer - deltaTime,
+          );
         }
         if (playerDisabled) {
-  if (player.missCause === "magma") {
-    player.velocityX = 0;
-    player.velocityY =
-      MAGMA_SINK_SPEED;
+          if (player.missCause === "magma") {
+            player.velocityX = 0;
+            player.velocityY = MAGMA_SINK_SPEED;
 
-    player.y +=
-      player.velocityY *
-      deltaTime;
-  } else {
-    player.velocityY =
-      Math.min(
-        player.velocityY +
-          GRAVITY * deltaTime,
-        MAX_FALL_SPEED,
-      );
+            player.y += player.velocityY * deltaTime;
+          } else {
+            player.velocityY = Math.min(
+              player.velocityY + GRAVITY * deltaTime,
+              MAX_FALL_SPEED,
+            );
 
-    player.x +=
-      player.velocityX *
-      deltaTime;
+            player.x += player.velocityX * deltaTime;
 
-    player.y +=
-      player.velocityY *
-      deltaTime;
-  }
+            player.y += player.velocityY * deltaTime;
+          }
 
-  player.animationTime +=
-    deltaTime;
+          player.animationTime += deltaTime;
 
-  missTimer -=
-    deltaTime;
+          missTimer -= deltaTime;
 
-  if (missTimer <= 0) {
-    restartAfterMiss();
-  }
+          if (missTimer <= 0) {
+            restartAfterMiss();
+          }
 
-  return;
-}
+          return;
+        }
         let horizontalInput = 0;
         if (input.left) {
           horizontalInput -= 1;
@@ -2336,10 +2467,20 @@ function getMagmaCollisionRectangle(magma) {
         if (horizontalInput !== 0) {
           player.facing = horizontalInput;
           const targetVelocityX = horizontalInput * maximumSpeed;
-          const acceleration = player.grounded ? GROUND_ACCELERATION : AIR_ACCELERATION;
-          player.velocityX = approach(player.velocityX, targetVelocityX, acceleration * deltaTime);
+          const acceleration = player.grounded
+            ? GROUND_ACCELERATION
+            : AIR_ACCELERATION;
+          player.velocityX = approach(
+            player.velocityX,
+            targetVelocityX,
+            acceleration * deltaTime,
+          );
         } else if (player.grounded) {
-          player.velocityX = approach(player.velocityX, 0, GROUND_DECELERATION * deltaTime);
+          player.velocityX = approach(
+            player.velocityX,
+            0,
+            GROUND_DECELERATION * deltaTime,
+          );
         }
         if (input.jumpPressed) {
           jumpBufferTimer = JUMP_BUFFER_TIME;
@@ -2357,13 +2498,19 @@ function getMagmaCollisionRectangle(magma) {
           startPlayerJump();
         }
         if (variableJumpActive && input.jump) {
-          jumpHoldTimer = Math.min(jumpHoldTimer + deltaTime, LARGE_JUMP_HOLD_TIME);
+          jumpHoldTimer = Math.min(
+            jumpHoldTimer + deltaTime,
+            LARGE_JUMP_HOLD_TIME,
+          );
         }
         if (input.jumpReleased) {
           finishVariableJump();
           input.jumpReleased = false;
         }
-        player.velocityY = Math.min(player.velocityY + GRAVITY * deltaTime, MAX_FALL_SPEED);
+        player.velocityY = Math.min(
+          player.velocityY + GRAVITY * deltaTime,
+          MAX_FALL_SPEED,
+        );
         moveEntityHorizontally(player, player.velocityX * deltaTime);
         moveEntityVertically(player, player.velocityY * deltaTime);
         updatePlayerSpringCollision();
@@ -2390,7 +2537,11 @@ function getMagmaCollisionRectangle(magma) {
           player.velocityX = 0;
         }
         player.animationTime += deltaTime;
-        if (player.dashing && player.grounded && Math.abs(player.velocityX) > WALK_MAX_SPEED) {
+        if (
+          player.dashing &&
+          player.grounded &&
+          Math.abs(player.velocityX) > WALK_MAX_SPEED
+        ) {
           player.dustTimer -= deltaTime;
           if (player.dustTimer <= 0) {
             player.dustTimer = 0.08;
@@ -2455,11 +2606,13 @@ function getMagmaCollisionRectangle(magma) {
         const playerLeft = player.x + 3;
         const playerRight = player.x + player.width - 3;
         for (const spring of springs) {
-          const horizontalOverlap = playerRight > spring.x && playerLeft < spring.x + spring.width;
+          const horizontalOverlap =
+            playerRight > spring.x && playerLeft < spring.x + spring.width;
           if (!horizontalOverlap) {
             continue;
           }
-          const crossedSpringTop = previousBottom <= spring.y + 6 && currentBottom >= spring.y;
+          const crossedSpringTop =
+            previousBottom <= spring.y + 6 && currentBottom >= spring.y;
           if (!crossedSpringTop) {
             continue;
           }
@@ -2478,7 +2631,8 @@ function getMagmaCollisionRectangle(magma) {
         return false;
       }
       function hasGroundInFront(enemy) {
-        const footX = enemy.direction > 0 ? enemy.x + enemy.width + 3 : enemy.x - 3;
+        const footX =
+          enemy.direction > 0 ? enemy.x + enemy.width + 3 : enemy.x - 3;
         const footY = enemy.y + enemy.height + 4;
         const frontColumn = Math.floor(footX / TILE_SIZE);
         const groundRow = Math.floor(footY / TILE_SIZE);
@@ -2502,14 +2656,20 @@ function getMagmaCollisionRectangle(magma) {
       function updateEnemyHorizontalMovement(enemy, deltaTime) {
         turnEnemyAwayFromHole(enemy);
         enemy.velocityX = enemy.direction * enemy.speed;
-        const hitWall = moveEntityHorizontally(enemy, enemy.velocityX * deltaTime);
+        const hitWall = moveEntityHorizontally(
+          enemy,
+          enemy.velocityX * deltaTime,
+        );
         if (hitWall) {
           enemy.direction *= -1;
           enemy.velocityX = enemy.direction * enemy.speed;
         }
       }
       function updateEnemyGravity(enemy, deltaTime) {
-        enemy.velocityY = Math.min(enemy.velocityY + GRAVITY * deltaTime, MAX_FALL_SPEED);
+        enemy.velocityY = Math.min(
+          enemy.velocityY + GRAVITY * deltaTime,
+          MAX_FALL_SPEED,
+        );
         moveEntityVertically(enemy, enemy.velocityY * deltaTime);
       }
       function updateWalkerEnemy(enemy, deltaTime) {
@@ -2528,7 +2688,10 @@ function getMagmaCollisionRectangle(magma) {
           if (enemy.jumpTimer <= 0) {
             enemy.velocityY = -enemy.jumpPower;
             enemy.grounded = false;
-            enemy.jumpTimer = randomRange(enemy.minimumJumpInterval, enemy.maximumJumpInterval);
+            enemy.jumpTimer = randomRange(
+              enemy.minimumJumpInterval,
+              enemy.maximumJumpInterval,
+            );
           }
         }
       }
@@ -2543,13 +2706,33 @@ function getMagmaCollisionRectangle(magma) {
           enemy.direction = 1;
         }
         enemy.y =
-          enemy.startY + Math.sin(enemy.flightTime * enemy.verticalSpeed) * enemy.verticalRange;
+          enemy.startY +
+          Math.sin(enemy.flightTime * enemy.verticalSpeed) *
+            enemy.verticalRange;
         enemy.velocityX = enemy.direction * enemy.speed;
         enemy.velocityY =
           Math.cos(enemy.flightTime * enemy.verticalSpeed) *
           enemy.verticalRange *
           enemy.verticalSpeed;
         enemy.grounded = false;
+      }
+      function updateVerticalFlyerEnemy(enemy, deltaTime) {
+        enemy.flightTime += deltaTime;
+        enemy.x = enemy.startX;
+        enemy.y += enemy.verticalDirection * enemy.speed * deltaTime;
+        const minimumY = enemy.startY - enemy.verticalRange;
+        const maximumY = enemy.startY + enemy.verticalRange;
+        if (enemy.y >= maximumY) {
+          enemy.y = maximumY;
+          enemy.verticalDirection = -1;
+        } else if (enemy.y <= minimumY) {
+          enemy.y = minimumY;
+          enemy.verticalDirection = 1;
+        }
+        enemy.velocityX = 0;
+        enemy.velocityY = enemy.verticalDirection * enemy.speed;
+        enemy.grounded = false;
+        enemy.standingPlatform = null;
       }
       function canEnemyDetectPlayer(enemy) {
         const enemyCenterX = enemy.x + enemy.width / 2;
@@ -2559,7 +2742,8 @@ function getMagmaCollisionRectangle(magma) {
         const horizontalDistance = Math.abs(playerCenterX - enemyCenterX);
         const verticalDistance = Math.abs(playerCenterY - enemyCenterY);
         return (
-          horizontalDistance <= enemy.detectionRange && verticalDistance <= enemy.detectionHeight
+          horizontalDistance <= enemy.detectionRange &&
+          verticalDistance <= enemy.detectionHeight
         );
       }
       function getDirectionTowardPlayer(enemy) {
@@ -2587,7 +2771,10 @@ function getMagmaCollisionRectangle(magma) {
           );
         }
         turnEnemyAwayFromHole(enemy);
-        const hitWall = moveEntityHorizontally(enemy, enemy.velocityX * deltaTime);
+        const hitWall = moveEntityHorizontally(
+          enemy,
+          enemy.velocityX * deltaTime,
+        );
         if (hitWall) {
           enemy.direction *= -1;
           enemy.charging = false;
@@ -2602,7 +2789,10 @@ function getMagmaCollisionRectangle(magma) {
           if (enemy.jumpTimer <= 0) {
             enemy.velocityY = -enemy.jumpPower;
             enemy.grounded = false;
-            enemy.jumpTimer = randomRange(enemy.minimumJumpInterval, enemy.maximumJumpInterval);
+            enemy.jumpTimer = randomRange(
+              enemy.minimumJumpInterval,
+              enemy.maximumJumpInterval,
+            );
           }
         }
       }
@@ -2624,7 +2814,10 @@ function getMagmaCollisionRectangle(magma) {
           );
         }
         turnEnemyAwayFromHole(enemy);
-        const hitWall = moveEntityHorizontally(enemy, enemy.velocityX * deltaTime);
+        const hitWall = moveEntityHorizontally(
+          enemy,
+          enemy.velocityX * deltaTime,
+        );
         if (hitWall) {
           enemy.direction *= -1;
         }
@@ -2634,7 +2827,10 @@ function getMagmaCollisionRectangle(magma) {
           if (enemy.jumpTimer <= 0) {
             enemy.velocityY = -enemy.jumpPower;
             enemy.grounded = false;
-            enemy.jumpTimer = randomRange(enemy.minimumJumpInterval, enemy.maximumJumpInterval);
+            enemy.jumpTimer = randomRange(
+              enemy.minimumJumpInterval,
+              enemy.maximumJumpInterval,
+            );
           }
         }
       }
@@ -2651,6 +2847,9 @@ function getMagmaCollisionRectangle(magma) {
             break;
           case ENEMY_TYPES.FLYER:
             updateFlyerEnemy(enemy, deltaTime);
+            break;
+          case ENEMY_TYPES.VERTICAL_FLYER:
+            updateVerticalFlyerEnemy(enemy, deltaTime);
             break;
           case ENEMY_TYPES.CHARGER:
             updateChargerEnemy(enemy, deltaTime);
@@ -2692,7 +2891,10 @@ function getMagmaCollisionRectangle(magma) {
           if (!enemy.alive) {
             enemy.squashTimer -= deltaTime;
             if (enemy.defeatAnimation === "blockBump") {
-              enemy.velocityY = Math.min(enemy.velocityY + GRAVITY * deltaTime, MAX_FALL_SPEED);
+              enemy.velocityY = Math.min(
+                enemy.velocityY + GRAVITY * deltaTime,
+                MAX_FALL_SPEED,
+              );
               enemy.x += enemy.velocityX * deltaTime;
               enemy.y += enemy.velocityY * deltaTime;
               enemy.velocityX = approach(enemy.velocityX, 0, 260 * deltaTime);
@@ -2700,14 +2902,22 @@ function getMagmaCollisionRectangle(magma) {
             continue;
           }
           updateEnemy(enemy, deltaTime);
-          enemy.standingPlatform = getStandingPlatform(enemy);
-          if (enemy.standingPlatform) {
-            const platform = enemy.standingPlatform;
-            enemy.x += platform.x - platform.previousX;
-            enemy.y = platform.y - enemy.height;
-            enemy.grounded = true;
-            enemy.velocityY = 0;
-            activateFallingPlatform(platform);
+          const isFlyingEnemy =
+            enemy.type === ENEMY_TYPES.FLYER ||
+            enemy.type === ENEMY_TYPES.VERTICAL_FLYER;
+          if (isFlyingEnemy) {
+            enemy.standingPlatform = null;
+            enemy.grounded = false;
+          } else {
+            enemy.standingPlatform = getStandingPlatform(enemy);
+            if (enemy.standingPlatform) {
+              const platform = enemy.standingPlatform;
+              enemy.x += platform.x - platform.previousX;
+              enemy.y = platform.y - enemy.height;
+              enemy.grounded = true;
+              enemy.velocityY = 0;
+              activateFallingPlatform(platform);
+            }
           }
           if (enemy.y > stageHeight + TILE_SIZE * 3) {
             enemy.alive = false;
@@ -2726,8 +2936,10 @@ function getMagmaCollisionRectangle(magma) {
           }
           if (platform.type === "horizontal") {
             platform.x += platform.direction * platform.speed * deltaTime;
-            const minimumX = platform.startX - MOVING_PLATFORM_HORIZONTAL_DISTANCE;
-            const maximumX = platform.startX + MOVING_PLATFORM_HORIZONTAL_DISTANCE;
+            const minimumX =
+              platform.startX - MOVING_PLATFORM_HORIZONTAL_DISTANCE;
+            const maximumX =
+              platform.startX + MOVING_PLATFORM_HORIZONTAL_DISTANCE;
             if (platform.x >= maximumX) {
               platform.x = maximumX;
               platform.direction = -1;
@@ -2739,8 +2951,10 @@ function getMagmaCollisionRectangle(magma) {
           }
           if (platform.type === "vertical") {
             platform.y += platform.direction * platform.speed * deltaTime;
-            const minimumY = platform.startY - MOVING_PLATFORM_VERTICAL_DISTANCE;
-            const maximumY = platform.startY + MOVING_PLATFORM_VERTICAL_DISTANCE;
+            const minimumY =
+              platform.startY - MOVING_PLATFORM_VERTICAL_DISTANCE;
+            const maximumY =
+              platform.startY + MOVING_PLATFORM_VERTICAL_DISTANCE;
             if (platform.y >= maximumY) {
               platform.y = maximumY;
               platform.direction = -1;
@@ -2796,7 +3010,10 @@ function getMagmaCollisionRectangle(magma) {
       function updateSprings(deltaTime) {
         for (const spring of springs) {
           if (spring.compressionTimer > 0) {
-            spring.compressionTimer = Math.max(0, spring.compressionTimer - deltaTime);
+            spring.compressionTimer = Math.max(
+              0,
+              spring.compressionTimer - deltaTime,
+            );
           }
         }
       }
@@ -2806,160 +3023,105 @@ function getMagmaCollisionRectangle(magma) {
             continue;
           }
           fireBar.angle =
-            (fireBar.angle + FIRE_BAR_ROTATION_SPEED * deltaTime) % (Math.PI * 2);
+            (fireBar.angle +
+              fireBar.rotationDirection * FIRE_BAR_ROTATION_SPEED * deltaTime) %
+            (Math.PI * 2);
           fireBar.animationTime += deltaTime;
         }
       }
-      function damageEnemyFromFireBar(
-  enemy,
-  fireBar,
-) {
-  // 関数内のすべて
-}
       function updateFireBarCollisions() {
-  for (const fireBar of fireBars) {
-    if (
-      !isEntityNearCamera(
-        fireBar,
-      )
-    ) {
-      continue;
-    }
+        for (const fireBar of fireBars) {
+          if (!isEntityNearCamera(fireBar)) {
+            continue;
+          }
 
-    const flames =
-      getFireBarFlames(
-        fireBar,
-      );
+          const flames = getFireBarFlames(fireBar);
 
-    for (const flame of flames) {
-      if (
-        circleRectangleOverlap(
-          flame,
-          player,
-        )
-      ) {
-        triggerMiss();
-        return;
+          for (const flame of flames) {
+            if (circleRectangleOverlap(flame, player)) {
+              triggerMiss();
+              return;
+            }
+          }
+        }
       }
-    }
-  }
-}
       function updateMagmaPlayerCollision() {
-  for (const magma of magmaTiles) {
-    if (
-      !isEntityNearCamera(
-        magma,
-      )
-    ) {
-      continue;
-    }
+        for (const magma of magmaTiles) {
+          if (!isEntityNearCamera(magma)) {
+            continue;
+          }
 
-    const collisionRectangle =
-      getMagmaCollisionRectangle(
-        magma,
-      );
+          const collisionRectangle = getMagmaCollisionRectangle(magma);
 
-    if (
-      rectanglesOverlap(
-        player,
-        collisionRectangle,
-      )
-    ) {
-      triggerMagmaMiss();
-      return true;
-    }
-  }
+          if (rectanglesOverlap(player, collisionRectangle)) {
+            triggerMagmaMiss();
+            return true;
+          }
+        }
 
-  return false;
-}
+        return false;
+      }
 
-function updateMagmaEntityCollisions() {
-  for (const magma of magmaTiles) {
-    if (
-      !isEntityNearCamera(
-        magma,
-      )
-    ) {
-      continue;
-    }
+      function updateMagmaEntityCollisions() {
+        for (const magma of magmaTiles) {
+          if (!isEntityNearCamera(magma)) {
+            continue;
+          }
 
-    const collisionRectangle =
-      getMagmaCollisionRectangle(
-        magma,
-      );
+          const collisionRectangle = getMagmaCollisionRectangle(magma);
 
-    /*
+          /*
       通常敵・中ボス・ボスを
       すべて即座に消滅させます。
       スコアは加算しません。
     */
-    for (const enemy of enemies) {
-      if (
-        !enemy.alive ||
-        !rectanglesOverlap(
-          enemy,
-          collisionRectangle,
-        )
-      ) {
-        continue;
-      }
+          for (const enemy of enemies) {
+            if (!enemy.alive || !rectanglesOverlap(enemy, collisionRectangle)) {
+              continue;
+            }
 
-      enemy.alive = false;
-      enemy.squashTimer = 0;
-      enemy.defeatAnimation =
-        "magma";
+            enemy.alive = false;
+            enemy.squashTimer = 0;
+            enemy.defeatAnimation = "magma";
 
-      enemy.velocityX = 0;
-      enemy.velocityY = 0;
+            enemy.velocityX = 0;
+            enemy.velocityY = 0;
 
-      createMagmaBurstParticles(
-        enemy.x +
-          enemy.width / 2,
+            createMagmaBurstParticles(
+              enemy.x + enemy.width / 2,
 
-        Math.max(
-          magma.y,
-          enemy.y +
-            enemy.height,
-        ),
+              Math.max(magma.y, enemy.y + enemy.height),
 
-        7,
-      );
-    }
+              7,
+            );
+          }
 
-    /*
+          /*
       シールド・無敵・ジャンプ強化・1UPも
       マグマへ入ると消滅します。
     */
-    for (const item of items) {
-      if (
-        item.collected ||
-        !rectanglesOverlap(
-          item,
-          collisionRectangle,
-        )
-      ) {
-        continue;
+          for (const item of items) {
+            if (
+              item.collected ||
+              !rectanglesOverlap(item, collisionRectangle)
+            ) {
+              continue;
+            }
+
+            item.collected = true;
+            item.velocityX = 0;
+            item.velocityY = 0;
+
+            createMagmaBurstParticles(
+              item.x + item.width / 2,
+
+              Math.max(magma.y, item.y + item.height),
+
+              5,
+            );
+          }
+        }
       }
-
-      item.collected = true;
-      item.velocityX = 0;
-      item.velocityY = 0;
-
-      createMagmaBurstParticles(
-        item.x +
-          item.width / 2,
-
-        Math.max(
-          magma.y,
-          item.y +
-            item.height,
-        ),
-
-        5,
-      );
-    }
-  }
-}
       function updateItems(deltaTime) {
         for (const item of items) {
           if (item.collected) {
@@ -2971,7 +3133,10 @@ function updateMagmaEntityCollisions() {
           item.animationTime += deltaTime;
           if (item.emerging) {
             item.emergingTimer -= deltaTime;
-            item.velocityY = Math.min(item.velocityY + GRAVITY * 0.45 * deltaTime, MAX_FALL_SPEED);
+            item.velocityY = Math.min(
+              item.velocityY + GRAVITY * 0.45 * deltaTime,
+              MAX_FALL_SPEED,
+            );
             item.y += item.velocityY * deltaTime;
             if (item.emergingTimer <= 0) {
               item.emerging = false;
@@ -2981,12 +3146,18 @@ function updateMagmaEntityCollisions() {
             continue;
           }
           item.velocityX = item.direction * ITEM_MOVE_SPEED;
-          const hitWall = moveEntityHorizontally(item, item.velocityX * deltaTime);
+          const hitWall = moveEntityHorizontally(
+            item,
+            item.velocityX * deltaTime,
+          );
           if (hitWall) {
             item.direction *= -1;
             item.velocityX = item.direction * ITEM_MOVE_SPEED;
           }
-          item.velocityY = Math.min(item.velocityY + GRAVITY * deltaTime, MAX_FALL_SPEED);
+          item.velocityY = Math.min(
+            item.velocityY + GRAVITY * deltaTime,
+            MAX_FALL_SPEED,
+          );
           moveEntityVertically(item, item.velocityY * deltaTime);
           if (item.y >= stageHeight) {
             item.collected = true;
@@ -3056,7 +3227,8 @@ function updateMagmaEntityCollisions() {
       }
       function updateCheckpointCollisions() {
         for (const checkpoint of checkpoints) {
-          const collisionRectangle = getCheckpointCollisionRectangle(checkpoint);
+          const collisionRectangle =
+            getCheckpointCollisionRectangle(checkpoint);
           if (rectanglesOverlap(player, collisionRectangle)) {
             activateCheckpoint(checkpoint);
             return;
@@ -3064,24 +3236,20 @@ function updateMagmaEntityCollisions() {
         }
       }
       function updateObjectCollisions() {
-        if (
-  playerDisabled ||
-  gameCleared ||
-  gameOver
-) {
-  return;
-}
-updateMagmaPlayerCollision();
+        if (playerDisabled || gameCleared || gameOver) {
+          return;
+        }
+        updateMagmaPlayerCollision();
 
-if (playerDisabled) {
-  return;
-}
+        if (playerDisabled) {
+          return;
+        }
 
-updateSpikeCollisions();
+        updateSpikeCollisions();
 
-if (playerDisabled) {
-  return;
-}
+        if (playerDisabled) {
+          return;
+        }
         updateFireBarCollisions();
         if (playerDisabled) {
           return;
@@ -3129,7 +3297,8 @@ if (playerDisabled) {
           const playerBottom = player.y + player.height;
           const previousPlayerBottom = playerBottom - player.velocityY / 60;
           const isFalling = player.velocityY > 0;
-          const isAboveEnemy = previousPlayerBottom <= enemy.y + enemy.height * 0.45;
+          const isAboveEnemy =
+            previousPlayerBottom <= enemy.y + enemy.height * 0.45;
           if (isFalling && isAboveEnemy) {
             stompEnemy(enemy);
           } else if (enemy.hitInvincibleTimer <= 0) {
@@ -3187,62 +3356,51 @@ if (playerDisabled) {
         updateHud();
       }
       function triggerMagmaMiss() {
-  if (
-    playerDisabled ||
-    gameCleared ||
-    gameOver
-  ) {
-    return;
-  }
+        if (playerDisabled || gameCleared || gameOver) {
+          return;
+        }
 
-  resetAllInputs();
+        resetAllInputs();
 
-  missCount += 1;
+        missCount += 1;
 
-  lives = Math.max(
-    0,
-    lives - 1,
-  );
+        lives = Math.max(0, lives - 1);
 
-  playerDisabled = true;
-  player.missCause = "magma";
+        playerDisabled = true;
+        player.missCause = "magma";
 
-  /*
+        /*
     シールド・無敵・被ダメージ無敵を
     すべて無効化します。
   */
-  player.hasShield = false;
-  player.invincibleTimer = 0;
-  player.damageInvincibleTimer = 0;
+        player.hasShield = false;
+        player.invincibleTimer = 0;
+        player.damageInvincibleTimer = 0;
 
-  player.velocityX = 0;
-  player.velocityY =
-    MAGMA_SINK_SPEED;
+        player.velocityX = 0;
+        player.velocityY = MAGMA_SINK_SPEED;
 
-  player.grounded = false;
-  player.standingPlatform = null;
+        player.grounded = false;
+        player.standingPlatform = null;
 
-  missTimer =
-    MAGMA_MISS_DURATION;
+        missTimer = MAGMA_MISS_DURATION;
 
-  variableJumpActive = false;
-  jumpHoldTimer = 0;
-  jumpBufferTimer = 0;
-  coyoteTimer = 0;
+        variableJumpActive = false;
+        jumpHoldTimer = 0;
+        jumpBufferTimer = 0;
+        coyoteTimer = 0;
 
-  createMagmaBurstParticles(
-    player.x +
-      player.width / 2,
+        createMagmaBurstParticles(
+          player.x + player.width / 2,
 
-    player.y +
-      player.height,
+          player.y + player.height,
 
-    MAGMA_PARTICLE_COUNT,
-  );
+          MAGMA_PARTICLE_COUNT,
+        );
 
-  playMissSound();
-  updateHud();
-}
+        playMissSound();
+        updateHud();
+      }
       function triggerClear() {
         if (gameCleared || gameOver) {
           return;
@@ -3314,54 +3472,30 @@ if (playerDisabled) {
           color: "#d2bea0",
         });
       }
-      function createMagmaBurstParticles(
-  x,
-  y,
-  count = MAGMA_PARTICLE_COUNT,
-) {
-  for (
-    let index = 0;
-    index < count;
-    index += 1
-  ) {
-    const life =
-      0.35 +
-      Math.random() * 0.35;
+      function createMagmaBurstParticles(x, y, count = MAGMA_PARTICLE_COUNT) {
+        for (let index = 0; index < count; index += 1) {
+          const life = 0.35 + Math.random() * 0.35;
 
-    particles.push({
-      type: "magmaSpark",
+          particles.push({
+            type: "magmaSpark",
 
-      x:
-        x +
-        (Math.random() - 0.5) *
-          28,
+            x: x + (Math.random() - 0.5) * 28,
 
-      y:
-        y -
-        Math.random() * 8,
+            y: y - Math.random() * 8,
 
-      velocityX:
-        (Math.random() - 0.5) *
-        180,
+            velocityX: (Math.random() - 0.5) * 180,
 
-      velocityY:
-        -120 -
-        Math.random() * 230,
+            velocityY: -120 - Math.random() * 230,
 
-      life,
-      maximumLife: life,
+            life,
+            maximumLife: life,
 
-      size:
-        2.5 +
-        Math.random() * 4.5,
+            size: 2.5 + Math.random() * 4.5,
 
-      color:
-        Math.random() < 0.5
-          ? "#ffcf45"
-          : "#ff5a1f",
-    });
-  }
-}
+            color: Math.random() < 0.5 ? "#ffcf45" : "#ff5a1f",
+          });
+        }
+      }
       function createBlockBreakParticles(column, row, symbol) {
         const colors = getBlockColors(symbol);
         const centerX = column * TILE_SIZE + TILE_SIZE / 2;
@@ -3403,10 +3537,14 @@ if (playerDisabled) {
           const particle = particles[index];
           particle.life -= deltaTime;
           if (particle.type === "coinPop") {
-            const remainingRatio = Math.max(0, particle.life / particle.maximumLife);
+            const remainingRatio = Math.max(
+              0,
+              particle.life / particle.maximumLife,
+            );
             const progress = 1 - remainingRatio;
             particle.y =
-              particle.startY - Math.sin((progress * Math.PI) / 2) * BLOCK_COIN_POP_HEIGHT;
+              particle.startY -
+              Math.sin((progress * Math.PI) / 2) * BLOCK_COIN_POP_HEIGHT;
             if (particle.life <= 0) {
               particles.splice(index, 1);
             }
@@ -3449,65 +3587,41 @@ if (playerDisabled) {
           size: 12,
         });
       }
-      function isRectangleTouchingMagma(
-  rectangle,
-) {
-  return magmaTiles.some(
-    (magma) =>
-      rectanglesOverlap(
-        rectangle,
-        getMagmaCollisionRectangle(
-          magma,
-        ),
-      ),
-  );
-}
+      function isRectangleTouchingMagma(rectangle) {
+        return magmaTiles.some((magma) =>
+          rectanglesOverlap(rectangle, getMagmaCollisionRectangle(magma)),
+        );
+      }
 
-function validateMagmaRespawnPositions() {
-  const stageName =
-    STAGES[currentStageIndex]
-      ?.name ??
-    "現在のステージ";
+      function validateMagmaRespawnPositions() {
+        const stageName = STAGES[currentStageIndex]?.name ?? "現在のステージ";
 
-  const startRectangle = {
-    x: startPosition.x,
-    y: startPosition.y,
-    width: PLAYER_WIDTH,
-    height: PLAYER_HEIGHT,
-  };
+        const startRectangle = {
+          x: startPosition.x,
+          y: startPosition.y,
+          width: PLAYER_WIDTH,
+          height: PLAYER_HEIGHT,
+        };
 
-  if (
-    isRectangleTouchingMagma(
-      startRectangle,
-    )
-  ) {
-    console.warn(
-      `${stageName}: 開始地点がマグマと重なっています。`,
-    );
-  }
+        if (isRectangleTouchingMagma(startRectangle)) {
+          console.warn(`${stageName}: 開始地点がマグマと重なっています。`);
+        }
 
-  for (
-    const checkpoint of
-    checkpoints
-  ) {
-    const respawnRectangle = {
-      x: checkpoint.respawnX,
-      y: checkpoint.respawnY,
-      width: PLAYER_WIDTH,
-      height: PLAYER_HEIGHT,
-    };
+        for (const checkpoint of checkpoints) {
+          const respawnRectangle = {
+            x: checkpoint.respawnX,
+            y: checkpoint.respawnY,
+            width: PLAYER_WIDTH,
+            height: PLAYER_HEIGHT,
+          };
 
-    if (
-      isRectangleTouchingMagma(
-        respawnRectangle,
-      )
-    ) {
-      console.warn(
-        `${stageName}: チェックポイント${checkpoint.id + 1}の復帰地点がマグマと重なっています。`,
-      );
-    }
-  }
-}
+          if (isRectangleTouchingMagma(respawnRectangle)) {
+            console.warn(
+              `${stageName}: チェックポイント${checkpoint.id + 1}の復帰地点がマグマと重なっています。`,
+            );
+          }
+        }
+      }
       function clamp(value, minimum, maximum) {
         return Math.max(minimum, Math.min(value, maximum));
       }
@@ -3545,963 +3659,470 @@ function validateMagmaRespawnPositions() {
           targetCameraY = player.y + player.height - bottomBoundary;
         }
         targetCameraX = clamp(targetCameraX, 0, getMaximumCameraX());
-        targetCameraY = clamp(targetCameraY, getMinimumCameraY(), getMaximumCameraY());
+        targetCameraY = clamp(
+          targetCameraY,
+          getMinimumCameraY(),
+          getMaximumCameraY(),
+        );
         const followAmount = Math.min(1, CAMERA_FOLLOW_SPEED * deltaTime);
         cameraX += (targetCameraX - cameraX) * followAmount;
         cameraY += (targetCameraY - cameraY) * followAmount;
       }
       function drawBackground() {
-  const backgroundTheme =
-    STAGES[currentStageIndex]?.background ??
-    "grassland";
+        const backgroundTheme =
+          STAGES[currentStageIndex]?.background ?? "grassland";
 
-  switch (backgroundTheme) {
-    case "underground":
-      drawUndergroundBackground();
-      break;
+        switch (backgroundTheme) {
+          case "underground":
+            drawUndergroundBackground();
+            break;
 
-    case "fortress":
-      drawFortressBackground();
-      break;
+          case "fortress":
+            drawFortressBackground();
+            break;
 
-    case "grassland":
-    default:
-      drawGrasslandBackground();
-      break;
-  }
-}
+          case "grassland":
+          default:
+            drawGrasslandBackground();
+            break;
+        }
+      }
 
-function drawGrasslandBackground() {
-  const gradient =
-    context.createLinearGradient(
-      0,
-      0,
-      0,
-      viewportHeight,
-    );
+      function drawGrasslandBackground() {
+        const gradient = context.createLinearGradient(0, 0, 0, viewportHeight);
 
-  gradient.addColorStop(
-    0,
-    "#74c9f5",
-  );
+        gradient.addColorStop(0, "#74c9f5");
 
-  gradient.addColorStop(
-    1,
-    "#d8f3ff",
-  );
+        gradient.addColorStop(1, "#d8f3ff");
 
-  context.fillStyle =
-    gradient;
+        context.fillStyle = gradient;
 
-  context.fillRect(
-    0,
-    0,
-    viewportWidth,
-    viewportHeight,
-  );
+        context.fillRect(0, 0, viewportWidth, viewportHeight);
 
-  drawCloud(
-    120 - cameraX * 0.12,
-    90 - cameraY * 0.08,
-    1,
-  );
+        drawCloud(120 - cameraX * 0.12, 90 - cameraY * 0.08, 1);
 
-  drawCloud(
-    480 - cameraX * 0.12,
-    150 - cameraY * 0.08,
-    0.8,
-  );
+        drawCloud(480 - cameraX * 0.12, 150 - cameraY * 0.08, 0.8);
 
-  drawCloud(
-    850 - cameraX * 0.12,
-    80 - cameraY * 0.08,
-    1.2,
-  );
+        drawCloud(850 - cameraX * 0.12, 80 - cameraY * 0.08, 1.2);
 
-  drawMountain(
-    -120 - cameraX * 0.18,
-    viewportHeight -
-      150 -
-      cameraY * 0.04,
-    330,
-  );
-
-  drawMountain(
-    230 - cameraX * 0.18,
-    viewportHeight -
-      130 -
-      cameraY * 0.04,
-    270,
-  );
-
-  drawMountain(
-    650 - cameraX * 0.18,
-    viewportHeight -
-      145 -
-      cameraY * 0.04,
-    310,
-  );
-}
-
-function positiveModulo(
-  value,
-  divisor,
-) {
-  return (
-    ((value % divisor) + divisor) %
-    divisor
-  );
-}
-
-function drawUndergroundBackground() {
-  context.save();
-
-  const gradient =
-    context.createLinearGradient(
-      0,
-      0,
-      0,
-      viewportHeight,
-    );
-
-  gradient.addColorStop(
-    0,
-    "#111820",
-  );
-
-  gradient.addColorStop(
-    0.55,
-    "#26323a",
-  );
-
-  gradient.addColorStop(
-    1,
-    "#151b20",
-  );
-
-  context.fillStyle =
-    gradient;
-
-  context.fillRect(
-    0,
-    0,
-    viewportWidth,
-    viewportHeight,
-  );
-
-  drawUndergroundStoneWall();
-
-  const time =
-    performance.now() / 1000;
-
-  const torchSpacing = 420;
-  const parallaxX =
-    cameraX * 0.1;
-
-  const firstTorchIndex =
-    Math.floor(
-      parallaxX /
-        torchSpacing,
-    ) - 1;
-
-  const verticalRange =
-    Math.max(
-      220,
-      viewportHeight - 180,
-    );
-
-  for (
-    let index = 0;
-    index < 5;
-    index += 1
-  ) {
-    const torchIndex =
-      firstTorchIndex + index;
-
-    const x =
-      torchIndex *
-        torchSpacing +
-      180 -
-      parallaxX;
-
-    const y =
-      100 +
-      positiveModulo(
-        torchIndex * 137 -
-          cameraY * 0.06,
-        verticalRange,
-      );
-
-    drawUndergroundTorch(
-      x,
-      y,
-      time +
-        torchIndex * 0.7,
-    );
-  }
-
-  const vignette =
-    context.createRadialGradient(
-      viewportWidth / 2,
-      viewportHeight / 2,
-      Math.min(
-        viewportWidth,
-        viewportHeight,
-      ) * 0.18,
-
-      viewportWidth / 2,
-      viewportHeight / 2,
-      Math.max(
-        viewportWidth,
-        viewportHeight,
-      ) * 0.72,
-    );
-
-  vignette.addColorStop(
-    0,
-    "rgba(0, 0, 0, 0)",
-  );
-
-  vignette.addColorStop(
-    1,
-    "rgba(0, 0, 0, 0.48)",
-  );
-
-  context.fillStyle =
-    vignette;
-
-  context.fillRect(
-    0,
-    0,
-    viewportWidth,
-    viewportHeight,
-  );
-
-  context.restore();
-}
-
-function drawUndergroundStoneWall() {
-  const brickWidth = 96;
-  const brickHeight = 54;
-
-  const offsetX =
-    -positiveModulo(
-      cameraX * 0.08,
-      brickWidth,
-    );
-
-  const offsetY =
-    -positiveModulo(
-      cameraY * 0.05,
-      brickHeight,
-    );
-
-  const columnCount =
-    Math.ceil(
-      viewportWidth /
-        brickWidth,
-    ) + 3;
-
-  const rowCount =
-    Math.ceil(
-      viewportHeight /
-        brickHeight,
-    ) + 3;
-
-  const stoneColors = [
-    "#303b42",
-    "#354148",
-    "#2b353c",
-  ];
-
-  for (
-    let row = -1;
-    row < rowCount;
-    row += 1
-  ) {
-    const rowShift =
-      row % 2 === 0
-        ? 0
-        : -brickWidth / 2;
-
-    for (
-      let column = -1;
-      column < columnCount;
-      column += 1
-    ) {
-      const x =
-        offsetX +
-        column * brickWidth +
-        rowShift;
-
-      const y =
-        offsetY +
-        row * brickHeight;
-
-      const shadeIndex =
-        positiveModulo(
-          row * 5 +
-            column * 3,
-          stoneColors.length,
+        drawMountain(
+          -120 - cameraX * 0.18,
+          viewportHeight - 150 - cameraY * 0.04,
+          330,
         );
 
-      context.fillStyle =
-        stoneColors[
-          shadeIndex
-        ];
+        drawMountain(
+          230 - cameraX * 0.18,
+          viewportHeight - 130 - cameraY * 0.04,
+          270,
+        );
 
-      context.fillRect(
-        x + 2,
-        y + 2,
-        brickWidth - 4,
-        brickHeight - 4,
-      );
+        drawMountain(
+          650 - cameraX * 0.18,
+          viewportHeight - 145 - cameraY * 0.04,
+          310,
+        );
+      }
 
-      context.strokeStyle =
-        "rgba(10, 14, 17, 0.72)";
+      function positiveModulo(value, divisor) {
+        return ((value % divisor) + divisor) % divisor;
+      }
 
-      context.lineWidth = 3;
+      function drawUndergroundBackground() {
+        context.save();
 
-      context.strokeRect(
-        x + 1,
-        y + 1,
-        brickWidth - 2,
-        brickHeight - 2,
-      );
+        const gradient = context.createLinearGradient(0, 0, 0, viewportHeight);
 
-      context.fillStyle =
-        "rgba(255, 255, 255, 0.035)";
+        gradient.addColorStop(0, "#111820");
 
-      context.fillRect(
-        x + 7,
-        y + 7,
-        brickWidth - 14,
-        5,
-      );
+        gradient.addColorStop(0.55, "#26323a");
 
-      const hasCrack =
-        positiveModulo(
-          row * 7 +
-            column * 11,
-          9,
-        ) === 0;
+        gradient.addColorStop(1, "#151b20");
 
-      if (hasCrack) {
-        context.strokeStyle =
-          "rgba(12, 16, 19, 0.65)";
+        context.fillStyle = gradient;
 
-        context.lineWidth = 2;
+        context.fillRect(0, 0, viewportWidth, viewportHeight);
+
+        drawUndergroundStoneWall();
+
+        const time = performance.now() / 1000;
+
+        const torchSpacing = 420;
+        const parallaxX = cameraX * 0.1;
+
+        const firstTorchIndex = Math.floor(parallaxX / torchSpacing) - 1;
+
+        const verticalRange = Math.max(220, viewportHeight - 180);
+
+        for (let index = 0; index < 5; index += 1) {
+          const torchIndex = firstTorchIndex + index;
+
+          const x = torchIndex * torchSpacing + 180 - parallaxX;
+
+          const y =
+            100 +
+            positiveModulo(torchIndex * 137 - cameraY * 0.06, verticalRange);
+
+          drawUndergroundTorch(x, y, time + torchIndex * 0.7);
+        }
+
+        const vignette = context.createRadialGradient(
+          viewportWidth / 2,
+          viewportHeight / 2,
+          Math.min(viewportWidth, viewportHeight) * 0.18,
+
+          viewportWidth / 2,
+          viewportHeight / 2,
+          Math.max(viewportWidth, viewportHeight) * 0.72,
+        );
+
+        vignette.addColorStop(0, "rgba(0, 0, 0, 0)");
+
+        vignette.addColorStop(1, "rgba(0, 0, 0, 0.48)");
+
+        context.fillStyle = vignette;
+
+        context.fillRect(0, 0, viewportWidth, viewportHeight);
+
+        context.restore();
+      }
+
+      function drawUndergroundStoneWall() {
+        const brickWidth = 96;
+        const brickHeight = 54;
+
+        const offsetX = -positiveModulo(cameraX * 0.08, brickWidth);
+
+        const offsetY = -positiveModulo(cameraY * 0.05, brickHeight);
+
+        const columnCount = Math.ceil(viewportWidth / brickWidth) + 3;
+
+        const rowCount = Math.ceil(viewportHeight / brickHeight) + 3;
+
+        const stoneColors = ["#303b42", "#354148", "#2b353c"];
+
+        for (let row = -1; row < rowCount; row += 1) {
+          const rowShift = row % 2 === 0 ? 0 : -brickWidth / 2;
+
+          for (let column = -1; column < columnCount; column += 1) {
+            const x = offsetX + column * brickWidth + rowShift;
+
+            const y = offsetY + row * brickHeight;
+
+            const shadeIndex = positiveModulo(
+              row * 5 + column * 3,
+              stoneColors.length,
+            );
+
+            context.fillStyle = stoneColors[shadeIndex];
+
+            context.fillRect(x + 2, y + 2, brickWidth - 4, brickHeight - 4);
+
+            context.strokeStyle = "rgba(10, 14, 17, 0.72)";
+
+            context.lineWidth = 3;
+
+            context.strokeRect(x + 1, y + 1, brickWidth - 2, brickHeight - 2);
+
+            context.fillStyle = "rgba(255, 255, 255, 0.035)";
+
+            context.fillRect(x + 7, y + 7, brickWidth - 14, 5);
+
+            const hasCrack = positiveModulo(row * 7 + column * 11, 9) === 0;
+
+            if (hasCrack) {
+              context.strokeStyle = "rgba(12, 16, 19, 0.65)";
+
+              context.lineWidth = 2;
+
+              context.beginPath();
+
+              context.moveTo(x + brickWidth * 0.36, y + 8);
+
+              context.lineTo(x + brickWidth * 0.48, y + brickHeight * 0.45);
+
+              context.lineTo(x + brickWidth * 0.42, y + brickHeight - 8);
+
+              context.stroke();
+            }
+          }
+        }
+      }
+
+      function drawUndergroundTorch(x, y, time) {
+        const flicker = Math.sin(time * 10) * 3 + Math.sin(time * 17) * 2;
+
+        const glowRadius = 68 + flicker;
+
+        const glow = context.createRadialGradient(
+          x,
+          y - 18,
+          4,
+          x,
+          y - 18,
+          glowRadius,
+        );
+
+        glow.addColorStop(0, "rgba(255, 211, 92, 0.48)");
+
+        glow.addColorStop(0.45, "rgba(255, 119, 36, 0.18)");
+
+        glow.addColorStop(1, "rgba(255, 90, 20, 0)");
+
+        context.fillStyle = glow;
 
         context.beginPath();
 
-        context.moveTo(
-          x +
-            brickWidth * 0.36,
-          y + 8,
+        context.arc(x, y - 18, glowRadius, 0, Math.PI * 2);
+
+        context.fill();
+
+        context.fillStyle = "#5f4634";
+
+        context.fillRect(x - 4, y - 2, 8, 34);
+
+        context.fillStyle = "#84705d";
+
+        context.fillRect(x - 10, y + 27, 20, 5);
+
+        context.fillStyle = "#ff7a1a";
+
+        context.beginPath();
+
+        context.moveTo(x, y - 42 - flicker * 0.35);
+
+        context.quadraticCurveTo(x + 14, y - 24, x, y - 8);
+
+        context.quadraticCurveTo(x - 14, y - 24, x, y - 42 - flicker * 0.35);
+
+        context.fill();
+
+        context.fillStyle = "#ffe36e";
+
+        context.beginPath();
+
+        context.moveTo(x, y - 33 - flicker * 0.2);
+
+        context.quadraticCurveTo(x + 7, y - 22, x, y - 13);
+
+        context.quadraticCurveTo(x - 7, y - 22, x, y - 33 - flicker * 0.2);
+
+        context.fill();
+      }
+
+      function drawFortressBackground() {
+        context.save();
+
+        const gradient = context.createLinearGradient(0, 0, 0, viewportHeight);
+
+        gradient.addColorStop(0, "#261117");
+
+        gradient.addColorStop(0.55, "#4b1d1d");
+
+        gradient.addColorStop(1, "#120d0e");
+
+        context.fillStyle = gradient;
+
+        context.fillRect(0, 0, viewportWidth, viewportHeight);
+
+        drawFortressSilhouette();
+
+        const lavaTop = viewportHeight - 82;
+
+        const lavaGlow = context.createLinearGradient(
+          0,
+          lavaTop - 100,
+          0,
+          viewportHeight,
         );
 
-        context.lineTo(
-          x +
-            brickWidth * 0.48,
-          y +
-            brickHeight * 0.45,
-        );
+        lavaGlow.addColorStop(0, "rgba(255, 70, 20, 0)");
 
-        context.lineTo(
-          x +
-            brickWidth * 0.42,
-          y +
-            brickHeight -
-            8,
-        );
+        lavaGlow.addColorStop(0.65, "rgba(255, 70, 20, 0.24)");
+
+        lavaGlow.addColorStop(1, "rgba(255, 125, 25, 0.62)");
+
+        context.fillStyle = lavaGlow;
+
+        context.fillRect(0, lavaTop - 100, viewportWidth, 182);
+
+        context.fillStyle = "#8f2416";
+
+        context.fillRect(0, lavaTop, viewportWidth, viewportHeight - lavaTop);
+
+        const time = performance.now() / 1000;
+
+        context.strokeStyle = "#ff9d2e";
+
+        context.lineWidth = 5;
+
+        context.beginPath();
+
+        for (let x = -20; x <= viewportWidth + 20; x += 20) {
+          const y = lavaTop + Math.sin(x * 0.045 + time * 2.5) * 5;
+
+          if (x === -20) {
+            context.moveTo(x, y);
+          } else {
+            context.lineTo(x, y);
+          }
+        }
 
         context.stroke();
+
+        drawFortressEmbers(time);
+
+        context.restore();
       }
-    }
-  }
-}
-
-function drawUndergroundTorch(
-  x,
-  y,
-  time,
-) {
-  const flicker =
-    Math.sin(time * 10) * 3 +
-    Math.sin(time * 17) * 2;
-
-  const glowRadius =
-    68 + flicker;
-
-  const glow =
-    context.createRadialGradient(
-      x,
-      y - 18,
-      4,
-      x,
-      y - 18,
-      glowRadius,
-    );
-
-  glow.addColorStop(
-    0,
-    "rgba(255, 211, 92, 0.48)",
-  );
-
-  glow.addColorStop(
-    0.45,
-    "rgba(255, 119, 36, 0.18)",
-  );
-
-  glow.addColorStop(
-    1,
-    "rgba(255, 90, 20, 0)",
-  );
-
-  context.fillStyle =
-    glow;
-
-  context.beginPath();
-
-  context.arc(
-    x,
-    y - 18,
-    glowRadius,
-    0,
-    Math.PI * 2,
-  );
-
-  context.fill();
-
-  context.fillStyle =
-    "#5f4634";
-
-  context.fillRect(
-    x - 4,
-    y - 2,
-    8,
-    34,
-  );
-
-  context.fillStyle =
-    "#84705d";
-
-  context.fillRect(
-    x - 10,
-    y + 27,
-    20,
-    5,
-  );
-
-  context.fillStyle =
-    "#ff7a1a";
-
-  context.beginPath();
-
-  context.moveTo(
-    x,
-    y -
-      42 -
-      flicker * 0.35,
-  );
-
-  context.quadraticCurveTo(
-    x + 14,
-    y - 24,
-    x,
-    y - 8,
-  );
-
-  context.quadraticCurveTo(
-    x - 14,
-    y - 24,
-    x,
-    y -
-      42 -
-      flicker * 0.35,
-  );
-
-  context.fill();
-
-  context.fillStyle =
-    "#ffe36e";
-
-  context.beginPath();
-
-  context.moveTo(
-    x,
-    y -
-      33 -
-      flicker * 0.2,
-  );
-
-  context.quadraticCurveTo(
-    x + 7,
-    y - 22,
-    x,
-    y - 13,
-  );
-
-  context.quadraticCurveTo(
-    x - 7,
-    y - 22,
-    x,
-    y -
-      33 -
-      flicker * 0.2,
-  );
-
-  context.fill();
-}
-
-function drawFortressBackground() {
-  context.save();
-
-  const gradient =
-    context.createLinearGradient(
-      0,
-      0,
-      0,
-      viewportHeight,
-    );
-
-  gradient.addColorStop(
-    0,
-    "#261117",
-  );
-
-  gradient.addColorStop(
-    0.55,
-    "#4b1d1d",
-  );
-
-  gradient.addColorStop(
-    1,
-    "#120d0e",
-  );
-
-  context.fillStyle =
-    gradient;
-
-  context.fillRect(
-    0,
-    0,
-    viewportWidth,
-    viewportHeight,
-  );
-
-  drawFortressSilhouette();
-
-  const lavaTop =
-    viewportHeight - 82;
-
-  const lavaGlow =
-    context.createLinearGradient(
-      0,
-      lavaTop - 100,
-      0,
-      viewportHeight,
-    );
-
-  lavaGlow.addColorStop(
-    0,
-    "rgba(255, 70, 20, 0)",
-  );
-
-  lavaGlow.addColorStop(
-    0.65,
-    "rgba(255, 70, 20, 0.24)",
-  );
-
-  lavaGlow.addColorStop(
-    1,
-    "rgba(255, 125, 25, 0.62)",
-  );
-
-  context.fillStyle =
-    lavaGlow;
-
-  context.fillRect(
-    0,
-    lavaTop - 100,
-    viewportWidth,
-    182,
-  );
-
-  context.fillStyle =
-    "#8f2416";
-
-  context.fillRect(
-    0,
-    lavaTop,
-    viewportWidth,
-    viewportHeight -
-      lavaTop,
-  );
-
-  const time =
-    performance.now() / 1000;
-
-  context.strokeStyle =
-    "#ff9d2e";
-
-  context.lineWidth = 5;
-
-  context.beginPath();
-
-  for (
-    let x = -20;
-    x <= viewportWidth + 20;
-    x += 20
-  ) {
-    const y =
-      lavaTop +
-      Math.sin(
-        x * 0.045 +
-          time * 2.5,
-      ) * 5;
-
-    if (x === -20) {
-      context.moveTo(
-        x,
-        y,
-      );
-    } else {
-      context.lineTo(
-        x,
-        y,
-      );
-    }
-  }
-
-  context.stroke();
-
-  drawFortressEmbers(
-    time,
-  );
-
-  context.restore();
-}
-
-function drawFortressSilhouette() {
-  const parallaxX =
-    cameraX * 0.12;
-
-  const towerSpacing = 250;
-
-  const firstTowerIndex =
-    Math.floor(
-      parallaxX /
-        towerSpacing,
-    ) - 1;
-
-  const baseline =
-    clamp(
-      viewportHeight * 0.76 -
-        cameraY * 0.03,
-      180,
-      viewportHeight - 45,
-    );
-
-  context.fillStyle =
-    "#191416";
-
-  context.fillRect(
-    0,
-    baseline,
-    viewportWidth,
-    viewportHeight -
-      baseline,
-  );
-
-  for (
-    let index = 0;
-    index < 6;
-    index += 1
-  ) {
-    const towerIndex =
-      firstTowerIndex +
-      index;
-
-    const x =
-      towerIndex *
-        towerSpacing +
-      90 -
-      parallaxX;
-
-    const height =
-      150 +
-      positiveModulo(
-        towerIndex * 47,
-        90,
-      );
-
-    const width =
-      92 +
-      positiveModulo(
-        towerIndex * 31,
-        34,
-      );
-
-    drawFortressTower(
-      x,
-      baseline,
-      width,
-      height,
-      towerIndex,
-    );
-  }
-}
-
-function drawFortressTower(
-  x,
-  baseline,
-  width,
-  height,
-  towerIndex,
-) {
-  const topY =
-    baseline - height;
-
-  context.fillStyle =
-    "#21191b";
-
-  context.fillRect(
-    x,
-    topY,
-    width,
-    height,
-  );
-
-  const battlementCount = 5;
-
-  const battlementWidth =
-    width /
-    battlementCount;
-
-  for (
-    let index = 0;
-    index < battlementCount;
-    index += 1
-  ) {
-    if (index % 2 === 0) {
-      context.fillRect(
-        x +
-          index *
-            battlementWidth,
-        topY - 17,
-        battlementWidth,
-        18,
-      );
-    }
-  }
-
-  context.strokeStyle =
-    "rgba(88, 52, 49, 0.7)";
-
-  context.lineWidth = 3;
-
-  context.strokeRect(
-    x + 1,
-    topY + 1,
-    width - 2,
-    height - 1,
-  );
-
-  const windowRows =
-    Math.max(
-      1,
-      Math.floor(
-        height / 62,
-      ),
-    );
-
-  for (
-    let row = 0;
-    row < windowRows;
-    row += 1
-  ) {
-    for (
-      let column = 0;
-      column < 2;
-      column += 1
-    ) {
-      const lit =
-        positiveModulo(
-          towerIndex * 5 +
-            row * 3 +
-            column,
-          4,
-        ) !== 0;
-
-      context.fillStyle =
-        lit
-          ? "rgba(255, 132, 42, 0.72)"
-          : "#0c0a0b";
-
-      context.fillRect(
-        x +
-          18 +
-          column *
-            (width - 40),
-        topY +
-          27 +
-          row * 56,
-        10,
-        20,
-      );
-    }
-  }
-}
-
-function drawFortressEmbers(
-  time,
-) {
-  const travelHeight =
-    viewportHeight + 120;
-
-  for (
-    let index = 0;
-    index < 24;
-    index += 1
-  ) {
-    const progress =
-      positiveModulo(
-        time *
-          (26 +
-            (index % 5) * 5) +
-          index * 67,
-        travelHeight,
-      );
-
-    const y =
-      viewportHeight +
-      35 -
-      progress;
-
-    const x =
-      positiveModulo(
-        index * 137 -
-          cameraX * 0.035 +
-          Math.sin(
-            time * 1.7 +
-              index,
-          ) * 24,
-        viewportWidth + 100,
-      ) - 50;
-
-    const radius =
-      1.5 +
-      (index % 3) * 0.8;
-
-    context.fillStyle =
-      index % 2 === 0
-        ? "rgba(255, 196, 76, 0.82)"
-        : "rgba(255, 92, 35, 0.72)";
-
-    context.beginPath();
-
-    context.arc(
-      x,
-      y,
-      radius,
-      0,
-      Math.PI * 2,
-    );
-
-    context.fill();
-  }
-}
-
-function drawCloud(
-  x,
-  y,
-  scale,
-) {
-  context.save();
-
-  context.translate(
-    x,
-    y,
-  );
-
-  context.scale(
-    scale,
-    scale,
-  );
-
-  context.fillStyle =
-    "rgba(255, 255, 255, 0.9)";
-
-  context.beginPath();
-
-  context.arc(
-    0,
-    10,
-    25,
-    0,
-    Math.PI * 2,
-  );
-
-  context.arc(
-    28,
-    0,
-    31,
-    0,
-    Math.PI * 2,
-  );
-
-  context.arc(
-    60,
-    12,
-    24,
-    0,
-    Math.PI * 2,
-  );
-
-  context.arc(
-    30,
-    22,
-    38,
-    0,
-    Math.PI * 2,
-  );
-
-  context.fill();
-
-  context.restore();
-}
-
-function drawMountain(
-  x,
-  baseY,
-  width,
-) {
-  context.fillStyle =
-    "rgba(84, 155, 105, 0.55)";
-
-  context.beginPath();
-
-  context.moveTo(
-    x,
-    baseY,
-  );
-
-  context.lineTo(
-    x + width / 2,
-    baseY -
-      width * 0.55,
-  );
-
-  context.lineTo(
-    x + width,
-    baseY,
-  );
-
-  context.closePath();
-
-  context.fill();
-}
+
+      function drawFortressSilhouette() {
+        const parallaxX = cameraX * 0.12;
+
+        const towerSpacing = 250;
+
+        const firstTowerIndex = Math.floor(parallaxX / towerSpacing) - 1;
+
+        const baseline = clamp(
+          viewportHeight * 0.76 - cameraY * 0.03,
+          180,
+          viewportHeight - 45,
+        );
+
+        context.fillStyle = "#191416";
+
+        context.fillRect(0, baseline, viewportWidth, viewportHeight - baseline);
+
+        for (let index = 0; index < 6; index += 1) {
+          const towerIndex = firstTowerIndex + index;
+
+          const x = towerIndex * towerSpacing + 90 - parallaxX;
+
+          const height = 150 + positiveModulo(towerIndex * 47, 90);
+
+          const width = 92 + positiveModulo(towerIndex * 31, 34);
+
+          drawFortressTower(x, baseline, width, height, towerIndex);
+        }
+      }
+
+      function drawFortressTower(x, baseline, width, height, towerIndex) {
+        const topY = baseline - height;
+
+        context.fillStyle = "#21191b";
+
+        context.fillRect(x, topY, width, height);
+
+        const battlementCount = 5;
+
+        const battlementWidth = width / battlementCount;
+
+        for (let index = 0; index < battlementCount; index += 1) {
+          if (index % 2 === 0) {
+            context.fillRect(
+              x + index * battlementWidth,
+              topY - 17,
+              battlementWidth,
+              18,
+            );
+          }
+        }
+
+        context.strokeStyle = "rgba(88, 52, 49, 0.7)";
+
+        context.lineWidth = 3;
+
+        context.strokeRect(x + 1, topY + 1, width - 2, height - 1);
+
+        const windowRows = Math.max(1, Math.floor(height / 62));
+
+        for (let row = 0; row < windowRows; row += 1) {
+          for (let column = 0; column < 2; column += 1) {
+            const lit =
+              positiveModulo(towerIndex * 5 + row * 3 + column, 4) !== 0;
+
+            context.fillStyle = lit ? "rgba(255, 132, 42, 0.72)" : "#0c0a0b";
+
+            context.fillRect(
+              x + 18 + column * (width - 40),
+              topY + 27 + row * 56,
+              10,
+              20,
+            );
+          }
+        }
+      }
+
+      function drawFortressEmbers(time) {
+        const travelHeight = viewportHeight + 120;
+
+        for (let index = 0; index < 24; index += 1) {
+          const progress = positiveModulo(
+            time * (26 + (index % 5) * 5) + index * 67,
+            travelHeight,
+          );
+
+          const y = viewportHeight + 35 - progress;
+
+          const x =
+            positiveModulo(
+              index * 137 - cameraX * 0.035 + Math.sin(time * 1.7 + index) * 24,
+              viewportWidth + 100,
+            ) - 50;
+
+          const radius = 1.5 + (index % 3) * 0.8;
+
+          context.fillStyle =
+            index % 2 === 0
+              ? "rgba(255, 196, 76, 0.82)"
+              : "rgba(255, 92, 35, 0.72)";
+
+          context.beginPath();
+
+          context.arc(x, y, radius, 0, Math.PI * 2);
+
+          context.fill();
+        }
+      }
+
+      function drawCloud(x, y, scale) {
+        context.save();
+
+        context.translate(x, y);
+
+        context.scale(scale, scale);
+
+        context.fillStyle = "rgba(255, 255, 255, 0.9)";
+
+        context.beginPath();
+
+        context.arc(0, 10, 25, 0, Math.PI * 2);
+
+        context.arc(28, 0, 31, 0, Math.PI * 2);
+
+        context.arc(60, 12, 24, 0, Math.PI * 2);
+
+        context.arc(30, 22, 38, 0, Math.PI * 2);
+
+        context.fill();
+
+        context.restore();
+      }
+
+      function drawMountain(x, baseY, width) {
+        context.fillStyle = "rgba(84, 155, 105, 0.55)";
+
+        context.beginPath();
+
+        context.moveTo(x, baseY);
+
+        context.lineTo(x + width / 2, baseY - width * 0.55);
+
+        context.lineTo(x + width, baseY);
+
+        context.closePath();
+
+        context.fill();
+      }
       function getBlockColors(symbol) {
         switch (symbol) {
           case "B":
@@ -4640,7 +4261,13 @@ function drawMountain(
             } else if (symbol === "Q") {
               context.fillStyle = "rgba(255, 245, 170, 0.88)";
               context.beginPath();
-              context.arc(x + TILE_SIZE / 2, y + TILE_SIZE / 2 + 2, 7, 0, Math.PI * 2);
+              context.arc(
+                x + TILE_SIZE / 2,
+                y + TILE_SIZE / 2 + 2,
+                7,
+                0,
+                Math.PI * 2,
+              );
               context.fill();
               context.strokeStyle = "rgba(170, 105, 0, 0.8)";
               context.lineWidth = 2;
@@ -4651,7 +4278,13 @@ function drawMountain(
             } else if (symbol === "U") {
               context.fillStyle = "rgba(45, 45, 45, 0.35)";
               context.beginPath();
-              context.arc(x + TILE_SIZE / 2, y + TILE_SIZE / 2 + 2, 7, 0, Math.PI * 2);
+              context.arc(
+                x + TILE_SIZE / 2,
+                y + TILE_SIZE / 2 + 2,
+                7,
+                0,
+                Math.PI * 2,
+              );
               context.fill();
             }
           }
@@ -4660,256 +4293,168 @@ function drawMountain(
         context.textBaseline = "alphabetic";
       }
       function drawMagma() {
-  const time =
-    performance.now() / 1000;
+        const time = performance.now() / 1000;
 
-  for (const magma of magmaTiles) {
-    if (
-      !isEntityNearCamera(
-        magma,
-      )
-    ) {
-      continue;
-    }
+        for (const magma of magmaTiles) {
+          if (!isEntityNearCamera(magma)) {
+            continue;
+          }
 
-    const gradient =
-      context.createLinearGradient(
-        0,
-        magma.y,
-        0,
-        magma.y +
-          magma.height,
-      );
+          const gradient = context.createLinearGradient(
+            0,
+            magma.y,
+            0,
+            magma.y + magma.height,
+          );
 
-    gradient.addColorStop(
-      0,
-      "#ff7a18",
-    );
+          gradient.addColorStop(0, "#ff7a18");
 
-    gradient.addColorStop(
-      0.28,
-      "#d83a12",
-    );
+          gradient.addColorStop(0.28, "#d83a12");
 
-    gradient.addColorStop(
-      1,
-      "#68130d",
-    );
+          gradient.addColorStop(1, "#68130d");
 
-    context.fillStyle =
-      gradient;
+          context.fillStyle = gradient;
 
-    context.fillRect(
-      magma.x,
-      magma.y,
-      magma.width,
-      magma.height,
-    );
+          context.fillRect(magma.x, magma.y, magma.width, magma.height);
 
-    context.fillStyle =
-      "rgba(255, 190, 55, 0.18)";
+          context.fillStyle = "rgba(255, 190, 55, 0.18)";
 
-    context.fillRect(
-      magma.x,
-      magma.y + 12,
-      magma.width,
-      8,
-    );
+          context.fillRect(magma.x, magma.y + 12, magma.width, 8);
 
-    /*
+          /*
       上に別のマグマがある場合は、
       このマスには表面の波を描きません。
     */
-    const hasMagmaAbove =
-      hasMagmaAt(
-        magma.column,
-        magma.row - 1,
-      );
+          const hasMagmaAbove = hasMagmaAt(magma.column, magma.row - 1);
 
-    if (hasMagmaAbove) {
-      continue;
-    }
+          if (hasMagmaAbove) {
+            continue;
+          }
 
-    context.fillStyle =
-      "rgba(255, 93, 24, 0.22)";
+          context.fillStyle = "rgba(255, 93, 24, 0.22)";
 
-    context.fillRect(
-      magma.x,
-      magma.y - 10,
-      magma.width,
-      18,
-    );
+          context.fillRect(magma.x, magma.y - 10, magma.width, 18);
 
-    /*
+          /*
       マグマの波面
     */
-    context.beginPath();
+          context.beginPath();
 
-    for (
-      let localX = 0;
-      localX <= TILE_SIZE;
-      localX += 6
-    ) {
-      const worldX =
-        magma.x + localX;
+          for (let localX = 0; localX <= TILE_SIZE; localX += 6) {
+            const worldX = magma.x + localX;
 
-      const surfaceY =
-        magma.y +
-        5 +
-        Math.sin(
-          worldX * 0.075 +
-            time * 3.2,
-        ) *
-          3;
+            const surfaceY =
+              magma.y + 5 + Math.sin(worldX * 0.075 + time * 3.2) * 3;
 
-      if (localX === 0) {
-        context.moveTo(
-          worldX,
-          surfaceY,
-        );
-      } else {
-        context.lineTo(
-          worldX,
-          surfaceY,
-        );
-      }
-    }
+            if (localX === 0) {
+              context.moveTo(worldX, surfaceY);
+            } else {
+              context.lineTo(worldX, surfaceY);
+            }
+          }
 
-    context.lineTo(
-      magma.x + TILE_SIZE,
-      magma.y + 17,
-    );
+          context.lineTo(magma.x + TILE_SIZE, magma.y + 17);
 
-    context.lineTo(
-      magma.x,
-      magma.y + 17,
-    );
+          context.lineTo(magma.x, magma.y + 17);
 
-    context.closePath();
+          context.closePath();
 
-    context.fillStyle =
-      "#ff9d22";
+          context.fillStyle = "#ff9d22";
 
-    context.fill();
+          context.fill();
 
-    context.strokeStyle =
-      "#ffe06a";
+          context.strokeStyle = "#ffe06a";
 
-    context.lineWidth = 2;
-    context.stroke();
+          context.lineWidth = 2;
+          context.stroke();
 
-    /*
+          /*
       マグマ内部の泡
     */
-    for (
-      let index = 0;
-      index < 2;
-      index += 1
-    ) {
-      const phase =
-        (
-          time *
-            (0.32 +
-              index * 0.08) +
-          magma.column * 0.17 +
-          magma.row * 0.11 +
-          index * 0.46
-        ) % 1;
+          for (let index = 0; index < 2; index += 1) {
+            const phase =
+              (time * (0.32 + index * 0.08) +
+                magma.column * 0.17 +
+                magma.row * 0.11 +
+                index * 0.46) %
+              1;
 
-      const bubbleX =
-        magma.x +
-        10 +
-        (
-          magma.column * 19 +
-          index * 23
-        ) %
-          28;
+            const bubbleX =
+              magma.x + 10 + ((magma.column * 19 + index * 23) % 28);
 
-      const bubbleY =
-        magma.y +
-        TILE_SIZE -
-        phase *
-          (TILE_SIZE - 10);
+            const bubbleY = magma.y + TILE_SIZE - phase * (TILE_SIZE - 10);
 
-      const bubbleRadius =
-        2 +
-        Math.sin(
-          phase * Math.PI,
-        ) *
-          3;
+            const bubbleRadius = 2 + Math.sin(phase * Math.PI) * 3;
 
-      context.strokeStyle =
-        "rgba(255, 205, 80, 0.75)";
+            context.strokeStyle = "rgba(255, 205, 80, 0.75)";
 
-      context.lineWidth = 2;
+            context.lineWidth = 2;
 
-      context.beginPath();
+            context.beginPath();
 
-      context.arc(
-        bubbleX,
-        bubbleY,
-        bubbleRadius,
-        0,
-        Math.PI * 2,
-      );
+            context.arc(bubbleX, bubbleY, bubbleRadius, 0, Math.PI * 2);
 
-      context.stroke();
-    }
+            context.stroke();
+          }
 
-    /*
+          /*
       表面から上昇する火の粉
     */
-    const sparkPhase =
-      (
-        time * 0.58 +
-        magma.column * 0.29 +
-        magma.row * 0.13
-      ) % 1;
+          const sparkPhase =
+            (time * 0.58 + magma.column * 0.29 + magma.row * 0.13) % 1;
 
-    const sparkX =
-      magma.x +
-      8 +
-      (magma.column * 31) %
-        32;
+          const sparkX = magma.x + 8 + ((magma.column * 31) % 32);
 
-    const sparkY =
-      magma.y -
-      sparkPhase * 28;
+          const sparkY = magma.y - sparkPhase * 28;
 
-    context.fillStyle =
-      `rgba(255, 205, 75, ${1 - sparkPhase})`;
+          context.fillStyle = `rgba(255, 205, 75, ${1 - sparkPhase})`;
 
-    context.beginPath();
+          context.beginPath();
 
-    context.arc(
-      sparkX,
-      sparkY,
-      2.5,
-      0,
-      Math.PI * 2,
-    );
+          context.arc(sparkX, sparkY, 2.5, 0, Math.PI * 2);
 
-    context.fill();
-  }
-}
+          context.fill();
+        }
+      }
       function drawDoors() {
         for (const door of doors) {
           context.save();
           const frameColor = door.enabled ? "#654321" : "#666";
           const panelColor = door.enabled ? "#9b6335" : "#888";
           context.fillStyle = frameColor;
-          context.fillRect(door.x - 4, door.y - 4, door.width + 8, door.height + 4);
+          context.fillRect(
+            door.x - 4,
+            door.y - 4,
+            door.width + 8,
+            door.height + 4,
+          );
           context.fillStyle = panelColor;
           context.fillRect(door.x, door.y, door.width, door.height);
           context.fillStyle = door.enabled ? "#c58a4b" : "#999";
           context.fillRect(door.x + 5, door.y + 7, door.width - 10, 18);
-          context.fillRect(door.x + 5, door.y + 31, door.width - 10, door.height - 38);
+          context.fillRect(
+            door.x + 5,
+            door.y + 31,
+            door.width - 10,
+            door.height - 38,
+          );
           context.strokeStyle = "rgba(45, 25, 12, 0.75)";
           context.lineWidth = 2;
-          context.strokeRect(door.x + 1, door.y + 1, door.width - 2, door.height - 1);
+          context.strokeRect(
+            door.x + 1,
+            door.y + 1,
+            door.width - 2,
+            door.height - 1,
+          );
           context.fillStyle = door.enabled ? "#f2d36b" : "#555";
           context.beginPath();
-          context.arc(door.x + door.width - 8, door.y + door.height / 2, 3, 0, Math.PI * 2);
+          context.arc(
+            door.x + door.width - 8,
+            door.y + door.height / 2,
+            3,
+            0,
+            Math.PI * 2,
+          );
           context.fill();
           context.fillStyle = door.enabled
             ? "rgba(255, 226, 160, 0.36)"
@@ -4945,7 +4490,7 @@ function drawMountain(
           context.moveTo(fireBar.centerX, fireBar.centerY);
           const lastDistance =
             FIRE_BAR_FIRST_FLAME_DISTANCE +
-            (FIRE_BAR_FLAME_COUNT - 1) * FIRE_BAR_FLAME_SPACING;
+            (fireBar.flameCount - 1) * FIRE_BAR_FLAME_SPACING;
           context.lineTo(
             fireBar.centerX + Math.cos(fireBar.angle) * lastDistance,
             fireBar.centerY + Math.sin(fireBar.angle) * lastDistance,
@@ -5003,7 +4548,10 @@ function drawMountain(
       }
       function drawPlayer() {
         context.save();
-        context.translate(player.x + player.width / 2, player.y + player.height / 2);
+        context.translate(
+          player.x + player.width / 2,
+          player.y + player.height / 2,
+        );
         context.scale(player.facing, 1);
         if (player.damageInvincibleTimer > 0) {
           const blink = Math.floor(player.damageInvincibleTimer * 14) % 2;
@@ -5032,40 +4580,28 @@ function drawMountain(
           context.ellipse(0, 20, 18, 6, 0, 0, Math.PI * 2);
           context.fill();
         }
-        const magmaDeath =
-  playerDisabled &&
-  player.missCause === "magma";
+        const magmaDeath = playerDisabled && player.missCause === "magma";
 
-if (
-  playerDisabled &&
-  !magmaDeath
-) {
-  context.rotate(
-    player.animationTime * 8,
-  );
-}
+        if (playerDisabled && !magmaDeath) {
+          context.rotate(player.animationTime * 8);
+        }
 
-if (
-  magmaDeath &&
-  Math.floor(
-    player.animationTime * 16,
-  ) %
-    2 ===
-    0
-) {
-  context.globalAlpha = 0.55;
-}
-        const speedRatio = Math.min(1, Math.abs(player.velocityX) / DASH_MAX_SPEED);
+        if (magmaDeath && Math.floor(player.animationTime * 16) % 2 === 0) {
+          context.globalAlpha = 0.55;
+        }
+        const speedRatio = Math.min(
+          1,
+          Math.abs(player.velocityX) / DASH_MAX_SPEED,
+        );
         const legSwing =
           player.grounded && Math.abs(player.velocityX) > 20
             ? Math.sin(player.animationTime * (player.dashing ? 24 : 15)) * 5
             : 0;
-        context.fillStyle =
-  magmaDeath
-    ? "#ff5a1f"
-    : player.dashing
-      ? "#1565c0"
-      : "#1f7ae0";
+        context.fillStyle = magmaDeath
+          ? "#ff5a1f"
+          : player.dashing
+            ? "#1565c0"
+            : "#1f7ae0";
         context.fillRect(-16, -18, 32, 31);
         context.fillStyle = "#ffd2a6";
         context.fillRect(-13, -17, 26, 18);
@@ -5089,7 +4625,9 @@ if (
         context.restore();
       }
       function getEnemyDrawDefinition(enemy) {
-        return ENEMY_DEFINITIONS[enemy.type] || ENEMY_DEFINITIONS[ENEMY_TYPES.WALKER];
+        return (
+          ENEMY_DEFINITIONS[enemy.type] || ENEMY_DEFINITIONS[ENEMY_TYPES.WALKER]
+        );
       }
       function drawWalkerEnemyDecoration(enemy) {
         context.fillStyle = "rgba(255, 255, 255, 0.35)";
@@ -5125,6 +4663,39 @@ if (
         context.fill();
         context.beginPath();
         context.ellipse(enemy.width / 2 + 5, 0, 10, 5, 0.35, 0, Math.PI * 2);
+        context.fill();
+      }
+      function drawVerticalFlyerEnemyDecoration(enemy) {
+        context.fillStyle = "#f3e8ff";
+        const wingBeat = Math.sin(enemy.flightTime * 11) * 3;
+        context.beginPath();
+        context.ellipse(
+          -enemy.width / 2 - 4,
+          -5,
+          6,
+          11 + wingBeat,
+          -0.18,
+          0,
+          Math.PI * 2,
+        );
+        context.fill();
+        context.beginPath();
+        context.ellipse(
+          enemy.width / 2 + 4,
+          -5,
+          6,
+          11 - wingBeat,
+          0.18,
+          0,
+          Math.PI * 2,
+        );
+        context.fill();
+        context.fillStyle = "#5f2b91";
+        context.beginPath();
+        context.moveTo(-5, -enemy.height / 2);
+        context.lineTo(0, -enemy.height / 2 - 9);
+        context.lineTo(5, -enemy.height / 2);
+        context.closePath();
         context.fill();
       }
       function drawChargerEnemyDecoration(enemy) {
@@ -5167,7 +4738,13 @@ if (
         for (let index = 0; index < enemy.maximumHealth; index += 1) {
           context.fillStyle = index < enemy.health ? "#ff4a4a" : "#555";
           context.beginPath();
-          context.arc(-12 + index * 12, enemy.height / 2 + 10, 4, 0, Math.PI * 2);
+          context.arc(
+            -12 + index * 12,
+            enemy.height / 2 + 10,
+            4,
+            0,
+            Math.PI * 2,
+          );
           context.fill();
         }
       }
@@ -5184,6 +4761,9 @@ if (
             break;
           case ENEMY_TYPES.FLYER:
             drawFlyerEnemyDecoration(enemy);
+            break;
+          case ENEMY_TYPES.VERTICAL_FLYER:
+            drawVerticalFlyerEnemyDecoration(enemy);
             break;
           case ENEMY_TYPES.CHARGER:
             drawChargerEnemyDecoration(enemy);
@@ -5203,16 +4783,33 @@ if (
           }
           const definition = getEnemyDrawDefinition(enemy);
           context.save();
-          context.translate(enemy.x + enemy.width / 2, enemy.y + enemy.height / 2);
-          if (enemy.flashTimer > 0 && Math.floor(enemy.flashTimer * 30) % 2 === 0) {
+          context.translate(
+            enemy.x + enemy.width / 2,
+            enemy.y + enemy.height / 2,
+          );
+          if (
+            enemy.flashTimer > 0 &&
+            Math.floor(enemy.flashTimer * 30) % 2 === 0
+          ) {
             context.globalAlpha = 0.35;
           }
-          const enemyScaleY = !enemy.alive && enemy.defeatAnimation !== "blockBump" ? 0.35 : 1;
+          const enemyScaleY =
+            !enemy.alive && enemy.defeatAnimation !== "blockBump" ? 0.35 : 1;
           context.scale(enemy.direction, enemyScaleY);
           context.fillStyle = definition.color;
-          context.fillRect(-enemy.width / 2, -enemy.height / 2, enemy.width, enemy.height);
+          context.fillRect(
+            -enemy.width / 2,
+            -enemy.height / 2,
+            enemy.width,
+            enemy.height,
+          );
           context.fillStyle = definition.faceColor;
-          context.fillRect(-enemy.width / 2 + 4, -enemy.height / 2 + 4, enemy.width - 8, 12);
+          context.fillRect(
+            -enemy.width / 2 + 4,
+            -enemy.height / 2 + 4,
+            enemy.width - 8,
+            12,
+          );
           context.fillStyle = "#222";
           context.fillRect(4, -8, 4, 5);
           context.fillRect(-14, enemy.height / 2 - 4, 11, 5);
@@ -5247,12 +4844,19 @@ if (
       function drawSprings() {
         for (const spring of springs) {
           const compressionProgress =
-            spring.compressionTimer > 0 ? spring.compressionTimer / SPRING_COMPRESSION_DURATION : 0;
+            spring.compressionTimer > 0
+              ? spring.compressionTimer / SPRING_COMPRESSION_DURATION
+              : 0;
           const compressedAmount = Math.sin(compressionProgress * Math.PI) * 9;
           const drawHeight = spring.height - compressedAmount;
           const drawY = spring.y + compressedAmount;
           context.fillStyle = "#3d566e";
-          context.fillRect(spring.x + 3, spring.y + spring.height - 7, spring.width - 6, 7);
+          context.fillRect(
+            spring.x + 3,
+            spring.y + spring.height - 7,
+            spring.width - 6,
+            7,
+          );
           context.strokeStyle = "#e5e5e5";
           context.lineWidth = 4;
           context.beginPath();
@@ -5291,14 +4895,30 @@ if (
           context.fillStyle = "#888";
           context.fillRect(checkpoint.x, checkpoint.y, 4, checkpoint.height);
           context.fillStyle = "#c5c5c5";
-          context.fillRect(checkpoint.x + 1, checkpoint.y, 1, checkpoint.height);
+          context.fillRect(
+            checkpoint.x + 1,
+            checkpoint.y,
+            1,
+            checkpoint.height,
+          );
           context.fillStyle = "#555";
-          context.fillRect(checkpoint.x - 6, checkpoint.y + checkpoint.height - 4, 16, 4);
+          context.fillRect(
+            checkpoint.x - 6,
+            checkpoint.y + checkpoint.height - 4,
+            16,
+            4,
+          );
           context.fillStyle = checkpoint.activated ? "#3fd15b" : "#d64545";
           context.beginPath();
           context.moveTo(checkpoint.x + 4, checkpoint.y + 4);
-          context.lineTo(checkpoint.x + 4 + CHECKPOINT_FLAG_WIDTH, checkpoint.y + 10);
-          context.lineTo(checkpoint.x + 4, checkpoint.y + CHECKPOINT_FLAG_HEIGHT);
+          context.lineTo(
+            checkpoint.x + 4 + CHECKPOINT_FLAG_WIDTH,
+            checkpoint.y + 10,
+          );
+          context.lineTo(
+            checkpoint.x + 4,
+            checkpoint.y + CHECKPOINT_FLAG_HEIGHT,
+          );
           context.closePath();
           context.fill();
           context.strokeStyle = "#333";
@@ -5431,8 +5051,12 @@ if (
           }
           let drawX = platform.x;
           const drawY = platform.y;
-          if (platform.type === "falling" && platform.fallingState === "waiting") {
-            drawX += Math.sin(platform.shakeTime * 45) * FALLING_PLATFORM_SHAKE_WIDTH;
+          if (
+            platform.type === "falling" &&
+            platform.fallingState === "waiting"
+          ) {
+            drawX +=
+              Math.sin(platform.shakeTime * 45) * FALLING_PLATFORM_SHAKE_WIDTH;
           }
           if (platform.type === "falling") {
             context.fillStyle = "#9b7045";
@@ -5440,7 +5064,8 @@ if (
             context.fillStyle = "#6f4e37";
           }
           context.fillRect(drawX, drawY, platform.width, platform.height);
-          context.fillStyle = platform.type === "falling" ? "#dfb36f" : "#b98b52";
+          context.fillStyle =
+            platform.type === "falling" ? "#dfb36f" : "#b98b52";
           context.fillRect(drawX, drawY, platform.width, 4);
           context.strokeStyle = "#2d2016";
           context.lineWidth = 2;
@@ -5451,10 +5076,16 @@ if (
             context.beginPath();
             context.moveTo(drawX + platform.width * 0.32, drawY + 3);
             context.lineTo(drawX + platform.width * 0.4, drawY + 9);
-            context.lineTo(drawX + platform.width * 0.36, drawY + platform.height);
+            context.lineTo(
+              drawX + platform.width * 0.36,
+              drawY + platform.height,
+            );
             context.moveTo(drawX + platform.width * 0.68, drawY + 2);
             context.lineTo(drawX + platform.width * 0.6, drawY + 8);
-            context.lineTo(drawX + platform.width * 0.65, drawY + platform.height);
+            context.lineTo(
+              drawX + platform.width * 0.65,
+              drawY + platform.height,
+            );
             context.stroke();
           }
         }
@@ -5480,7 +5111,8 @@ if (
           const alpha = Math.max(0, particle.life / particle.maximumLife);
           if (particle.type === "coinPop") {
             const progress = 1 - alpha;
-            const scaleX = 0.25 + Math.abs(Math.cos(progress * Math.PI * 5)) * 0.75;
+            const scaleX =
+              0.25 + Math.abs(Math.cos(progress * Math.PI * 5)) * 0.75;
             context.save();
             context.globalAlpha = Math.min(1, alpha * 1.5);
             context.translate(particle.x, particle.y);
@@ -5498,42 +5130,51 @@ if (
             continue;
           }
           if (particle.type === "magmaSpark") {
-  context.save();
+            context.save();
 
-  context.globalAlpha =
-    alpha;
+            context.globalAlpha = alpha;
 
-  context.fillStyle =
-    particle.color;
+            context.fillStyle = particle.color;
 
-  context.beginPath();
+            context.beginPath();
 
-  context.arc(
-    particle.x,
-    particle.y,
-    particle.size * alpha,
-    0,
-    Math.PI * 2,
-  );
+            context.arc(
+              particle.x,
+              particle.y,
+              particle.size * alpha,
+              0,
+              Math.PI * 2,
+            );
 
-  context.fill();
-  context.restore();
+            context.fill();
+            context.restore();
 
-  continue;
-}
+            continue;
+          }
           if (particle.type === "blockFragment") {
             context.save();
             context.globalAlpha = alpha;
             context.fillStyle = particle.color;
             context.translate(particle.x, particle.y);
             context.rotate(particle.life * 12);
-            context.fillRect(-particle.size / 2, -particle.size / 2, particle.size, particle.size);
+            context.fillRect(
+              -particle.size / 2,
+              -particle.size / 2,
+              particle.size,
+              particle.size,
+            );
             context.restore();
             continue;
           }
           context.fillStyle = "rgba(210, 190, 160, " + alpha + ")";
           context.beginPath();
-          context.arc(particle.x, particle.y, particle.size * alpha, 0, Math.PI * 2);
+          context.arc(
+            particle.x,
+            particle.y,
+            particle.size * alpha,
+            0,
+            Math.PI * 2,
+          );
           context.fill();
         }
       }
@@ -5667,8 +5308,7 @@ if (
       window.addEventListener("keyup", handleKeyUp);
       const activePointerReleases = new Map();
       function releaseActivePointer(pointerId) {
-        const releasePointer =
-          activePointerReleases.get(pointerId);
+        const releasePointer = activePointerReleases.get(pointerId);
         if (releasePointer) {
           releasePointer();
         }
@@ -5710,15 +5350,9 @@ if (
             }
             ensureAudioContext();
             event.preventDefault();
-            releaseActivePointer(
-              event.pointerId
-            );
-            releasePointerById(
-              event.pointerId
-            );
-            pointerIds.add(
-              event.pointerId
-            );
+            releaseActivePointer(event.pointerId);
+            releasePointerById(event.pointerId);
+            pointerIds.add(event.pointerId);
             activePointerReleases.set(event.pointerId, () => {
               releasePointerById(event.pointerId);
             });
@@ -5752,27 +5386,17 @@ if (
             passive: false,
           },
         );
-        element.addEventListener(
-          "pointerleave",
-          (event) => {
-            let captured =
-              false;
-            try {
-              captured =
-                element.hasPointerCapture(
-                  event.pointerId
-                );
-            } catch (error) {
-              captured =
-                false;
-            }
-            if (!captured) {
-              releasePointerById(
-                event.pointerId  
-              );
-            }
+        element.addEventListener("pointerleave", (event) => {
+          let captured = false;
+          try {
+            captured = element.hasPointerCapture(event.pointerId);
+          } catch (error) {
+            captured = false;
           }
-        );
+          if (!captured) {
+            releasePointerById(event.pointerId);
+          }
+        });
         element.addEventListener("lostpointercapture", (event) => {
           releasePointerById(event.pointerId);
         });
@@ -5793,7 +5417,8 @@ if (
           element,
           () => {
             const currentTime = performance.now() / 1000;
-            const isDoubleTap = currentTime - lastPressTime <= MOVE_DOUBLE_TAP_TIME;
+            const isDoubleTap =
+              currentTime - lastPressTime <= MOVE_DOUBLE_TAP_TIME;
             lastPressTime = currentTime;
             if (direction === "left") {
               input.left = true;
@@ -5860,25 +5485,12 @@ if (
         },
       );
       function releaseAllTouchControls() {
-        const touchButtons = [
-          leftButton,
-          rightButton,
-          jumpButton,
-          enterButton
-        ];
-        for (
-          const button of
-          touchButtons
-        ) {
-          if (
-            typeof button.releaseAllPointers ===
-            "function"
-          ) {
+        const touchButtons = [leftButton, rightButton, jumpButton, enterButton];
+        for (const button of touchButtons) {
+          if (typeof button.releaseAllPointers === "function") {
             button.releaseAllPointers();
           } else {
-            button.classList.remove(
-              "active"
-            );
+            button.classList.remove("active");
           }
         }
         activePointerReleases.clear();
@@ -5890,38 +5502,22 @@ if (
         }
         releaseAllTouchControls();
       }
-      document.addEventListener(
-        "touchend",
-        handleTouchReleaseFallback,
-        {
-          capture: true,
-          passive: true
-        }
-      );
-      document.addEventListener(
-        "touchcancel",
-        handleTouchReleaseFallback,
-        {
-          capture: true,
-          passive: true
-        }
-      );
-      function handleGlobalPointerRelease(
-        event
-      ) {
-        releaseActivePointer(
-          event.pointerId
-        );
+      document.addEventListener("touchend", handleTouchReleaseFallback, {
+        capture: true,
+        passive: true,
+      });
+      document.addEventListener("touchcancel", handleTouchReleaseFallback, {
+        capture: true,
+        passive: true,
+      });
+      function handleGlobalPointerRelease(event) {
+        releaseActivePointer(event.pointerId);
       }
-      window.addEventListener(
-        "pointerup",
-        handleGlobalPointerRelease,
-        true
-      );
+      window.addEventListener("pointerup", handleGlobalPointerRelease, true);
       window.addEventListener(
         "pointercancel",
         handleGlobalPointerRelease,
-        true
+        true,
       );
       function resetAllInputs() {
         input.left = false;
@@ -5963,7 +5559,10 @@ if (
         "touchend",
         (event) => {
           const target = event.target;
-          if (target instanceof Element && target.closest("button, .touch-button")) {
+          if (
+            target instanceof Element &&
+            target.closest("button, .touch-button")
+          ) {
             return;
           }
           const currentTime = Date.now();
@@ -5981,7 +5580,10 @@ if (
         "dblclick",
         (event) => {
           const target = event.target;
-          if (target instanceof Element && target.closest("button, .touch-button")) {
+          if (
+            target instanceof Element &&
+            target.closest("button, .touch-button")
+          ) {
             return;
           }
           event.preventDefault();
