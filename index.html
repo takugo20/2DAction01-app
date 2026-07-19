@@ -3194,40 +3194,957 @@
         cameraY += (targetCameraY - cameraY) * followAmount;
       }
       function drawBackground() {
-        const gradient = context.createLinearGradient(0, 0, 0, viewportHeight);
-        gradient.addColorStop(0, "#74c9f5");
-        gradient.addColorStop(1, "#d8f3ff");
-        context.fillStyle = gradient;
-        context.fillRect(0, 0, viewportWidth, viewportHeight);
-        drawCloud(120 - cameraX * 0.12, 90 - cameraY * 0.08, 1);
-        drawCloud(480 - cameraX * 0.12, 150 - cameraY * 0.08, 0.8);
-        drawCloud(850 - cameraX * 0.12, 80 - cameraY * 0.08, 1.2);
-        drawMountain(-120 - cameraX * 0.18, viewportHeight - 150 - cameraY * 0.04, 330);
-        drawMountain(230 - cameraX * 0.18, viewportHeight - 130 - cameraY * 0.04, 270);
-        drawMountain(650 - cameraX * 0.18, viewportHeight - 145 - cameraY * 0.04, 310);
-      }
-      function drawCloud(x, y, scale) {
-        context.save();
-        context.translate(x, y);
-        context.scale(scale, scale);
-        context.fillStyle = "rgba(255, 255, 255, 0.9)";
+  const backgroundTheme =
+    STAGES[currentStageIndex]?.background ??
+    "grassland";
+
+  switch (backgroundTheme) {
+    case "underground":
+      drawUndergroundBackground();
+      break;
+
+    case "fortress":
+      drawFortressBackground();
+      break;
+
+    case "grassland":
+    default:
+      drawGrasslandBackground();
+      break;
+  }
+}
+
+function drawGrasslandBackground() {
+  const gradient =
+    context.createLinearGradient(
+      0,
+      0,
+      0,
+      viewportHeight,
+    );
+
+  gradient.addColorStop(
+    0,
+    "#74c9f5",
+  );
+
+  gradient.addColorStop(
+    1,
+    "#d8f3ff",
+  );
+
+  context.fillStyle =
+    gradient;
+
+  context.fillRect(
+    0,
+    0,
+    viewportWidth,
+    viewportHeight,
+  );
+
+  drawCloud(
+    120 - cameraX * 0.12,
+    90 - cameraY * 0.08,
+    1,
+  );
+
+  drawCloud(
+    480 - cameraX * 0.12,
+    150 - cameraY * 0.08,
+    0.8,
+  );
+
+  drawCloud(
+    850 - cameraX * 0.12,
+    80 - cameraY * 0.08,
+    1.2,
+  );
+
+  drawMountain(
+    -120 - cameraX * 0.18,
+    viewportHeight -
+      150 -
+      cameraY * 0.04,
+    330,
+  );
+
+  drawMountain(
+    230 - cameraX * 0.18,
+    viewportHeight -
+      130 -
+      cameraY * 0.04,
+    270,
+  );
+
+  drawMountain(
+    650 - cameraX * 0.18,
+    viewportHeight -
+      145 -
+      cameraY * 0.04,
+    310,
+  );
+}
+
+function positiveModulo(
+  value,
+  divisor,
+) {
+  return (
+    ((value % divisor) + divisor) %
+    divisor
+  );
+}
+
+function drawUndergroundBackground() {
+  context.save();
+
+  const gradient =
+    context.createLinearGradient(
+      0,
+      0,
+      0,
+      viewportHeight,
+    );
+
+  gradient.addColorStop(
+    0,
+    "#111820",
+  );
+
+  gradient.addColorStop(
+    0.55,
+    "#26323a",
+  );
+
+  gradient.addColorStop(
+    1,
+    "#151b20",
+  );
+
+  context.fillStyle =
+    gradient;
+
+  context.fillRect(
+    0,
+    0,
+    viewportWidth,
+    viewportHeight,
+  );
+
+  drawUndergroundStoneWall();
+
+  const time =
+    performance.now() / 1000;
+
+  const torchSpacing = 420;
+  const parallaxX =
+    cameraX * 0.1;
+
+  const firstTorchIndex =
+    Math.floor(
+      parallaxX /
+        torchSpacing,
+    ) - 1;
+
+  const verticalRange =
+    Math.max(
+      220,
+      viewportHeight - 180,
+    );
+
+  for (
+    let index = 0;
+    index < 5;
+    index += 1
+  ) {
+    const torchIndex =
+      firstTorchIndex + index;
+
+    const x =
+      torchIndex *
+        torchSpacing +
+      180 -
+      parallaxX;
+
+    const y =
+      100 +
+      positiveModulo(
+        torchIndex * 137 -
+          cameraY * 0.06,
+        verticalRange,
+      );
+
+    drawUndergroundTorch(
+      x,
+      y,
+      time +
+        torchIndex * 0.7,
+    );
+  }
+
+  const vignette =
+    context.createRadialGradient(
+      viewportWidth / 2,
+      viewportHeight / 2,
+      Math.min(
+        viewportWidth,
+        viewportHeight,
+      ) * 0.18,
+
+      viewportWidth / 2,
+      viewportHeight / 2,
+      Math.max(
+        viewportWidth,
+        viewportHeight,
+      ) * 0.72,
+    );
+
+  vignette.addColorStop(
+    0,
+    "rgba(0, 0, 0, 0)",
+  );
+
+  vignette.addColorStop(
+    1,
+    "rgba(0, 0, 0, 0.48)",
+  );
+
+  context.fillStyle =
+    vignette;
+
+  context.fillRect(
+    0,
+    0,
+    viewportWidth,
+    viewportHeight,
+  );
+
+  context.restore();
+}
+
+function drawUndergroundStoneWall() {
+  const brickWidth = 96;
+  const brickHeight = 54;
+
+  const offsetX =
+    -positiveModulo(
+      cameraX * 0.08,
+      brickWidth,
+    );
+
+  const offsetY =
+    -positiveModulo(
+      cameraY * 0.05,
+      brickHeight,
+    );
+
+  const columnCount =
+    Math.ceil(
+      viewportWidth /
+        brickWidth,
+    ) + 3;
+
+  const rowCount =
+    Math.ceil(
+      viewportHeight /
+        brickHeight,
+    ) + 3;
+
+  const stoneColors = [
+    "#303b42",
+    "#354148",
+    "#2b353c",
+  ];
+
+  for (
+    let row = -1;
+    row < rowCount;
+    row += 1
+  ) {
+    const rowShift =
+      row % 2 === 0
+        ? 0
+        : -brickWidth / 2;
+
+    for (
+      let column = -1;
+      column < columnCount;
+      column += 1
+    ) {
+      const x =
+        offsetX +
+        column * brickWidth +
+        rowShift;
+
+      const y =
+        offsetY +
+        row * brickHeight;
+
+      const shadeIndex =
+        positiveModulo(
+          row * 5 +
+            column * 3,
+          stoneColors.length,
+        );
+
+      context.fillStyle =
+        stoneColors[
+          shadeIndex
+        ];
+
+      context.fillRect(
+        x + 2,
+        y + 2,
+        brickWidth - 4,
+        brickHeight - 4,
+      );
+
+      context.strokeStyle =
+        "rgba(10, 14, 17, 0.72)";
+
+      context.lineWidth = 3;
+
+      context.strokeRect(
+        x + 1,
+        y + 1,
+        brickWidth - 2,
+        brickHeight - 2,
+      );
+
+      context.fillStyle =
+        "rgba(255, 255, 255, 0.035)";
+
+      context.fillRect(
+        x + 7,
+        y + 7,
+        brickWidth - 14,
+        5,
+      );
+
+      const hasCrack =
+        positiveModulo(
+          row * 7 +
+            column * 11,
+          9,
+        ) === 0;
+
+      if (hasCrack) {
+        context.strokeStyle =
+          "rgba(12, 16, 19, 0.65)";
+
+        context.lineWidth = 2;
+
         context.beginPath();
-        context.arc(0, 10, 25, 0, Math.PI * 2);
-        context.arc(28, 0, 31, 0, Math.PI * 2);
-        context.arc(60, 12, 24, 0, Math.PI * 2);
-        context.arc(30, 22, 38, 0, Math.PI * 2);
-        context.fill();
-        context.restore();
+
+        context.moveTo(
+          x +
+            brickWidth * 0.36,
+          y + 8,
+        );
+
+        context.lineTo(
+          x +
+            brickWidth * 0.48,
+          y +
+            brickHeight * 0.45,
+        );
+
+        context.lineTo(
+          x +
+            brickWidth * 0.42,
+          y +
+            brickHeight -
+            8,
+        );
+
+        context.stroke();
       }
-      function drawMountain(x, baseY, width) {
-        context.fillStyle = "rgba(84, 155, 105, 0.55)";
-        context.beginPath();
-        context.moveTo(x, baseY);
-        context.lineTo(x + width / 2, baseY - width * 0.55);
-        context.lineTo(x + width, baseY);
-        context.closePath();
-        context.fill();
-      }
+    }
+  }
+}
+
+function drawUndergroundTorch(
+  x,
+  y,
+  time,
+) {
+  const flicker =
+    Math.sin(time * 10) * 3 +
+    Math.sin(time * 17) * 2;
+
+  const glowRadius =
+    68 + flicker;
+
+  const glow =
+    context.createRadialGradient(
+      x,
+      y - 18,
+      4,
+      x,
+      y - 18,
+      glowRadius,
+    );
+
+  glow.addColorStop(
+    0,
+    "rgba(255, 211, 92, 0.48)",
+  );
+
+  glow.addColorStop(
+    0.45,
+    "rgba(255, 119, 36, 0.18)",
+  );
+
+  glow.addColorStop(
+    1,
+    "rgba(255, 90, 20, 0)",
+  );
+
+  context.fillStyle =
+    glow;
+
+  context.beginPath();
+
+  context.arc(
+    x,
+    y - 18,
+    glowRadius,
+    0,
+    Math.PI * 2,
+  );
+
+  context.fill();
+
+  context.fillStyle =
+    "#5f4634";
+
+  context.fillRect(
+    x - 4,
+    y - 2,
+    8,
+    34,
+  );
+
+  context.fillStyle =
+    "#84705d";
+
+  context.fillRect(
+    x - 10,
+    y + 27,
+    20,
+    5,
+  );
+
+  context.fillStyle =
+    "#ff7a1a";
+
+  context.beginPath();
+
+  context.moveTo(
+    x,
+    y -
+      42 -
+      flicker * 0.35,
+  );
+
+  context.quadraticCurveTo(
+    x + 14,
+    y - 24,
+    x,
+    y - 8,
+  );
+
+  context.quadraticCurveTo(
+    x - 14,
+    y - 24,
+    x,
+    y -
+      42 -
+      flicker * 0.35,
+  );
+
+  context.fill();
+
+  context.fillStyle =
+    "#ffe36e";
+
+  context.beginPath();
+
+  context.moveTo(
+    x,
+    y -
+      33 -
+      flicker * 0.2,
+  );
+
+  context.quadraticCurveTo(
+    x + 7,
+    y - 22,
+    x,
+    y - 13,
+  );
+
+  context.quadraticCurveTo(
+    x - 7,
+    y - 22,
+    x,
+    y -
+      33 -
+      flicker * 0.2,
+  );
+
+  context.fill();
+}
+
+function drawFortressBackground() {
+  context.save();
+
+  const gradient =
+    context.createLinearGradient(
+      0,
+      0,
+      0,
+      viewportHeight,
+    );
+
+  gradient.addColorStop(
+    0,
+    "#261117",
+  );
+
+  gradient.addColorStop(
+    0.55,
+    "#4b1d1d",
+  );
+
+  gradient.addColorStop(
+    1,
+    "#120d0e",
+  );
+
+  context.fillStyle =
+    gradient;
+
+  context.fillRect(
+    0,
+    0,
+    viewportWidth,
+    viewportHeight,
+  );
+
+  drawFortressSilhouette();
+
+  const lavaTop =
+    viewportHeight - 82;
+
+  const lavaGlow =
+    context.createLinearGradient(
+      0,
+      lavaTop - 100,
+      0,
+      viewportHeight,
+    );
+
+  lavaGlow.addColorStop(
+    0,
+    "rgba(255, 70, 20, 0)",
+  );
+
+  lavaGlow.addColorStop(
+    0.65,
+    "rgba(255, 70, 20, 0.24)",
+  );
+
+  lavaGlow.addColorStop(
+    1,
+    "rgba(255, 125, 25, 0.62)",
+  );
+
+  context.fillStyle =
+    lavaGlow;
+
+  context.fillRect(
+    0,
+    lavaTop - 100,
+    viewportWidth,
+    182,
+  );
+
+  context.fillStyle =
+    "#8f2416";
+
+  context.fillRect(
+    0,
+    lavaTop,
+    viewportWidth,
+    viewportHeight -
+      lavaTop,
+  );
+
+  const time =
+    performance.now() / 1000;
+
+  context.strokeStyle =
+    "#ff9d2e";
+
+  context.lineWidth = 5;
+
+  context.beginPath();
+
+  for (
+    let x = -20;
+    x <= viewportWidth + 20;
+    x += 20
+  ) {
+    const y =
+      lavaTop +
+      Math.sin(
+        x * 0.045 +
+          time * 2.5,
+      ) * 5;
+
+    if (x === -20) {
+      context.moveTo(
+        x,
+        y,
+      );
+    } else {
+      context.lineTo(
+        x,
+        y,
+      );
+    }
+  }
+
+  context.stroke();
+
+  drawFortressEmbers(
+    time,
+  );
+
+  context.restore();
+}
+
+function drawFortressSilhouette() {
+  const parallaxX =
+    cameraX * 0.12;
+
+  const towerSpacing = 250;
+
+  const firstTowerIndex =
+    Math.floor(
+      parallaxX /
+        towerSpacing,
+    ) - 1;
+
+  const baseline =
+    clamp(
+      viewportHeight * 0.76 -
+        cameraY * 0.03,
+      180,
+      viewportHeight - 45,
+    );
+
+  context.fillStyle =
+    "#191416";
+
+  context.fillRect(
+    0,
+    baseline,
+    viewportWidth,
+    viewportHeight -
+      baseline,
+  );
+
+  for (
+    let index = 0;
+    index < 6;
+    index += 1
+  ) {
+    const towerIndex =
+      firstTowerIndex +
+      index;
+
+    const x =
+      towerIndex *
+        towerSpacing +
+      90 -
+      parallaxX;
+
+    const height =
+      150 +
+      positiveModulo(
+        towerIndex * 47,
+        90,
+      );
+
+    const width =
+      92 +
+      positiveModulo(
+        towerIndex * 31,
+        34,
+      );
+
+    drawFortressTower(
+      x,
+      baseline,
+      width,
+      height,
+      towerIndex,
+    );
+  }
+}
+
+function drawFortressTower(
+  x,
+  baseline,
+  width,
+  height,
+  towerIndex,
+) {
+  const topY =
+    baseline - height;
+
+  context.fillStyle =
+    "#21191b";
+
+  context.fillRect(
+    x,
+    topY,
+    width,
+    height,
+  );
+
+  const battlementCount = 5;
+
+  const battlementWidth =
+    width /
+    battlementCount;
+
+  for (
+    let index = 0;
+    index < battlementCount;
+    index += 1
+  ) {
+    if (index % 2 === 0) {
+      context.fillRect(
+        x +
+          index *
+            battlementWidth,
+        topY - 17,
+        battlementWidth,
+        18,
+      );
+    }
+  }
+
+  context.strokeStyle =
+    "rgba(88, 52, 49, 0.7)";
+
+  context.lineWidth = 3;
+
+  context.strokeRect(
+    x + 1,
+    topY + 1,
+    width - 2,
+    height - 1,
+  );
+
+  const windowRows =
+    Math.max(
+      1,
+      Math.floor(
+        height / 62,
+      ),
+    );
+
+  for (
+    let row = 0;
+    row < windowRows;
+    row += 1
+  ) {
+    for (
+      let column = 0;
+      column < 2;
+      column += 1
+    ) {
+      const lit =
+        positiveModulo(
+          towerIndex * 5 +
+            row * 3 +
+            column,
+          4,
+        ) !== 0;
+
+      context.fillStyle =
+        lit
+          ? "rgba(255, 132, 42, 0.72)"
+          : "#0c0a0b";
+
+      context.fillRect(
+        x +
+          18 +
+          column *
+            (width - 40),
+        topY +
+          27 +
+          row * 56,
+        10,
+        20,
+      );
+    }
+  }
+}
+
+function drawFortressEmbers(
+  time,
+) {
+  const travelHeight =
+    viewportHeight + 120;
+
+  for (
+    let index = 0;
+    index < 24;
+    index += 1
+  ) {
+    const progress =
+      positiveModulo(
+        time *
+          (26 +
+            (index % 5) * 5) +
+          index * 67,
+        travelHeight,
+      );
+
+    const y =
+      viewportHeight +
+      35 -
+      progress;
+
+    const x =
+      positiveModulo(
+        index * 137 -
+          cameraX * 0.035 +
+          Math.sin(
+            time * 1.7 +
+              index,
+          ) * 24,
+        viewportWidth + 100,
+      ) - 50;
+
+    const radius =
+      1.5 +
+      (index % 3) * 0.8;
+
+    context.fillStyle =
+      index % 2 === 0
+        ? "rgba(255, 196, 76, 0.82)"
+        : "rgba(255, 92, 35, 0.72)";
+
+    context.beginPath();
+
+    context.arc(
+      x,
+      y,
+      radius,
+      0,
+      Math.PI * 2,
+    );
+
+    context.fill();
+  }
+}
+
+function drawCloud(
+  x,
+  y,
+  scale,
+) {
+  context.save();
+
+  context.translate(
+    x,
+    y,
+  );
+
+  context.scale(
+    scale,
+    scale,
+  );
+
+  context.fillStyle =
+    "rgba(255, 255, 255, 0.9)";
+
+  context.beginPath();
+
+  context.arc(
+    0,
+    10,
+    25,
+    0,
+    Math.PI * 2,
+  );
+
+  context.arc(
+    28,
+    0,
+    31,
+    0,
+    Math.PI * 2,
+  );
+
+  context.arc(
+    60,
+    12,
+    24,
+    0,
+    Math.PI * 2,
+  );
+
+  context.arc(
+    30,
+    22,
+    38,
+    0,
+    Math.PI * 2,
+  );
+
+  context.fill();
+
+  context.restore();
+}
+
+function drawMountain(
+  x,
+  baseY,
+  width,
+) {
+  context.fillStyle =
+    "rgba(84, 155, 105, 0.55)";
+
+  context.beginPath();
+
+  context.moveTo(
+    x,
+    baseY,
+  );
+
+  context.lineTo(
+    x + width / 2,
+    baseY -
+      width * 0.55,
+  );
+
+  context.lineTo(
+    x + width,
+    baseY,
+  );
+
+  context.closePath();
+
+  context.fill();
+}
       function getBlockColors(symbol) {
         switch (symbol) {
           case "B":
