@@ -606,15 +606,19 @@
       const FIRE_BAR_FLAME_RADIUS = 10;
       const FIRE_BAR_CENTER_RADIUS = 10;
       const FIRE_BAR_ROTATION_SPEED = 1.45;
-      const FIRE_BAR_ENEMY_KNOCKBACK_SPEED = 150;
-      const FIRE_BAR_ENEMY_BOUNCE_POWER = 320;
+
+      const MAGMA_COLLISION_MARGIN_X = 4;
+      const MAGMA_COLLISION_MARGIN_TOP = 3;
+      const MAGMA_MISS_DURATION = 0.9;
+      const MAGMA_SINK_SPEED = 55;
+      const MAGMA_PARTICLE_COUNT = 16;
       /*
       ステージ記号:
         . 空間 / P 開始 / C コイン / G ゴール
         # 地面 / B 通常 / H 叩ける / R 壊せる / Q コイン / I アイテム / U 使用済み / Z トゲブロック
         W 通常敵 / A 穴回避 / J ジャンプ / F 飛行 / D 突進 / N 中ボス / X ボス
         M 横足場 / V 縦足場 / L 落ちる床 / T トゲ / S バネ / K チェックポイント
-        Y 時計回りに回転するファイヤーバー
+        Y 時計回りに回転するファイヤーバー / ~ マグマ
         a～z 同じ文字同士を結ぶドア
         1 シールド / 2 無敵 / 3 ジャンプ強化 / 4 残機アップ
       */
@@ -773,6 +777,8 @@
       let goal = null;
       let movingPlatforms = [];
       let fireBars = [];
+      let magmaTiles = [];
+      const magmaTileKeys = new Set();
       let doors = [];
       let nearbyDoor = null;
       let doorCooldown = 0;
@@ -1420,6 +1426,53 @@
           height: SPIKE_HEIGHT,
         });
       }
+      function getMagmaTileKey(column, row) {
+  return column + "," + row;
+}
+
+function createMagma(column, row) {
+  const x = column * TILE_SIZE;
+  const y = row * TILE_SIZE;
+
+  magmaTiles.push({
+    column,
+    row,
+    x,
+    y,
+    width: TILE_SIZE,
+    height: TILE_SIZE,
+  });
+
+  magmaTileKeys.add(
+    getMagmaTileKey(column, row),
+  );
+}
+
+function hasMagmaAt(column, row) {
+  return magmaTileKeys.has(
+    getMagmaTileKey(column, row),
+  );
+}
+
+function getMagmaCollisionRectangle(magma) {
+  return {
+    x:
+      magma.x +
+      MAGMA_COLLISION_MARGIN_X,
+
+    y:
+      magma.y +
+      MAGMA_COLLISION_MARGIN_TOP,
+
+    width:
+      magma.width -
+      MAGMA_COLLISION_MARGIN_X * 2,
+
+    height:
+      magma.height -
+      MAGMA_COLLISION_MARGIN_TOP,
+  };
+}
       function createSpring(tileX, tileY) {
         springs.push({
           x: tileX,
@@ -1561,6 +1614,11 @@
           stageRows[row][column] = ".";
           return;
         }
+        if (symbol === "~") {
+        createMagma(column, row);
+        stageRows[row][column] = ".";
+        return;
+        }
         if (symbol === "T") {
           createSpike(tileX, tileY);
           stageRows[row][column] = ".";
@@ -1632,6 +1690,8 @@
         checkpoints = [];
         movingPlatforms = [];
         fireBars = [];
+        magmaTiles = [];
+        magmaTileKeys.clear();
         doors = [];
         nearbyDoor = null;
         doorCooldown = 0;
@@ -1674,6 +1734,7 @@
           }
         }
         prepareDoorPairs();
+        validateMagmaRespawnPositions();
         if (preservedCheckpointId !== null && preservedRespawnPosition) {
           const restoredCheckpoint = checkpoints.find(
             (checkpoint) => checkpoint.id === preservedCheckpointId,
@@ -1714,6 +1775,7 @@
           invincibleTimer: 0,
           damageInvincibleTimer: 0,
           jumpBoostTimer: 0,
+          missCause: null,
         };
         playerDisabled = false;
         missTimer = 0;
@@ -2224,16 +2286,43 @@
           player.jumpBoostTimer = Math.max(0, player.jumpBoostTimer - deltaTime);
         }
         if (playerDisabled) {
-          player.velocityY = Math.min(player.velocityY + GRAVITY * deltaTime, MAX_FALL_SPEED);
-          player.x += player.velocityX * deltaTime;
-          player.y += player.velocityY * deltaTime;
-          player.animationTime += deltaTime;
-          missTimer -= deltaTime;
-          if (missTimer <= 0) {
-            restartAfterMiss();
-          }
-          return;
-        }
+  if (player.missCause === "magma") {
+    player.velocityX = 0;
+    player.velocityY =
+      MAGMA_SINK_SPEED;
+
+    player.y +=
+      player.velocityY *
+      deltaTime;
+  } else {
+    player.velocityY =
+      Math.min(
+        player.velocityY +
+          GRAVITY * deltaTime,
+        MAX_FALL_SPEED,
+      );
+
+    player.x +=
+      player.velocityX *
+      deltaTime;
+
+    player.y +=
+      player.velocityY *
+      deltaTime;
+  }
+
+  player.animationTime +=
+    deltaTime;
+
+  missTimer -=
+    deltaTime;
+
+  if (missTimer <= 0) {
+    restartAfterMiss();
+  }
+
+  return;
+}
         let horizontalInput = 0;
         if (input.left) {
           horizontalInput -= 1;
@@ -2721,64 +2810,156 @@
           fireBar.animationTime += deltaTime;
         }
       }
-      function damageEnemyFromFireBar(enemy, fireBar) {
-        if (!enemy.alive || enemy.hitInvincibleTimer > 0) {
-          return false;
-        }
-        enemy.health -= 1;
-        enemy.hitInvincibleTimer = 0.45;
-        enemy.flashTimer = 0.25;
-        const enemyCenterX = enemy.x + enemy.width / 2;
-        enemy.direction = enemyCenterX < fireBar.centerX ? -1 : 1;
-        enemy.velocityX = enemy.direction * FIRE_BAR_ENEMY_KNOCKBACK_SPEED;
-        enemy.velocityY = -FIRE_BAR_ENEMY_BOUNCE_POWER;
-        enemy.grounded = false;
-        enemy.standingPlatform = null;
-        if (enemy.health <= 0) {
-          enemy.alive = false;
-          enemy.squashTimer = BLOCK_ENEMY_DEFEAT_DURATION;
-          enemy.defeatAnimation = "blockBump";
-          if (enemy.type === ENEMY_TYPES.MID_BOSS) {
-            score += 1000;
-          } else if (enemy.type === ENEMY_TYPES.BOSS) {
-            score += 3000;
-          } else {
-            score += 200;
-          }
-        } else {
-          score += 300;
-        }
-        return true;
-      }
+      function damageEnemyFromFireBar(
+  enemy,
+  fireBar,
+) {
+  // 関数内のすべて
+}
       function updateFireBarCollisions() {
-        let damagedEnemy = false;
-        for (const fireBar of fireBars) {
-          if (!isEntityNearCamera(fireBar)) {
-            continue;
-          }
-          const flames = getFireBarFlames(fireBar);
-          for (const flame of flames) {
-            if (circleRectangleOverlap(flame, player)) {
-              triggerMiss();
-              if (playerDisabled) {
-                return;
-              }
-            }
-            for (const enemy of enemies) {
-              if (!enemy.alive || !circleRectangleOverlap(flame, enemy)) {
-                continue;
-              }
-              if (damageEnemyFromFireBar(enemy, fireBar)) {
-                damagedEnemy = true;
-              }
-            }
-          }
-        }
-        if (damagedEnemy) {
-          playStompSound();
-          updateHud();
-        }
+  for (const fireBar of fireBars) {
+    if (
+      !isEntityNearCamera(
+        fireBar,
+      )
+    ) {
+      continue;
+    }
+
+    const flames =
+      getFireBarFlames(
+        fireBar,
+      );
+
+    for (const flame of flames) {
+      if (
+        circleRectangleOverlap(
+          flame,
+          player,
+        )
+      ) {
+        triggerMiss();
+        return;
       }
+    }
+  }
+}
+      function updateMagmaPlayerCollision() {
+  for (const magma of magmaTiles) {
+    if (
+      !isEntityNearCamera(
+        magma,
+      )
+    ) {
+      continue;
+    }
+
+    const collisionRectangle =
+      getMagmaCollisionRectangle(
+        magma,
+      );
+
+    if (
+      rectanglesOverlap(
+        player,
+        collisionRectangle,
+      )
+    ) {
+      triggerMagmaMiss();
+      return true;
+    }
+  }
+
+  return false;
+}
+
+function updateMagmaEntityCollisions() {
+  for (const magma of magmaTiles) {
+    if (
+      !isEntityNearCamera(
+        magma,
+      )
+    ) {
+      continue;
+    }
+
+    const collisionRectangle =
+      getMagmaCollisionRectangle(
+        magma,
+      );
+
+    /*
+      通常敵・中ボス・ボスを
+      すべて即座に消滅させます。
+      スコアは加算しません。
+    */
+    for (const enemy of enemies) {
+      if (
+        !enemy.alive ||
+        !rectanglesOverlap(
+          enemy,
+          collisionRectangle,
+        )
+      ) {
+        continue;
+      }
+
+      enemy.alive = false;
+      enemy.squashTimer = 0;
+      enemy.defeatAnimation =
+        "magma";
+
+      enemy.velocityX = 0;
+      enemy.velocityY = 0;
+
+      createMagmaBurstParticles(
+        enemy.x +
+          enemy.width / 2,
+
+        Math.max(
+          magma.y,
+          enemy.y +
+            enemy.height,
+        ),
+
+        7,
+      );
+    }
+
+    /*
+      シールド・無敵・ジャンプ強化・1UPも
+      マグマへ入ると消滅します。
+    */
+    for (const item of items) {
+      if (
+        item.collected ||
+        !rectanglesOverlap(
+          item,
+          collisionRectangle,
+        )
+      ) {
+        continue;
+      }
+
+      item.collected = true;
+      item.velocityX = 0;
+      item.velocityY = 0;
+
+      createMagmaBurstParticles(
+        item.x +
+          item.width / 2,
+
+        Math.max(
+          magma.y,
+          item.y +
+            item.height,
+        ),
+
+        5,
+      );
+    }
+  }
+}
       function updateItems(deltaTime) {
         for (const item of items) {
           if (item.collected) {
@@ -2883,13 +3064,24 @@
         }
       }
       function updateObjectCollisions() {
-        if (playerDisabled || gameCleared || gameOver) {
-          return;
-        }
-        updateSpikeCollisions();
-        if (playerDisabled) {
-          return;
-        }
+        if (
+  playerDisabled ||
+  gameCleared ||
+  gameOver
+) {
+  return;
+}
+updateMagmaPlayerCollision();
+
+if (playerDisabled) {
+  return;
+}
+
+updateSpikeCollisions();
+
+if (playerDisabled) {
+  return;
+}
         updateFireBarCollisions();
         if (playerDisabled) {
           return;
@@ -2982,6 +3174,7 @@
         missCount += 1;
         lives = Math.max(0, lives - 1);
         playerDisabled = true;
+        player.missCause = "normal";
         missTimer = 1.15;
         variableJumpActive = false;
         jumpHoldTimer = 0;
@@ -2993,6 +3186,63 @@
         playMissSound();
         updateHud();
       }
+      function triggerMagmaMiss() {
+  if (
+    playerDisabled ||
+    gameCleared ||
+    gameOver
+  ) {
+    return;
+  }
+
+  resetAllInputs();
+
+  missCount += 1;
+
+  lives = Math.max(
+    0,
+    lives - 1,
+  );
+
+  playerDisabled = true;
+  player.missCause = "magma";
+
+  /*
+    シールド・無敵・被ダメージ無敵を
+    すべて無効化します。
+  */
+  player.hasShield = false;
+  player.invincibleTimer = 0;
+  player.damageInvincibleTimer = 0;
+
+  player.velocityX = 0;
+  player.velocityY =
+    MAGMA_SINK_SPEED;
+
+  player.grounded = false;
+  player.standingPlatform = null;
+
+  missTimer =
+    MAGMA_MISS_DURATION;
+
+  variableJumpActive = false;
+  jumpHoldTimer = 0;
+  jumpBufferTimer = 0;
+  coyoteTimer = 0;
+
+  createMagmaBurstParticles(
+    player.x +
+      player.width / 2,
+
+    player.y +
+      player.height,
+
+    MAGMA_PARTICLE_COUNT,
+  );
+
+  playMissSound();
+  updateHud();
+}
       function triggerClear() {
         if (gameCleared || gameOver) {
           return;
@@ -3064,6 +3314,54 @@
           color: "#d2bea0",
         });
       }
+      function createMagmaBurstParticles(
+  x,
+  y,
+  count = MAGMA_PARTICLE_COUNT,
+) {
+  for (
+    let index = 0;
+    index < count;
+    index += 1
+  ) {
+    const life =
+      0.35 +
+      Math.random() * 0.35;
+
+    particles.push({
+      type: "magmaSpark",
+
+      x:
+        x +
+        (Math.random() - 0.5) *
+          28,
+
+      y:
+        y -
+        Math.random() * 8,
+
+      velocityX:
+        (Math.random() - 0.5) *
+        180,
+
+      velocityY:
+        -120 -
+        Math.random() * 230,
+
+      life,
+      maximumLife: life,
+
+      size:
+        2.5 +
+        Math.random() * 4.5,
+
+      color:
+        Math.random() < 0.5
+          ? "#ffcf45"
+          : "#ff5a1f",
+    });
+  }
+}
       function createBlockBreakParticles(column, row, symbol) {
         const colors = getBlockColors(symbol);
         const centerX = column * TILE_SIZE + TILE_SIZE / 2;
@@ -3151,6 +3449,65 @@
           size: 12,
         });
       }
+      function isRectangleTouchingMagma(
+  rectangle,
+) {
+  return magmaTiles.some(
+    (magma) =>
+      rectanglesOverlap(
+        rectangle,
+        getMagmaCollisionRectangle(
+          magma,
+        ),
+      ),
+  );
+}
+
+function validateMagmaRespawnPositions() {
+  const stageName =
+    STAGES[currentStageIndex]
+      ?.name ??
+    "現在のステージ";
+
+  const startRectangle = {
+    x: startPosition.x,
+    y: startPosition.y,
+    width: PLAYER_WIDTH,
+    height: PLAYER_HEIGHT,
+  };
+
+  if (
+    isRectangleTouchingMagma(
+      startRectangle,
+    )
+  ) {
+    console.warn(
+      `${stageName}: 開始地点がマグマと重なっています。`,
+    );
+  }
+
+  for (
+    const checkpoint of
+    checkpoints
+  ) {
+    const respawnRectangle = {
+      x: checkpoint.respawnX,
+      y: checkpoint.respawnY,
+      width: PLAYER_WIDTH,
+      height: PLAYER_HEIGHT,
+    };
+
+    if (
+      isRectangleTouchingMagma(
+        respawnRectangle,
+      )
+    ) {
+      console.warn(
+        `${stageName}: チェックポイント${checkpoint.id + 1}の復帰地点がマグマと重なっています。`,
+      );
+    }
+  }
+}
       function clamp(value, minimum, maximum) {
         return Math.max(minimum, Math.min(value, maximum));
       }
@@ -4302,6 +4659,239 @@ function drawMountain(
         context.textAlign = "start";
         context.textBaseline = "alphabetic";
       }
+      function drawMagma() {
+  const time =
+    performance.now() / 1000;
+
+  for (const magma of magmaTiles) {
+    if (
+      !isEntityNearCamera(
+        magma,
+      )
+    ) {
+      continue;
+    }
+
+    const gradient =
+      context.createLinearGradient(
+        0,
+        magma.y,
+        0,
+        magma.y +
+          magma.height,
+      );
+
+    gradient.addColorStop(
+      0,
+      "#ff7a18",
+    );
+
+    gradient.addColorStop(
+      0.28,
+      "#d83a12",
+    );
+
+    gradient.addColorStop(
+      1,
+      "#68130d",
+    );
+
+    context.fillStyle =
+      gradient;
+
+    context.fillRect(
+      magma.x,
+      magma.y,
+      magma.width,
+      magma.height,
+    );
+
+    context.fillStyle =
+      "rgba(255, 190, 55, 0.18)";
+
+    context.fillRect(
+      magma.x,
+      magma.y + 12,
+      magma.width,
+      8,
+    );
+
+    /*
+      上に別のマグマがある場合は、
+      このマスには表面の波を描きません。
+    */
+    const hasMagmaAbove =
+      hasMagmaAt(
+        magma.column,
+        magma.row - 1,
+      );
+
+    if (hasMagmaAbove) {
+      continue;
+    }
+
+    context.fillStyle =
+      "rgba(255, 93, 24, 0.22)";
+
+    context.fillRect(
+      magma.x,
+      magma.y - 10,
+      magma.width,
+      18,
+    );
+
+    /*
+      マグマの波面
+    */
+    context.beginPath();
+
+    for (
+      let localX = 0;
+      localX <= TILE_SIZE;
+      localX += 6
+    ) {
+      const worldX =
+        magma.x + localX;
+
+      const surfaceY =
+        magma.y +
+        5 +
+        Math.sin(
+          worldX * 0.075 +
+            time * 3.2,
+        ) *
+          3;
+
+      if (localX === 0) {
+        context.moveTo(
+          worldX,
+          surfaceY,
+        );
+      } else {
+        context.lineTo(
+          worldX,
+          surfaceY,
+        );
+      }
+    }
+
+    context.lineTo(
+      magma.x + TILE_SIZE,
+      magma.y + 17,
+    );
+
+    context.lineTo(
+      magma.x,
+      magma.y + 17,
+    );
+
+    context.closePath();
+
+    context.fillStyle =
+      "#ff9d22";
+
+    context.fill();
+
+    context.strokeStyle =
+      "#ffe06a";
+
+    context.lineWidth = 2;
+    context.stroke();
+
+    /*
+      マグマ内部の泡
+    */
+    for (
+      let index = 0;
+      index < 2;
+      index += 1
+    ) {
+      const phase =
+        (
+          time *
+            (0.32 +
+              index * 0.08) +
+          magma.column * 0.17 +
+          magma.row * 0.11 +
+          index * 0.46
+        ) % 1;
+
+      const bubbleX =
+        magma.x +
+        10 +
+        (
+          magma.column * 19 +
+          index * 23
+        ) %
+          28;
+
+      const bubbleY =
+        magma.y +
+        TILE_SIZE -
+        phase *
+          (TILE_SIZE - 10);
+
+      const bubbleRadius =
+        2 +
+        Math.sin(
+          phase * Math.PI,
+        ) *
+          3;
+
+      context.strokeStyle =
+        "rgba(255, 205, 80, 0.75)";
+
+      context.lineWidth = 2;
+
+      context.beginPath();
+
+      context.arc(
+        bubbleX,
+        bubbleY,
+        bubbleRadius,
+        0,
+        Math.PI * 2,
+      );
+
+      context.stroke();
+    }
+
+    /*
+      表面から上昇する火の粉
+    */
+    const sparkPhase =
+      (
+        time * 0.58 +
+        magma.column * 0.29 +
+        magma.row * 0.13
+      ) % 1;
+
+    const sparkX =
+      magma.x +
+      8 +
+      (magma.column * 31) %
+        32;
+
+    const sparkY =
+      magma.y -
+      sparkPhase * 28;
+
+    context.fillStyle =
+      `rgba(255, 205, 75, ${1 - sparkPhase})`;
+
+    context.beginPath();
+
+    context.arc(
+      sparkX,
+      sparkY,
+      2.5,
+      0,
+      Math.PI * 2,
+    );
+
+    context.fill();
+  }
+}
       function drawDoors() {
         for (const door of doors) {
           context.save();
@@ -4442,15 +5032,40 @@ function drawMountain(
           context.ellipse(0, 20, 18, 6, 0, 0, Math.PI * 2);
           context.fill();
         }
-        if (playerDisabled) {
-          context.rotate(player.animationTime * 8);
-        }
+        const magmaDeath =
+  playerDisabled &&
+  player.missCause === "magma";
+
+if (
+  playerDisabled &&
+  !magmaDeath
+) {
+  context.rotate(
+    player.animationTime * 8,
+  );
+}
+
+if (
+  magmaDeath &&
+  Math.floor(
+    player.animationTime * 16,
+  ) %
+    2 ===
+    0
+) {
+  context.globalAlpha = 0.55;
+}
         const speedRatio = Math.min(1, Math.abs(player.velocityX) / DASH_MAX_SPEED);
         const legSwing =
           player.grounded && Math.abs(player.velocityX) > 20
             ? Math.sin(player.animationTime * (player.dashing ? 24 : 15)) * 5
             : 0;
-        context.fillStyle = player.dashing ? "#1565c0" : "#1f7ae0";
+        context.fillStyle =
+  magmaDeath
+    ? "#ff5a1f"
+    : player.dashing
+      ? "#1565c0"
+      : "#1f7ae0";
         context.fillRect(-16, -18, 32, 31);
         context.fillStyle = "#ffd2a6";
         context.fillRect(-13, -17, 26, 18);
@@ -4882,6 +5497,30 @@ function drawMountain(
             context.restore();
             continue;
           }
+          if (particle.type === "magmaSpark") {
+  context.save();
+
+  context.globalAlpha =
+    alpha;
+
+  context.fillStyle =
+    particle.color;
+
+  context.beginPath();
+
+  context.arc(
+    particle.x,
+    particle.y,
+    particle.size * alpha,
+    0,
+    Math.PI * 2,
+  );
+
+  context.fill();
+  context.restore();
+
+  continue;
+}
           if (particle.type === "blockFragment") {
             context.save();
             context.globalAlpha = alpha;
@@ -4906,6 +5545,7 @@ function drawMountain(
         context.save();
         context.translate(-cameraX, -cameraY);
         drawStage();
+        drawMagma();
         drawDoors();
         drawSpikes();
         drawSprings();
@@ -4940,6 +5580,7 @@ function drawMountain(
         updatePlayer(deltaTime);
         updateEnemies(deltaTime);
         updateItems(deltaTime);
+        updateMagmaEntityCollisions();
         updateObjectCollisions();
         updateDoorInteraction(deltaTime);
         updateBlocks(deltaTime);
