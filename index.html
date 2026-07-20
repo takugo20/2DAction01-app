@@ -406,7 +406,7 @@
 
         <span>
           残機:
-          <span id="life-value">10</span>
+          <span id="life-value">30</span>
         </span>
 
         <span>
@@ -491,7 +491,7 @@
       const doorTransitionOverlay = document.getElementById(
         "door-transition-overlay",
       );
-      const INITIAL_LIVES = 10;
+      const INITIAL_LIVES = 30;
       const COINS_PER_EXTRA_LIFE = 100;
       const TILE_SIZE = 48;
       const GRAVITY = 1900;
@@ -1146,6 +1146,10 @@
           console.warn("セーブデータを保存できませんでした。", error);
         }
       }
+      function resetStageChallengeRightsAfterGameOver() {
+        saveData.unlockedStageIds = [1];
+        writeSaveData();
+      }
       function isStageUnlocked(stageId) {
         return saveData.unlockedStageIds.includes(stageId);
       }
@@ -1195,7 +1199,59 @@
       function updateDashInput() {
         input.dash = keyboardDashHeld || touchDashDirections.size > 0;
       }
+      const BGM_VOLUME = 0.16;
+      const SOUND_EFFECT_VOLUME_MULTIPLIER = 1.65;
+      const BGM_FILE_BY_BACKGROUND = {
+        grassland: "grassland.mp3",
+        underground: "underground.mp3",
+        fortress: "fortress.mp3",
+      };
+      const bgmTracks = {};
+      for (const [background, fileName] of Object.entries(
+        BGM_FILE_BY_BACKGROUND,
+      )) {
+        const track = new Audio(fileName);
+        track.loop = true;
+        track.preload = "auto";
+        track.volume = BGM_VOLUME;
+        bgmTracks[background] = track;
+      }
+      let currentBgm = null;
       let audioContext = null;
+      function stopBgm(resetPlaybackPosition = true) {
+        if (!currentBgm) {
+          return;
+        }
+        currentBgm.pause();
+        if (resetPlaybackPosition) {
+          try {
+            currentBgm.currentTime = 0;
+          } catch (error) {}
+        }
+        currentBgm = null;
+      }
+      function playBgmForCurrentStage() {
+        const background =
+          STAGES[currentStageIndex]?.background ?? "grassland";
+        const nextBgm = bgmTracks[background];
+        stopBgm(true);
+        if (!nextBgm) {
+          return;
+        }
+        currentBgm = nextBgm;
+        currentBgm.volume = BGM_VOLUME;
+        try {
+          currentBgm.currentTime = 0;
+        } catch (error) {}
+        const playPromise = currentBgm.play();
+        if (playPromise && typeof playPromise.catch === "function") {
+          playPromise.catch((error) => {
+            if (error?.name !== "AbortError") {
+              console.warn("BGMを再生できませんでした。", error);
+            }
+          });
+        }
+      }
       function ensureAudioContext() {
         if (!audioContext) {
           const AudioContextClass =
@@ -1230,7 +1286,11 @@
             now + duration,
           );
         }
-        gain.gain.setValueAtTime(volume, now);
+        const adjustedVolume = Math.min(
+          1,
+          volume * SOUND_EFFECT_VOLUME_MULTIPLIER,
+        );
+        gain.gain.setValueAtTime(adjustedVolume, now);
         gain.gain.exponentialRampToValueAtTime(0.0001, now + duration);
         oscillator.connect(gain);
         gain.connect(audioContext.destination);
@@ -2377,6 +2437,8 @@
           return;
         }
         resetAllInputs();
+        stopBgm(true);
+        resetStageChallengeRightsAfterGameOver();
         gameOver = true;
         gamePaused = true;
         playerDisabled = true;
@@ -2439,6 +2501,7 @@
       }
       function showStageSelectScreen() {
         resetAllInputs();
+        stopBgm(true);
         hideMessage();
         gamePaused = true;
         nearbyDoor = null;
@@ -2458,6 +2521,7 @@
             hideStageSelectScreen();
             initializeGame(true);
             gamePaused = false;
+            playBgmForCurrentStage();
             lastTime = performance.now();
           });
           stageButtonList.appendChild(emergencyButton);
@@ -2481,6 +2545,7 @@
         hideStageSelectScreen();
         initializeGame(true);
         gamePaused = false;
+        playBgmForCurrentStage();
         lastTime = performance.now();
       }
       function getTileSymbol(column, row) {
@@ -3641,6 +3706,7 @@
         resetAllInputs();
         missCount += 1;
         lives = Math.max(0, lives - 1);
+        score = 0;
         playerDisabled = true;
         player.missCause = "normal";
         missTimer = 1.15;
@@ -3664,6 +3730,8 @@
         missCount += 1;
 
         lives = Math.max(0, lives - 1);
+
+        score = 0;
 
         playerDisabled = true;
         player.missCause = "magma";
@@ -3828,6 +3896,7 @@
           return;
         }
         resetAllInputs();
+        stopBgm(true);
         clearPendingClearMessage();
         gameCleared = true;
         gamePaused = true;
@@ -5740,6 +5809,7 @@
         }
         if (key === "r" && !event.repeat) {
           initializeGame(true);
+          playBgmForCurrentStage();
         }
       }
       function handleKeyUp(event) {
@@ -6075,6 +6145,7 @@
         }
         ensureAudioContext();
         initializeGame(true);
+        playBgmForCurrentStage();
       });
       stageSelectButton.addEventListener("click", () => {
         showStageSelectScreen();
@@ -6089,11 +6160,13 @@
         ensureAudioContext();
         const restartingAfterGameOver = gameOver;
         if (restartingAfterGameOver) {
+          currentStageIndex = 0;
           resetRunProgress();
         }
         hideMessage();
         initializeGame(true);
         gamePaused = false;
+        playBgmForCurrentStage();
         lastTime = performance.now();
       });
       messageStageSelectButton.addEventListener("click", () => {
